@@ -68,59 +68,6 @@ class BaseVisionProcessor(Processor):
             Dictionary with detection results
         """
 
-    def _filter_detections(
-        self,
-        detections: List[Dict[str, Any]],
-        query_params: Dict[str, Any],
-        image_dimensions: Optional[Tuple[int, int]] = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        Enhanced filter detections method with attribute and relationship support.
-
-        Args:
-            detections: Raw detection results
-            query_params: Query parameters including attributes and relationships
-            image_dimensions: Optional tuple of (width, height) for relative positioning
-
-        Returns:
-            Filtered detection results
-        """
-        # Skip further processing if detections is empty
-        if not detections:
-            return []
-
-        # Calculate relative positions if image dimensions provided
-        if image_dimensions:
-            detections = calculate_relative_positions(detections, *image_dimensions)
-
-        # Detect spatial relationships between objects
-        detections = detect_spatial_relationships(detections)
-
-        # Extract target objects
-        target_objects = [obj.lower() for obj in query_params.get("target_objects", [])]
-
-        # Filter by target objects if specified
-        if target_objects:
-            detections = [
-                det for det in detections if det["label"].lower() in target_objects
-            ]
-
-        # Filter by required attributes if specified
-        if "attributes" in query_params and query_params["attributes"]:
-            detections = filter_by_attributes(detections, query_params["attributes"])
-
-        # Filter by spatial relations if specified
-        if "spatial_relations" in query_params and query_params["spatial_relations"]:
-            detections = filter_by_spatial_relations(
-                detections, query_params["spatial_relations"]
-            )
-
-        # Filter by activities if specified (mainly for videos)
-        if "activities" in query_params and query_params["activities"]:
-            detections = filter_by_activities(detections, query_params["activities"])
-
-        return detections
-
     def _analyze_video_for_activities(
         self,
         frame_detections: Dict[str, List[Dict[str, Any]]],

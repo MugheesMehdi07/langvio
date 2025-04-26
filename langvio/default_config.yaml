@@ -28,7 +28,7 @@ vision:
     yoloe:
       type: "yolo"
       model_path: "yoloe-11s-seg-pf.pt"  # YOLOe nano - fastest
-      confidence: 0.5
+      confidence: 0.8
       model_type: "yoloe"
 
     yoloe_medium:
@@ -40,7 +40,7 @@ vision:
     yoloe_large:
         type: "yolo"
         model_path: "yoloe-11l-seg-pf.pt"  # YOLOe extra large - most accurate
-        confidence: 0.5
+        confidence: 0.8
         model_type: "yoloe"
     yolo:
       type: "yolo"

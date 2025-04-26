@@ -5,37 +5,6 @@ Utility functions for vision processing
 from typing import Any, Dict, List, Optional, Tuple
 
 
-def add_spatial_context(
-    detections: List[Dict[str, Any]], dimensions: Optional[Tuple[int, int]]
-) -> List[Dict[str, Any]]:
-    """
-    Add spatial context to detections (positions and relationships).
-
-    Args:
-        detections: List of detection dictionaries
-        dimensions: Optional tuple of (width, height)
-
-    Returns:
-        Enhanced detections with spatial context
-    """
-    # Skip if no dimensions provided
-    if not dimensions or not detections:
-        return detections
-
-    # Calculate relative positions
-    from langvio.vision.utils import (
-        calculate_relative_positions,
-        detect_spatial_relationships,
-    )
-
-    # Add relative positions based on image dimensions
-    detections = calculate_relative_positions(detections, *dimensions)
-
-    # Add spatial relationships between objects
-    detections = detect_spatial_relationships(detections)
-
-    return detections
-
 
 def create_visualization_detections_for_video(
     all_detections: Dict[str, List[Dict[str, Any]]],

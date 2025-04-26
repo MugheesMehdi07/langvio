@@ -45,36 +45,3 @@ class Processor(ABC):
         processor.initialize()
         return processor
 
-
-class Model(ABC):
-    """Base class for all models in langvio"""
-
-    def __init__(self, name: str, config: Optional[Dict[str, Any]] = None):
-        """
-        Initialize model.
-
-        Args:
-            name: Model name
-            config: Configuration parameters
-        """
-        self.name = name
-        self.config = config or {}
-        self.initialized = False
-
-    @abstractmethod
-    def load(self) -> bool:
-        """
-        Load the model.
-
-        Returns:
-            True if model was loaded successfully
-        """
-
-    @abstractmethod
-    def unload(self) -> bool:
-        """
-        Unload the model to free resources.
-
-        Returns:
-            True if model was unloaded successfully
-        """
