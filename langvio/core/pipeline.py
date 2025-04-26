@@ -262,20 +262,20 @@ class Pipeline:
         return viz_config
 
     def _create_visualization(
-        self,
-        media_path: str,
-        all_detections: Dict[str, List[Dict[str, Any]]],
-        highlighted_objects: List[Dict[str, Any]],
-        query_params: Dict[str, Any],
-        is_video: bool,
+            self,
+            media_path: str,
+            all_detections: Dict[str, List[Dict[str, Any]]],
+            highlighted_objects: List[Dict[str, Any]],
+            query_params: Dict[str, Any],
+            is_video: bool,
     ) -> str:
         """
-        Create visualization with highlighted objects and return the output path.
+        Create visualization with all detected objects and highlighted ones.
 
         Args:
             media_path: Path to input media
             all_detections: All detection results
-            highlighted_objects: Objects to highlight
+            highlighted_objects: Objects to highlight with a different color
             query_params: Query parameters
             is_video: Whether the media is a video
 
@@ -294,31 +294,41 @@ class Pipeline:
         # Get visualization config
         visualization_config = self._get_visualization_config(query_params)
 
-        if is_video:
-            # Create visualization detections for video
-            visualization_detections = create_visualization_detections_for_video(
-                all_detections, highlighted_objects
-            )
+        # Store original box color to use for non-highlighted objects
+        original_box_color = visualization_config["box_color"]
 
-            # Visualize video
-            self.media_processor.visualize_video(
+        # Use a different, more prominent color for highlighted objects
+        highlight_color = [0, 0, 255]  # Red color (BGR) for highlighted objects
+
+        if is_video:
+            # For videos, we'll pass all detections and use a different visualization approach
+            # that distinguishes highlighted objects
+            self.media_processor.visualize_video_with_highlights(
                 media_path,
                 output_path,
-                visualization_detections,
-                **visualization_config,
+                all_detections,  # Use all detections instead of just highlighted ones
+                highlighted_objects,  # Pass highlighted objects separately
+                original_box_color=original_box_color,
+                highlight_color=highlight_color,
+                text_color=visualization_config["text_color"],
+                line_thickness=visualization_config["line_thickness"],
+                show_attributes=visualization_config.get("show_attributes", True),
+                show_confidence=visualization_config.get("show_confidence", True),
             )
         else:
-            # Create visualization detections for image
-            visualization_detections = create_visualization_detections_for_image(
-                highlighted_objects
-            )
-
-            # Visualize image
-            self.media_processor.visualize_image(
+            # For images, we'll pass all detections and use a different visualization approach
+            # that distinguishes highlighted objects
+            self.media_processor.visualize_image_with_highlights(
                 media_path,
                 output_path,
-                visualization_detections,
-                **visualization_config,
+                all_detections["0"],  # Use all detections for the single frame
+                [obj["detection"] for obj in highlighted_objects],  # Extract just the detection objects
+                original_box_color=original_box_color,
+                highlight_color=highlight_color,
+                text_color=visualization_config["text_color"],
+                line_thickness=visualization_config["line_thickness"],
+                show_attributes=visualization_config.get("show_attributes", True),
+                show_confidence=visualization_config.get("show_confidence", True),
             )
 
         return output_path
