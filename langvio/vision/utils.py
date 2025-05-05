@@ -11,7 +11,27 @@ from typing import Any, Dict, List
 #     ACTIVITIES,
 #     DEFAULT_IOU_THRESHOLD
 # )
+# Add to langvio/vision/yolo11_utils.py
 
+def optimize_for_memory():
+    """
+    Set PyTorch memory optimization settings.
+    """
+    import os
+    import torch
+
+    # Set environment variables to reduce memory fragmentation
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+    # Enable memory caching to reduce allocations
+    torch.cuda.empty_cache()
+
+    # Set to use TF32 precision if available (for Ampere and later GPUs)
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+
+    # Set inference mode for PyTorch
+    torch.set_grad_enabled(False)
 
 def extract_detections(results) -> List[Dict[str, Any]]:
     """

@@ -8,6 +8,7 @@ import tempfile
 from typing import Any, Dict, List
 
 import cv2
+import torch
 from ultralytics import YOLO, YOLOE
 
 from langvio.prompts.constants import (
@@ -15,7 +16,9 @@ from langvio.prompts.constants import (
     DEFAULT_VIDEO_SAMPLE_RATE,
 )
 from langvio.vision.base import BaseVisionProcessor
-from langvio.vision.utils import extract_detections
+from langvio.vision.utils import extract_detections, optimize_for_memory
+from langvio.vision.yolo.yolo11_utils import combine_metrics, process_counting, check_yolo11_solutions_available, \
+    process_speeds, process_distances
 
 
 class YOLOProcessor(BaseVisionProcessor):
@@ -59,12 +62,12 @@ class YOLOProcessor(BaseVisionProcessor):
             self.logger.error(f"Error loading YOLO model: {e}")
             return False
 
-    def process_image(
-        self, image_path: str, query_params: Dict[str, Any]
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    # Update langvio/vision/yolo/detector.py
+
+    def process_image(self, image_path: str, query_params: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
         """
         Process an image with YOLO with enhanced detection capabilities.
-        Modified to return all detections without filtering.
+        Uses YOLO11 Solutions for advanced metrics.
 
         Args:
             image_path: Path to the input image
@@ -79,47 +82,89 @@ class YOLOProcessor(BaseVisionProcessor):
         if not self.model:
             self.initialize()
 
-        # Run detection
-        try:
-            # Get image dimensions for relative positioning
-            image_dimensions = self._get_image_dimensions(image_path)
+        with torch.no_grad():
+            # Run detection
+            try:
+                optimize_for_memory()
+                # Get image dimensions for relative positioning
+                image_dimensions = self._get_image_dimensions(image_path)
 
-            # Run basic object detection
-            results = self.model(image_path, conf=self.config["confidence"])
+                # Run basic object detection
+                results = self.model(image_path, conf=self.config["confidence"])
 
-            # Extract detections
-            detections = extract_detections(results)
+                # Extract detections
+                detections = extract_detections(results)
 
-            # Enhance detections with attributes based on the image
-            detections = self._enhance_detections_with_attributes(
-                detections, image_path
-            )
-
-            # Calculate relative positions if image dimensions provided
-            if image_dimensions:
-                from langvio.vision.utils import (
-                    calculate_relative_positions,
-                    detect_spatial_relationships,
+                # Enhance detections with attributes based on the image
+                detections = self._enhance_detections_with_attributes(
+                    detections, image_path
                 )
 
-                detections = calculate_relative_positions(detections, *image_dimensions)
-                detections = detect_spatial_relationships(detections)
+                # Calculate relative positions if image dimensions provided
+                if image_dimensions:
+                    from langvio.vision.utils import (
+                        calculate_relative_positions,
+                        detect_spatial_relationships,
+                    )
 
-            # Return ALL results without filtering (use "0" as the frame key for images)
-            return {"0": detections}
-        except Exception as e:
-            self.logger.error(f"Error processing image: {e}")
-            return {"0": []}
+                    detections = calculate_relative_positions(detections, *image_dimensions)
+                    detections = detect_spatial_relationships(detections)
+
+                # Set up initial frame_detections
+                frame_detections = {"0": detections}
+
+
+                yolo11_available = check_yolo11_solutions_available()
+
+                # Process with YOLO11 Solutions if available
+                all_metrics = []
+
+                if yolo11_available:
+                    # Read the image
+                    image = cv2.imread(image_path)
+
+                    if image is not None:
+                        # Extract target classes if provided
+                        target_objects = query_params.get("target_objects", [])
+
+                        # Process counting
+                        counting_metrics = process_counting(
+                            image,
+                            self.model,
+                            detections,
+                            target_objects if target_objects else None
+                        )
+                        all_metrics.append(counting_metrics)
+
+                        # Process distances
+                        from langvio.vision.yolo.yolo11_utils import process_distances
+                        distance_metrics = process_distances(
+                            image,
+                            self.model,
+                            detections
+                        )
+                        all_metrics.append(distance_metrics)
+
+                # Combine metrics
+                summary = combine_metrics(frame_detections, all_metrics)
+
+                # Add summary to frame detections
+                frame_detections["summary"] = summary
+
+                return frame_detections
+            except Exception as e:
+                self.logger.error(f"Error processing image: {e}")
+                return {"0": []}
 
     def process_video(
-        self,
-        video_path: str,
-        query_params: Dict[str, Any],
-        sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
+            self,
+            video_path: str,
+            query_params: Dict[str, Any],
+            sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Process a video with YOLO with enhanced activity and tracking detection.
-        Modified to return all detections without filtering.
+        Uses YOLO11 Solutions for advanced metrics in a single pass.
 
         Args:
             video_path: Path to the input video
@@ -135,46 +180,114 @@ class YOLOProcessor(BaseVisionProcessor):
         if not self.model:
             self.initialize()
 
-        # Open video
-        try:
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                raise ValueError(f"Failed to open video: {video_path}")
+        with torch.no_grad():
+            # Open video
+            try:
+                optimize_for_memory()
+                # Check if YOLO11 Solutions is available
+                yolo11_available = check_yolo11_solutions_available()
 
-            # Get video dimensions
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            video_dimensions = (width, height)
+                # Get video properties
+                cap = cv2.VideoCapture(video_path)
+                if not cap.isOpened():
+                    raise ValueError(f"Failed to open video: {video_path}")
 
-            # Process frames
-            frame_detections = {}
-            frame_idx = 0
+                # Get video dimensions
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                video_dimensions = (width, height)
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                if fps <= 0:
+                    fps = 25.0  # Default FPS
 
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
+                cap.release()  # Release and reopen for processing
 
-                # Process every Nth frame
-                if frame_idx % sample_rate == 0:
-                    # Save frame to temp file
-                    with tempfile.NamedTemporaryFile(
-                        suffix=".jpg", delete=False
-                    ) as temp:
-                        temp_path = temp.name
+                # Extract target classes if provided
+                target_objects = query_params.get("target_objects", [])
 
-                    cv2.imwrite(temp_path, frame)
+                # Process frames
+                frame_detections = {}
+                all_metrics = []
 
-                    # Run detection
-                    results = self.model(temp_path, conf=self.config["confidence"])
+                # Use tracking for the whole video to get consistent track IDs
+                results = self.model.track(source=video_path, conf=self.config["confidence"], persist=True)
 
-                    # Extract detections
-                    detections = extract_detections(results)
+                # Get YOLO11 metrics from a sample frame
+                if yolo11_available:
+                    # Process a sample frame for counting and distance metrics
+                    cap = cv2.VideoCapture(video_path)
+                    success, sample_frame = cap.read()
+                    cap.release()
 
-                    # Enhance detections with attributes
-                    detections = self._enhance_detections_with_attributes(
-                        detections, temp_path
-                    )
+                    if success:
+                        # Process initial frame with YOLO11 Solutions
+                        sample_detections = extract_detections(self.model(sample_frame))
+
+                        # Process counting
+                        counting_metrics = process_counting(
+                            sample_frame,
+                            self.model,
+                            sample_detections,
+                            target_objects if target_objects else None
+                        )
+                        all_metrics.append(counting_metrics)
+
+                        # Process distances
+                        distance_metrics = process_distances(
+                            sample_frame,
+                            self.model,
+                            sample_detections
+                        )
+                        all_metrics.append(distance_metrics)
+
+                        # For videos, we can also get speed metrics
+                        speed_metrics = process_speeds(
+                            sample_frame,
+                            self.model,
+                            sample_detections,
+                            fps
+                        )
+                        all_metrics.append(speed_metrics)
+
+                # Process each frame from the tracking results
+                for frame_idx, result in enumerate(results):
+                    # Process every Nth frame (according to sample_rate)
+                    if frame_idx % sample_rate != 0:
+                        continue
+
+                    # Extract detections with track IDs
+                    detections = []
+
+                    if result.boxes and hasattr(result.boxes, 'id') and result.boxes.id is not None:
+                        boxes = result.boxes.xyxy.cpu().numpy()
+                        track_ids = result.boxes.id.int().cpu().numpy()
+                        cls_ids = result.boxes.cls.int().cpu().numpy()
+                        confs = result.boxes.conf.cpu().numpy()
+
+                        for i, (box, track_id, cls_id, conf) in enumerate(zip(boxes, track_ids, cls_ids, confs)):
+                            x1, y1, x2, y2 = map(int, box)
+                            label = self.model.names[cls_id]
+
+                            # Calculate center and dimensions
+                            center_x = (x1 + x2) / 2
+                            center_y = (y1 + y2) / 2
+                            width = x2 - x1
+                            height = y2 - y1
+
+                            detection = {
+                                "label": label,
+                                "confidence": float(conf),
+                                "bbox": [x1, y1, x2, y2],
+                                "class_id": int(cls_id),
+                                "track_id": int(track_id),
+                                "center": (float(center_x), float(center_y)),
+                                "dimensions": (float(width), float(height)),
+                                "area": float(width * height),
+                                "attributes": {},
+                                "activities": []
+                            }
+
+                            detections.append(detection)
 
                     # Calculate relative positions and relationships
                     from langvio.vision.utils import (
@@ -187,27 +300,28 @@ class YOLOProcessor(BaseVisionProcessor):
                     )
                     detections = detect_spatial_relationships(detections)
 
-                    # Store ALL results without filtering
+                    # Enhance with attributes (using original frame from result)
+                    if hasattr(result, 'orig_img'):
+                        detections = self._enhance_detections_with_attributes(
+                            detections, None, result.orig_img
+                        )
+
+                    # Store results for this frame
                     frame_detections[str(frame_idx)] = detections
 
-                    # Clean up
-                    os.remove(temp_path)
+                # Analyze for activities and tracking across frames
+                if frame_detections:
+                    frame_detections = self._analyze_video_for_activities(
+                        frame_detections, query_params
+                    )
 
-                frame_idx += 1
+                # Combine all metrics
+                summary = combine_metrics(frame_detections, all_metrics)
 
-            cap.release()
+                # Add summary to frame detections
+                frame_detections["summary"] = summary
 
-            # Analyze for activities and tracking across frames if needed
-            # but don't filter out any detections yet
-            if frame_detections and query_params.get("task_type") in [
-                "tracking",
-                "activity",
-            ]:
-                frame_detections = self._analyze_video_for_activities(
-                    frame_detections, query_params
-                )
-
-            return frame_detections
-        except Exception as e:
-            self.logger.error(f"Error processing video: {e}")
-            return {}
+                return frame_detections
+            except Exception as e:
+                self.logger.error(f"Error processing video: {e}")
+                return {}

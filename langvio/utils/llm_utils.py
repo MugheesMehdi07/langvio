@@ -28,6 +28,9 @@ def index_detections(
 
         for det in frame_detections:
             # Create a copy with object_id
+            if not isinstance(det, dict):
+                print(det)
+                continue
             object_id = f"obj_{object_id_counter}"
             det_copy = det.copy()
             det_copy["object_id"] = object_id
