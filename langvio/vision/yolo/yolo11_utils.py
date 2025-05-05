@@ -1,14 +1,15 @@
-# langvio/vision/yolo11_utils.py
-
 """
-Utility functions that use YOLO11 Solutions for enhanced detection metrics
+Enhanced utility functions that use YOLO11 Solutions for video processing
+The key improvement is processing complete videos frame by frame
 """
 
 import logging
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -28,372 +29,125 @@ def check_yolo11_solutions_available() -> bool:
         return False
 
 
-def process_counting(
-        frame: np.ndarray,
-        model: Any,
-        detections: List[Dict[str, Any]],
-        target_classes: Optional[List[str]] = None
+def process_video_with_yolo11(
+        video_path: str,
+        model_path: str,
+        sample_rate: int = 5,
+        confidence: float = 0.5
 ) -> Dict[str, Any]:
     """
-    Process frame with YOLO11 Solutions ObjectCounter.
-
-    Args:
-        frame: Input frame as numpy array
-        model: YOLO model instance
-        detections: Detections for the frame
-        target_classes: Optional list of target classes to count
-
-    Returns:
-        Dictionary with counting metrics
-    """
-    try:
-        from ultralytics import solutions
-
-        # Define region (full frame)
-        h, w = frame.shape[:2]
-        region = [(0, 0), (w, 0), (w, h), (0, h)]
-
-        # Convert target classes to class indices if provided
-        class_ids = None
-        if target_classes:
-            class_ids = []
-            for target in target_classes:
-                # Find index for this class name
-                if target in model.names.values():
-                    for idx, name in model.names.items():
-                        if name == target:
-                            class_ids.append(idx)
-                            break
-
-        # Initialize and use counter
-        counter = solutions.ObjectCounter(
-            model=model,
-            region=region,
-            classes=class_ids,
-            verbose=False
-        )
-
-        # Process frame
-        results = counter(frame)
-
-        # Update detections with "counted" attribute
-        for det in detections:
-            if "attributes" not in det:
-                det["attributes"] = {}
-            det["attributes"]["counted"] = True
-
-        # Extract metrics
-        metrics = {
-            "count_in": getattr(results, "in_count", 0),
-            "count_out": getattr(results, "out_count", 0),
-            "count_total": getattr(results, "in_count", 0) + getattr(results, "out_count", 0)
-        }
-
-        logger.info(f"YOLO11 counting metrics: {metrics}")
-        return metrics
-
-    except Exception as e:
-        logger.error(f"Error in YOLO11 counting: {e}")
-        return {}
-
-
-def process_distances(
-        frame: np.ndarray,
-        model: Any,
-        detections: List[Dict[str, Any]]
-) -> Dict[str, Any]:
-    """
-    Process frame with YOLO11 Solutions DistanceCalculator.
-
-    Args:
-        frame: Input frame as numpy array
-        model: YOLO model instance
-        detections: Detections for the frame
-
-    Returns:
-        Dictionary with distance metrics
-    """
-    try:
-        from ultralytics import solutions
-
-        # Initialize and use distance calculator
-        distance_calculator = solutions.DistanceCalculator(
-            model=model,
-            verbose=False
-        )
-
-        # Process frame
-        results = distance_calculator(frame)
-
-        # Extract distances and update detections
-        pairs = []
-
-        # Check if pairs exist in results
-        if hasattr(results, "pairs"):
-            for pair in results.pairs:
-                # Extract pair data
-                id1 = getattr(pair, "id1", None)
-                id2 = getattr(pair, "id2", None)
-                coord1 = getattr(pair, "coord1", (0, 0))
-                coord2 = getattr(pair, "coord2", (0, 0))
-                distance = getattr(pair, "distance", 0)
-
-                # Find corresponding detections
-                det1_idx = None
-                det2_idx = None
-                obj1_type = None
-                obj2_type = None
-
-                # First try to match by track_id if available
-                for i, det in enumerate(detections):
-                    if "track_id" in det and det["track_id"] == id1:
-                        det1_idx = i
-                        obj1_type = det["label"]
-                    if "track_id" in det and det["track_id"] == id2:
-                        det2_idx = i
-                        obj2_type = det["label"]
-
-                # If not found by track_id, try to match by coordinates
-                if det1_idx is None or det2_idx is None:
-                    for i, det in enumerate(detections):
-                        if "center" in det:
-                            center = det["center"]
-                            # Match with some tolerance
-                            if (abs(center[0] - coord1[0]) < 10 and
-                                    abs(center[1] - coord1[1]) < 10):
-                                det1_idx = i
-                                obj1_type = det["label"]
-                            if (abs(center[0] - coord2[0]) < 10 and
-                                    abs(center[1] - coord2[1]) < 10):
-                                det2_idx = i
-                                obj2_type = det["label"]
-
-                # Add relationship to detections if found
-                if det1_idx is not None and det2_idx is not None:
-                    # Add relationship to first detection
-                    if "relationships" not in detections[det1_idx]:
-                        detections[det1_idx]["relationships"] = []
-
-                    detections[det1_idx]["relationships"].append({
-                        "object": detections[det2_idx]["label"],
-                        "object_id": det2_idx,
-                        "relations": ["distance"],
-                        "distance": distance
-                    })
-
-                    # Add relationship to second detection
-                    if "relationships" not in detections[det2_idx]:
-                        detections[det2_idx]["relationships"] = []
-
-                    detections[det2_idx]["relationships"].append({
-                        "object": detections[det1_idx]["label"],
-                        "object_id": det1_idx,
-                        "relations": ["distance"],
-                        "distance": distance
-                    })
-
-                # Add to pairs list with object types if available
-                pairs.append({
-                    "object1": obj1_type if obj1_type else f"Object {id1}",
-                    "object2": obj2_type if obj2_type else f"Object {id2}",
-                    "distance": distance
-                })
-
-        # Extract metrics
-        metrics = {
-            "distance_pairs": pairs,
-            "total_pairs": len(pairs)
-        }
-
-        logger.info(f"YOLO11 distance processing completed: {len(pairs)} pairs found")
-        return metrics
-
-    except Exception as e:
-        logger.error(f"Error in YOLO11 distance calculation: {e}")
-        return {}
-
-
-def process_speeds(
-        frame: np.ndarray,
-        model: Any,
-        detections: List[Dict[str, Any]],
-        fps: float = 25.0
-) -> Dict[str, Any]:
-    """
-    Process frame with YOLO11 Solutions SpeedEstimator.
-
-    Args:
-        frame: Input frame as numpy array
-        model: YOLO model instance
-        detections: Detections for the frame
-        fps: Frames per second for the video
-
-    Returns:
-        Dictionary with speed metrics
-    """
-    try:
-        from ultralytics import solutions
-
-        # Initialize and use speed estimator
-        speed_estimator = solutions.SpeedEstimator(
-            model=model,
-            verbose=False
-        )
-
-        # Process frame
-        results = speed_estimator(frame)
-
-        # Extract speed data and update detections
-        speeds = []
-
-        if hasattr(results, "objects"):
-            for obj in results.objects:
-                # Extract object data
-                obj_id = getattr(obj, "id", None)
-                speed = getattr(obj, "speed", 0)
-
-                # Find matching detection
-                for det in detections:
-                    if "track_id" in det and det["track_id"] == obj_id:
-                        # Add speed to detection
-                        if "attributes" not in det:
-                            det["attributes"] = {}
-                        det["attributes"]["speed"] = f"{speed:.2f} pixels/sec"
-
-                        # Add activity based on speed
-                        if "activities" not in det:
-                            det["activities"] = []
-
-                        if speed < 5:
-                            if "stationary" not in det["activities"]:
-                                det["activities"].append("stationary")
-                        elif speed < 30:
-                            if "moving_slowly" not in det["activities"]:
-                                det["activities"].append("moving_slowly")
-                        else:
-                            if "moving_quickly" not in det["activities"]:
-                                det["activities"].append("moving_quickly")
-
-                        # Add to speeds list
-                        speeds.append({
-                            "object_id": obj_id,
-                            "object_type": det["label"],
-                            "speed": speed
-                        })
-                        break
-
-        # Calculate average speeds by object type
-        speed_by_type = {}
-
-        for speed_info in speeds:
-            obj_type = speed_info["object_type"]
-            if obj_type not in speed_by_type:
-                speed_by_type[obj_type] = []
-            speed_by_type[obj_type].append(speed_info["speed"])
-
-        # Calculate averages
-        avg_speed_by_class = {}
-        for obj_type, obj_speeds in speed_by_type.items():
-            if obj_speeds:
-                avg_speed_by_class[obj_type] = sum(obj_speeds) / len(obj_speeds)
-
-        # Extract metrics
-        metrics = {
-            "speeds": speeds,
-            "avg_speeds": avg_speed_by_class
-        }
-
-        logger.info(f"YOLO11 speed estimation completed: {len(speeds)} objects tracked")
-        return metrics
-
-    except Exception as e:
-        logger.error(f"Error in YOLO11 speed estimation: {e}")
-        return {}
-
-
-def get_fps_from_video(video_path: str) -> float:
-    """
-    Get frames per second from a video file.
+    Process an entire video with YOLO11 Solutions, applying counting, distance, and speed metrics
+    to each frame.
 
     Args:
         video_path: Path to the video file
+        model_path: Path to the YOLO model file
+        sample_rate: Process every Nth frame
+        confidence: Confidence threshold for detections
 
     Returns:
-        Frames per second (defaults to 25.0 if cannot be determined)
+        Dictionary with combined metrics and frame-by-frame detections
     """
     try:
+        from ultralytics import YOLO, solutions
+
+        # Check if YOLO11 Solutions is available
+        if not check_yolo11_solutions_available():
+            return {"error": "YOLO11 Solutions not available"}
+
+        # Load model
+        # model = YOLO(model_path)
+
+        # Open video capture
         cap = cv2.VideoCapture(video_path)
-        if cap.isOpened():
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            cap.release()
+        if not cap.isOpened():
+            return {"error": f"Failed to open video: {video_path}"}
 
-            if fps <= 0:
-                return 25.0  # Default if detection fails
-            return fps
-        else:
-            return 25.0  # Default if cannot open video
-    except Exception:
-        return 25.0  # Default on error
+        # Get video properties
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 0:
+            fps = 25.0  # Default FPS if not available
 
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-def combine_metrics(
-        frame_detections: Dict[str, List[Dict[str, Any]]],
-        metrics_list: List[Dict[str, Any]]
-) -> Dict[str, Any]:
-    """
-    Combine all metrics into a single summary.
+        # Initialize solution objects (create once, reuse for all frames)
+        counter = solutions.ObjectCounter(
+            model=model_path,
+            region=[(0, 0), (width, 0), (width, height), (0, height)],
+            verbose=False,
+            show=False
 
-    Args:
-        frame_detections: Dictionary with frame detections
-        metrics_list: List of metrics dictionaries
+        )
 
-    Returns:
-        Combined metrics summary
-    """
-    # Start with basic counting metrics
-    # Count by class
-    count_by_class = {}
-    for frame_key, detections in frame_detections.items():
-        if not frame_key.isdigit():
-            continue
+        distance_calculator = solutions.DistanceCalculation(
+            model=model_path,
+            verbose=False,
+            show=False
 
-        for det in detections:
-            label = det["label"]
-            if label not in count_by_class:
-                count_by_class[label] = 0
-            count_by_class[label] += 1
+        )
 
-    # Track unique objects
-    unique_tracks = {}
-    for frame_key, detections in frame_detections.items():
-        if not frame_key.isdigit():
-            continue
+        speed_estimator = solutions.SpeedEstimator(
+            model=model_path,
+            verbose=False,
+            show=False
 
-        for det in detections:
-            if "track_id" in det:
-                label = det["label"]
-                if label not in unique_tracks:
-                    unique_tracks[label] = set()
-                unique_tracks[label].add(det["track_id"])
+        )
 
-    # Build summary dictionary
-    summary = {
-        "counts": count_by_class
-    }
+        # Initialize results storage
+        frame_detections = {}
+        all_metrics = {
+            "counting": {},
+            "distance": {},
+            "speed": {}
+        }
 
-    # Add unique object counts if available
-    if unique_tracks:
-        summary["unique_objects"] = {label: len(tracks) for label, tracks in unique_tracks.items()}
-        summary["total_unique_objects"] = sum(len(tracks) for tracks in unique_tracks.values())
+        # Create object trackers - these will be maintained across all frames
+        track_objects = {}
+        next_track_id = 0
 
-    # Add all metrics from the list
-    for metrics in metrics_list:
-        # Add each metric, avoiding duplicates
-        for key, value in metrics.items():
-            # Don't overwrite counts if we already have them
-            if key == "counts" and "counts" in summary:
-                continue
+        # Process frames
+        frame_idx = 0
 
-            summary[key] = value
+        while cap.isOpened() and frame_idx < total_frames :
+            # Read frame
+            success, frame = cap.read()
+            if not success:
+                break
 
-    return summary
+            # Process every Nth frame based on sample_rate
+            if frame_idx % sample_rate == 0:
+                logger.info(f"Processing frame {frame_idx}/{total_frames}")
+
+            #counter
+            results_count = counter(frame)
+            print(results_count)
+
+            # results_distance = distance_calculator(frame)
+            # print(results_distance)
+
+            results_speed = speed_estimator(frame)
+            print(results_speed)
+            frame_idx += 1
+
+        # Release video capture
+        cap.release()
+
+        all_metrics["counting"] = results_count
+        # all_metrics["distance"] = results_distance
+        all_metrics["speed"] = results_speed
+        print(all_metrics)
+
+        # Generate summary metrics
+        # summary = create_summary_metrics(frame_detections, all_metrics)
+        # Add summary to frame detections
+        # frame_detections["summary"] = summary
+
+        return frame_detections
+
+    except Exception as e:
+        logger.error(f"Error processing video with YOLO11: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {"error": str(e)}

@@ -51,7 +51,7 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
     if vision_name:
         pipeline.set_vision_processor(vision_name)
     else:
-        pipeline.set_vision_processor("yoloe_large")
+        pipeline.set_vision_processor("yoloe")
 
     # Set the LLM processor if specified
     if llm_name:

@@ -17,8 +17,7 @@ from langvio.prompts.constants import (
 )
 from langvio.vision.base import BaseVisionProcessor
 from langvio.vision.utils import extract_detections, optimize_for_memory
-from langvio.vision.yolo.yolo11_utils import combine_metrics, process_counting, check_yolo11_solutions_available, \
-    process_speeds, process_distances
+from langvio.vision.yolo.yolo11_utils import check_yolo11_solutions_available
 
 
 class YOLOProcessor(BaseVisionProcessor):
@@ -119,37 +118,14 @@ class YOLOProcessor(BaseVisionProcessor):
                 # Process with YOLO11 Solutions if available
                 all_metrics = []
 
-                if yolo11_available:
-                    # Read the image
-                    image = cv2.imread(image_path)
 
-                    if image is not None:
-                        # Extract target classes if provided
-                        target_objects = query_params.get("target_objects", [])
-
-                        # Process counting
-                        counting_metrics = process_counting(
-                            image,
-                            self.model,
-                            detections,
-                            target_objects if target_objects else None
-                        )
-                        all_metrics.append(counting_metrics)
-
-                        # Process distances
-                        from langvio.vision.yolo.yolo11_utils import process_distances
-                        distance_metrics = process_distances(
-                            image,
-                            self.model,
-                            detections
-                        )
-                        all_metrics.append(distance_metrics)
+                self.logger.info(f"All Metrics: {all_metrics}")
 
                 # Combine metrics
-                summary = combine_metrics(frame_detections, all_metrics)
+                # summary = combine_metrics(frame_detections, all_metrics)
 
                 # Add summary to frame detections
-                frame_detections["summary"] = summary
+                # frame_detections["summary"] = summary
 
                 return frame_detections
             except Exception as e:
@@ -213,41 +189,6 @@ class YOLOProcessor(BaseVisionProcessor):
                 results = self.model.track(source=video_path, conf=self.config["confidence"], persist=True)
 
                 # Get YOLO11 metrics from a sample frame
-                if yolo11_available:
-                    # Process a sample frame for counting and distance metrics
-                    cap = cv2.VideoCapture(video_path)
-                    success, sample_frame = cap.read()
-                    cap.release()
-
-                    if success:
-                        # Process initial frame with YOLO11 Solutions
-                        sample_detections = extract_detections(self.model(sample_frame))
-
-                        # Process counting
-                        counting_metrics = process_counting(
-                            sample_frame,
-                            self.model,
-                            sample_detections,
-                            target_objects if target_objects else None
-                        )
-                        all_metrics.append(counting_metrics)
-
-                        # Process distances
-                        distance_metrics = process_distances(
-                            sample_frame,
-                            self.model,
-                            sample_detections
-                        )
-                        all_metrics.append(distance_metrics)
-
-                        # For videos, we can also get speed metrics
-                        speed_metrics = process_speeds(
-                            sample_frame,
-                            self.model,
-                            sample_detections,
-                            fps
-                        )
-                        all_metrics.append(speed_metrics)
 
                 # Process each frame from the tracking results
                 for frame_idx, result in enumerate(results):
@@ -316,10 +257,10 @@ class YOLOProcessor(BaseVisionProcessor):
                     )
 
                 # Combine all metrics
-                summary = combine_metrics(frame_detections, all_metrics)
+                # summary = combine_metrics(frame_detections, all_metrics)
 
                 # Add summary to frame detections
-                frame_detections["summary"] = summary
+                # frame_detections["summary"] = summary
 
                 return frame_detections
             except Exception as e:
