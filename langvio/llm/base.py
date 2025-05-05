@@ -186,3 +186,66 @@ class BaseLLMProcessor(Processor):
     def is_package_installed(self, package_name: str) -> bool:
         """Check if a Python package is installed."""
         return importlib.util.find_spec(package_name) is not None
+
+    def parse_solution_results(solution_results):
+        """
+        Convert YOLO11 SolutionResults objects to well-structured dictionaries.
+
+        Args:
+            solution_results: Either object counting or speed estimation results
+
+        Returns:
+            Dictionary with structured information
+        """
+        # Convert to string first
+        result_str = str(solution_results)
+
+        # Create a base dictionary
+        parsed_data = {}
+
+        # Check if it's object counting results
+        if "in_count" in result_str and "out_count" in result_str:
+            # Extract the basic counts
+            parsed_data["type"] = "object_counting"
+            parsed_data["in_count"] = solution_results.in_count
+            parsed_data["out_count"] = solution_results.out_count
+            parsed_data["total_tracks"] = solution_results.total_tracks
+
+            # Extract class-wise counts in a more accessible format
+            class_counts = {}
+            for class_name, directions in solution_results.classwise_count.items():
+                # Only include classes that have non-zero counts
+                if directions["IN"] > 0 or directions["OUT"] > 0:
+                    class_counts[class_name] = {
+                        "in": directions["IN"],
+                        "out": directions["OUT"],
+                        "total": directions["IN"] + directions["OUT"]
+                    }
+
+            parsed_data["class_counts"] = class_counts
+
+            # Add a summary for quick access
+            active_classes = [cls for cls, counts in class_counts.items()]
+            parsed_data["summary"] = {
+                "total_objects": parsed_data["in_count"] + parsed_data["out_count"],
+                "active_classes": active_classes,
+                "most_common_class": max(class_counts.items(), key=lambda x: x[1]["total"])[0] if class_counts else None
+            }
+
+        # Check if it's speed estimation results
+        elif "total_tracks" in result_str:
+            parsed_data["type"] = "speed_estimation"
+            parsed_data["total_tracks"] = solution_results.total_tracks
+
+            # If there are additional attributes in the speed results, extract them
+            # This will depend on what attributes the SolutionResults object has
+            if hasattr(solution_results, "track_speeds"):
+                parsed_data["track_speeds"] = solution_results.track_speeds
+
+            if hasattr(solution_results, "avg_speed"):
+                parsed_data["avg_speed"] = solution_results.avg_speed
+
+            if hasattr(solution_results, "class_speeds"):
+                parsed_data["class_speeds"] = solution_results.class_speeds
+
+        return parsed_data

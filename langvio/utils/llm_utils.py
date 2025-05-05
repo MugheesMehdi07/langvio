@@ -1,5 +1,5 @@
 """
-Utility functions for LLM processing
+Enhanced utility functions for LLM processing with better YOLO11 metrics handling
 """
 
 import json
@@ -24,13 +24,19 @@ def index_detections(
     object_id_counter = 0
 
     for frame_key, frame_detections in detections.items():
+        # Skip non-frame keys like "metrics" or "summary"
+        if not frame_key.isdigit():
+            indexed_detections[frame_key] = frame_detections
+            continue
+
         indexed_detections[frame_key] = []
 
         for det in frame_detections:
-            # Create a copy with object_id
+            # Skip if not a dictionary
             if not isinstance(det, dict):
-                print(det)
                 continue
+
+            # Create a copy with object_id
             object_id = f"obj_{object_id_counter}"
             det_copy = det.copy()
             det_copy["object_id"] = object_id
@@ -53,10 +59,11 @@ def format_detection_summary(
     detections: Dict[str, List[Dict[str, Any]]], query_params: Dict[str, Any]
 ) -> str:
     """
-    Format the detection summary in a structured and readable way.
+    Format the detection summary in a structured and readable way,
+    including YOLO11 metrics if available.
 
     Args:
-        detections: Dictionary with detection results
+        detections: Dictionary with detection results and metrics
         query_params: Parsed query parameters
 
     Returns:
@@ -64,24 +71,84 @@ def format_detection_summary(
     """
     summary_parts = []
 
-    # Count objects by type
+    # Check if we have metrics or summary data from YOLO11
+    has_metrics = "metrics" in detections
+    has_summary = "summary" in detections
+
+    # Add YOLO11 metrics summary if available
+    if has_summary:
+        summary = detections["summary"]
+
+        # Add summary header
+        summary_parts.append("# Summary Analysis")
+
+        # Add object counts
+        if "counts" in summary:
+            summary_parts.append("\n## Object Counts")
+            for label, count in sorted(summary["counts"].items(), key=lambda x: x[1], reverse=True):
+                summary_parts.append(f"- {label}: {count} instances")
+
+        # Add unique tracked objects for videos
+        if "unique_tracked_objects" in summary:
+            summary_parts.append(f"\n## Tracking Information")
+            summary_parts.append(f"- Total unique objects tracked: {summary['unique_tracked_objects']}")
+
+            if "unique_by_type" in summary:
+                summary_parts.append("- Unique objects by type:")
+                for label, count in sorted(summary["unique_by_type"].items(), key=lambda x: x[1], reverse=True):
+                    summary_parts.append(f"  - {label}: {count} unique instances")
+
+        # Add speed data if available
+        if "speed" in summary:
+            summary_parts.append("\n## Speed Information")
+            # Format depends on the exact structure returned by YOLO11
+            if isinstance(summary["speed"], dict):
+                for obj_type, speed_data in summary["speed"].items():
+                    if isinstance(speed_data, (int, float)):
+                        summary_parts.append(f"- Average speed of {obj_type}: {speed_data:.1f} units/s")
+                    elif isinstance(speed_data, dict) and "avg_speed" in speed_data:
+                        summary_parts.append(f"- Average speed of {obj_type}: {speed_data['avg_speed']:.1f} units/s")
+
+        # Add counting data if available
+        if "counting" in summary:
+            summary_parts.append("\n## Object Counting")
+            counting_data = summary["counting"]
+            if isinstance(counting_data, dict):
+                for count_type, count_value in counting_data.items():
+                    summary_parts.append(f"- {count_type}: {count_value}")
+
+        # Add frame info for videos
+        if "total_frames_analyzed" in summary:
+            summary_parts.append(f"\n## Video Analysis")
+            summary_parts.append(f"- Total frames analyzed: {summary['total_frames_analyzed']}")
+
+        # Add a separator
+        summary_parts.append("\n" + "-" * 40 + "\n")
+
+    # Count objects by type from basic detections
     object_counts = {}
     object_details = []
 
-    # Process the detections
-    if isinstance(detections, dict) and len(detections) > 0:
+    # Process the detection frames (skip metadata keys)
+    frame_keys = [k for k in detections.keys() if k.isdigit()]
+
+    if frame_keys:
         # For images (single frame) or videos (multiple frames)
-        is_video = len(detections) > 1
+        is_video = len(frame_keys) > 1
 
         if is_video:
-            summary_parts.append(f"Analyzed {len(detections)} frames of video")
+            summary_parts.append(f"Analyzed {len(frame_keys)} frames of video")
 
         # Collect statistics and object details
-        for frame_key, frame_detections in detections.items():
+        for frame_key in frame_keys:
             frame_prefix = f"Frame {frame_key}: " if is_video else ""
+            frame_detections = detections[frame_key]
 
             for det in frame_detections:
-                label = det["label"]
+                if not isinstance(det, dict):
+                    continue
+
+                label = det.get("label", "unknown")
                 object_id = det.get("object_id", "unknown")
 
                 # Update counts
@@ -117,17 +184,15 @@ def format_detection_summary(
 
                 object_details.append(obj_details)
 
-        # Add object counts to summary
-        if object_counts:
-            summary_parts.append("Object counts:")
-            for label, count in sorted(
-                object_counts.items(), key=lambda x: x[1], reverse=True
-            ):
+        # Add object counts to summary if not already added from summary data
+        if not has_summary and object_counts:
+            summary_parts.append("Basic Object Counts:")
+            for label, count in sorted(object_counts.items(), key=lambda x: x[1], reverse=True):
                 summary_parts.append(f"- {label}: {count} instances")
 
         # Add detailed object list (limited to avoid overwhelming the LLM)
         if object_details:
-            summary_parts.append("\nDetailed object list:")
+            summary_parts.append("\nDetailed Object List:")
             # Limit to 50 objects to keep context manageable
             for detail in object_details[:50]:
                 summary_parts.append(f"- {detail}")

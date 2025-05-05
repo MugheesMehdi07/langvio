@@ -139,7 +139,7 @@ class Pipeline:
     def process(self, query: str, media_path: str) -> Dict[str, Any]:
         """
         Process a query on media with enhanced capabilities.
-        Modified to pass all objects to the LLM before filtering for visualization.
+        Integrates YOLO detections with YOLO11 metrics, then passes to LLM.
 
         Args:
             query: Natural language query
@@ -177,11 +177,11 @@ class Pipeline:
         is_video = is_video_file(media_path)
         media_type = "video" if is_video else "image"
 
-        # Process query with LLM
+        # Process query with LLM to get structured parameters
         query_params = self.llm_processor.parse_query(query)
         self.logger.info(f"Parsed query params: {query_params}")
 
-        # Run detection with vision processor - WITHOUT INITIAL FILTERING
+        # Run detection with vision processor
         if is_video:
             # For video processing, check if we need to adjust sample rate based on task
             sample_rate = 5  # Default
@@ -189,17 +189,17 @@ class Pipeline:
                 # Use a more frequent sampling for tracking and activity detection
                 sample_rate = 2
 
-            # Get all detections without filtering
+            # Get all detections with YOLO11 metrics integrated
             all_detections = self.vision_processor.process_video(
                 media_path, query_params, sample_rate
             )
         else:
-            # Get all detections without filtering
+            # Get all detections with YOLO11 metrics integrated for image
             all_detections = self.vision_processor.process_image(
                 media_path, query_params
             )
 
-            # Generate explanation using ALL detected objects
+        # Generate explanation using all detected objects and metrics
         explanation = self.llm_processor.generate_explanation(query, all_detections)
 
         # Get highlighted objects from the LLM processor
@@ -282,12 +282,6 @@ class Pipeline:
         Returns:
             Path to the output visualization
         """
-        # Import vision utils
-        from langvio.utils.vision_utils import (
-            create_visualization_detections_for_image,
-            create_visualization_detections_for_video,
-        )
-
         # Generate output path
         output_path = self.media_processor.get_output_path(media_path)
 
