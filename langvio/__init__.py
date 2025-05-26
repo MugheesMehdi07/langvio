@@ -82,7 +82,7 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
     else:
         # Default to YOLOe for best performance
         try:
-            pipeline.set_vision_processor("yoloe")
+            pipeline.set_vision_processor("yoloe_large")
         except:
             # Fall back to YOLO if YOLOe is not available
             pipeline.set_vision_processor("yolo")

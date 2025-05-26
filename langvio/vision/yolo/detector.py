@@ -1,5 +1,5 @@
 """
-Enhanced YOLO-based vision processor with YOLO11 utilities integration
+Simplified YOLO-based vision processor with integrated YOLOe and YOLO11 processing
 """
 
 import logging
@@ -7,19 +7,24 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
+import numpy as np
 import torch
 from ultralytics import YOLO, YOLOE
 
 from langvio.prompts.constants import DEFAULT_CONFIDENCE_THRESHOLD, DEFAULT_VIDEO_SAMPLE_RATE
 from langvio.vision.base import BaseVisionProcessor
-from langvio.vision.utils import extract_detections, optimize_for_memory
-from langvio.vision.yolo.yolo11_utils import (process_video_with_yolo11,
-                                             process_image_with_yolo11,
-                                             check_yolo11_solutions_available)
+from langvio.vision.utils import extract_detections, optimize_for_memory, calculate_relative_positions, detect_spatial_relationships
+from langvio.vision.yolo.yolo11_utils import (
+    check_yolo11_solutions_available,
+    create_object_counter,
+    create_speed_estimator,
+    process_frame_with_yolo11,
+    parse_solution_results, initialize_yolo11_tools
+)
 
 
 class YOLOProcessor(BaseVisionProcessor):
-    """Enhanced vision processor using YOLO models with YOLO11 utilities integration"""
+    """Simplified vision processor using YOLO models with integrated YOLO11 metrics"""
 
     def __init__(self, name: str, model_path: str, confidence: float = DEFAULT_CONFIDENCE_THRESHOLD, **kwargs):
         """
@@ -41,6 +46,13 @@ class YOLOProcessor(BaseVisionProcessor):
         self.model = None
         self.model_type = kwargs.get("model_type", "yolo")
 
+        # Check YOLO11 Solutions availability
+        self.has_yolo11_solutions = check_yolo11_solutions_available()
+        if self.has_yolo11_solutions:
+            self.logger.info("YOLO11 Solutions is available for metrics")
+        else:
+            self.logger.info("YOLO11 Solutions not available - using basic detection only")
+
     def initialize(self) -> bool:
         """
         Initialize the YOLO model.
@@ -51,35 +63,56 @@ class YOLOProcessor(BaseVisionProcessor):
         try:
             self.logger.info(f"Loading {self.model_type} model: {self.config['model_path']}")
 
-            # Determine model type (YOLO or YOLOe)
+            # Use YOLOE by default for better performance
             if self.model_type == "yoloe":
                 self.model = YOLOE(self.config['model_path'])
             else:
                 self.model = YOLO(self.config['model_path'])
-
-            # Check if YOLO11 Solutions is available
-            self.has_yolo11_solutions = check_yolo11_solutions_available()
-            if self.has_yolo11_solutions:
-                self.logger.info("YOLO11 Solutions is available for advanced metrics")
-            else:
-                self.logger.info("YOLO11 Solutions not available - using basic detection only")
 
             return True
         except Exception as e:
             self.logger.error(f"Error loading YOLO model: {e}")
             return False
 
+    def initialize_video_capture(self, video_path: str) -> Tuple[cv2.VideoCapture, Tuple[int, int, float, int]]:
+        """
+        Initialize video capture and extract video properties.
+
+        Args:
+            video_path: Path to the video file
+
+        Returns:
+            Tuple containing (video_capture, (width, height, fps, total_frames))
+
+        Raises:
+            ValueError: If video cannot be opened
+        """
+        # Open video
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise ValueError(f"Failed to open video: {video_path}")
+
+        # Get video properties
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 0:
+            fps = 25.0  # Default FPS
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        return cap, (width, height, fps, total_frames)
+
     def process_image(self, image_path: str, query_params: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Process an image with YOLO with enhanced detection capabilities.
-        Uses YOLO11 Solutions for advanced metrics if available.
+        Process an image with YOLOe with enhanced detection capabilities.
+        For images: only uses YOLOe with attribute computation.
 
         Args:
             image_path: Path to the input image
             query_params: Parameters from the query processor
 
         Returns:
-            Dictionary with all detection results and metrics
+            Dictionary with detection results and attributes
         """
         self.logger.info(f"Processing image: {image_path}")
 
@@ -94,41 +127,25 @@ class YOLOProcessor(BaseVisionProcessor):
                 # Get image dimensions for relative positioning
                 image_dimensions = self._get_image_dimensions(image_path)
 
-                # Run basic object detection
+                # Run basic object detection with YOLOe
                 results = self.model(image_path, conf=self.config["confidence"])
 
                 # Extract detections
                 detections = extract_detections(results)
 
-                # Enhance detections with attributes based on the image
+                # Add position, size and color attributes to detections
                 detections = self._enhance_detections_with_attributes(detections, image_path)
 
-                # Calculate relative positions if image dimensions provided
+                # Calculate relative positions
                 if image_dimensions:
-                    from langvio.vision.utils import calculate_relative_positions, detect_spatial_relationships
                     detections = calculate_relative_positions(detections, *image_dimensions)
                     detections = detect_spatial_relationships(detections)
 
-                # Set up frame_detections with basic detections
+                # Create result with detections
                 frame_detections = {"0": detections}
 
-                # Process with YOLO11 Solutions if available
-                if self.has_yolo11_solutions and query_params.get("task_type") in ["counting", "analysis"]:
-                    try:
-                        yolo11_metrics = process_image_with_yolo11(
-                            image_path=image_path,
-                            model_path=self.config["model_path"],
-                            confidence=self.config["confidence"]
-                        )
-
-                        # Add metrics to result
-                        frame_detections["metrics"] = yolo11_metrics
-
-                        # Create a summary combining basic detections with metrics
-                        frame_detections["summary"] = self._create_summary(detections, yolo11_metrics)
-
-                    except Exception as e:
-                        self.logger.error(f"Error processing image with YOLO11 solutions: {e}")
+                # Create a simple summary of detections
+                frame_detections["summary"] = self._create_simple_summary(detections)
 
                 return frame_detections
 
@@ -143,10 +160,10 @@ class YOLOProcessor(BaseVisionProcessor):
             video_path: str,
             query_params: Dict[str, Any],
             sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
+            show_frame: bool = False
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Process a video with YOLO with enhanced activity and tracking detection.
-        Uses YOLO11 Solutions for advanced metrics if available.
+        Process a video in a single loop, running both YOLOe and YOLO11 on each frame.
 
         Args:
             video_path: Path to the input video
@@ -154,131 +171,188 @@ class YOLOProcessor(BaseVisionProcessor):
             sample_rate: Process every Nth frame
 
         Returns:
-            Dictionary with all detection results, tracking, and metrics
+            Dictionary with combined detection results and metrics
         """
-        self.logger.info(f"Processing video: {video_path} (sample rate: {sample_rate})")
+        self.logger.info(f"Processing video: {video_path}")
 
         # Load model if not already loaded
         if not self.model:
             self.initialize()
 
-        with torch.no_grad():
-            try:
-                optimize_for_memory()
+        # Initialize results container
+        frame_detections = {}
+        counter_results = None
+        speed_results = None
+        cap = None
 
-                # Get video properties
-                cap = cv2.VideoCapture(video_path)
-                if not cap.isOpened():
-                    raise ValueError(f"Failed to open video: {video_path}")
+        try:
+            # 1. Initialize video and auxiliary tools
+            cap, video_props = self.initialize_video_capture(video_path)
+            width, height, fps, total_frames = video_props
+            counter, speed_estimator = initialize_yolo11_tools(width, height)
 
-                # Get video dimensions
-                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                video_dimensions = (width, height)
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                if fps <= 0:
-                    fps = 25.0  # Default FPS
+            # 2. Process all frames
+            frame_idx = 0
+            with torch.no_grad():
+                while cap.isOpened():
+                    # Read frame
+                    success, frame = cap.read()
+                    if not success:
+                        break
 
-                cap.release()  # Release and reopen for processing
+                    cv2.imshow("Video Frame", frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
 
-                # Process frames with tracking for consistent IDs
-                frame_detections = {}
 
-                # Use tracking for the whole video to get consistent track IDs
-                results = self.model.track(
-                    source=video_path,
-                    conf=self.config["confidence"],
-                    persist=True,
-                    stream=True  # Stream for memory efficiency
-                )
-
-                # Process each frame from the tracking results
-                for frame_idx, result in enumerate(results):
-                    # Process every Nth frame (according to sample_rate)
-                    if frame_idx % sample_rate != 0:
-                        continue
-
-                    # Extract detections with track IDs
-                    detections = []
-
-                    if result.boxes and hasattr(result.boxes, 'id') and result.boxes.id is not None:
-                        boxes = result.boxes.xyxy.cpu().numpy()
-                        track_ids = result.boxes.id.int().cpu().numpy()
-                        cls_ids = result.boxes.cls.int().cpu().numpy()
-                        confs = result.boxes.conf.cpu().numpy()
-
-                        for i, (box, track_id, cls_id, conf) in enumerate(zip(boxes, track_ids, cls_ids, confs)):
-                            x1, y1, x2, y2 = map(int, box)
-                            label = self.model.names[cls_id]
-
-                            # Calculate center and dimensions
-                            center_x = (x1 + x2) / 2
-                            center_y = (y1 + y2) / 2
-                            width = x2 - x1
-                            height = y2 - y1
-
-                            detection = {
-                                "label": label,
-                                "confidence": float(conf),
-                                "bbox": [x1, y1, x2, y2],
-                                "class_id": int(cls_id),
-                                "track_id": int(track_id),
-                                "center": (float(center_x), float(center_y)),
-                                "dimensions": (float(width), float(height)),
-                                "area": float(width * height),
-                                "attributes": {},
-                                "activities": []
-                            }
-
-                            detections.append(detection)
-
-                    # Calculate relative positions and relationships
-                    from langvio.vision.utils import calculate_relative_positions, detect_spatial_relationships
-                    detections = calculate_relative_positions(detections, *video_dimensions)
-                    detections = detect_spatial_relationships(detections)
-
-                    # Enhance with attributes (using original frame from result)
-                    if hasattr(result, 'orig_img'):
-                        # For video frames, we pass the actual frame instead of a path
-                        detections = self._enhance_detections_with_attributes(
-                            detections, None, result.orig_img
-                        )
-
-                    # Store results for this frame
-                    frame_detections[str(frame_idx)] = detections
-
-                # Analyze for activities across frames
-                if frame_detections:
-                    frame_detections = self._analyze_video_for_activities(
-                        frame_detections, query_params
+                    # Process every Nth frame based on sample_rate
+                    # if frame_idx % sample_rate == 0:
+                    result = self._process_single_frame(
+                        frame, frame_idx, total_frames,
+                        width, height,
+                        counter, speed_estimator
                     )
 
-                # Process with YOLO11 Solutions for additional metrics if available
-                if self.has_yolo11_solutions and query_params.get("task_type") in ["counting", "analysis", "tracking", "activity"]:
-                    try:
-                        yolo11_metrics = process_video_with_yolo11(
-                            video_path=video_path,
-                            model_path=self.config["model_path"],
-                            sample_rate=sample_rate,
-                            confidence=self.config["confidence"]
-                        )
 
-                        # Add metrics to result
-                        frame_detections["metrics"] = yolo11_metrics
+                    # Extract results
+                    detections = result.get("detections", [])
 
-                        # Create summary combining detections with metrics
-                        frame_detections["summary"] = self._create_video_summary(frame_detections, yolo11_metrics)
+                    for det in detections:
+                        if "bbox" not in det or "label" not in det:
+                            continue
 
-                    except Exception as e:
-                        self.logger.error(f"Error processing video with YOLO11 solutions: {e}")
+                        x1, y1, x2, y2 = map(int, det["bbox"])
+                        label = det["label"]
+                        color = (0, 255, 0)  # Green bounding box
 
-                return frame_detections
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                        cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.6, color, 2)
 
-            except Exception as e:
-                self.logger.error(f"Error processing video: {e}")
-                import traceback
-                self.logger.error(traceback.format_exc())
-                return {"error": str(e)}
+                        frame_detections[str(frame_idx)] = detections
+
+                        # Update metrics if available
+                        if "counter_result" in result and result["counter_result"]:
+                            counter_results = result["counter_result"]
+                        if "speed_result" in result and result["speed_result"]:
+                            speed_results = result["speed_result"]
+
+                    # Increment frame counter
+                    frame_idx += 1
+
+            # 3. Create summary from results
+            return self._finalize_results(frame_detections, counter_results, speed_results)
+
+        except Exception as e:
+            self.logger.error(f"Error processing video: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return {"error": str(e)}
+        finally:
+            # Ensure resources are properly released
+            if cap is not None:
+                cap.release()
+
+    def _process_single_frame(
+            self,
+            frame: np.ndarray,
+            frame_idx: int,
+            total_frames: int,
+            width: int,
+            height: int,
+            counter: Any,
+            speed_estimator: Any
+    ) -> Dict[str, Any]:
+        """
+        Process a single video frame with both YOLOe and YOLO11.
+
+        Args:
+            frame: The video frame to process
+            frame_idx: Current frame index
+            total_frames: Total number of frames
+            width: Video width
+            height: Video height
+            counter: YOLO11 counter object or None
+            speed_estimator: YOLO11 speed estimator object or None
+
+        Returns:
+            Dictionary with frame processing results
+        """
+        result = {
+            "detections": [],
+            "counter_result": None,
+            "speed_result": None
+        }
+
+        try:
+            self.logger.info(f"Processing frame {frame_idx}/{total_frames}")
+
+            # 1. Run basic object detection with YOLOe
+            model_results = self.model(frame, conf=self.config["confidence"])
+
+            # 2. Extract and enhance detections
+            detections = extract_detections(model_results)
+
+            if len(detections) > 0:
+                # Add position, size and color attributes to detections
+                detections = self._enhance_detections_with_attributes(detections, None, frame)
+
+                # Calculate relative positions
+                detections = calculate_relative_positions(detections, width, height)
+                detections = detect_spatial_relationships(detections)
+
+            result["detections"] = detections
+
+            # 3. Run YOLO11 metrics if available
+            if self.has_yolo11_solutions and (counter or speed_estimator):
+                try:
+                    counter_frame, speed_frame = process_frame_with_yolo11(
+                        frame, counter, speed_estimator
+                    )
+                    result["counter_result"] = counter_frame
+                    result["speed_result"] = speed_frame
+                except Exception as e:
+                    self.logger.warning(f"YOLO11 processing error on frame {frame_idx}: {e}")
+
+        except Exception as e:
+            self.logger.warning(f"Error processing frame {frame_idx}: {e}")
+            # We return partial results instead of raising to continue processing
+
+        return result
+
+    def _finalize_results(
+            self,
+            frame_detections: Dict[str, List[Dict[str, Any]]],
+            counter_results: Any,
+            speed_results: Any
+    ) -> Dict[str, Any]:
+        """
+        Finalize and structure the results with metrics and summaries.
+
+        Args:
+            frame_detections: Dictionary mapping frame indices to detections
+            counter_results: Results from the YOLO11 counter
+            speed_results: Results from the YOLO11 speed estimator
+
+        Returns:
+            Structured results dictionary
+        """
+        # Parse YOLO11 metrics for easier use by LLM
+        metrics = {}
+        if counter_results:
+            metrics["counting"] = parse_solution_results(counter_results)
+        if speed_results:
+            metrics["speed"] = parse_solution_results(speed_results)
+
+        # Add metrics to result if available
+        if metrics:
+            frame_detections["metrics"] = metrics
+            frame_detections["summary"] = self._create_combined_summary(frame_detections, metrics)
+        else:
+            # Create basic summary without metrics
+            frame_detections["summary"] = self._create_simple_summary(frame_detections)
+
+        return frame_detections
 
     def _enhance_detections_with_attributes(
         self,
@@ -287,7 +361,7 @@ class YOLOProcessor(BaseVisionProcessor):
         image: Optional[Any] = None
     ) -> List[Dict[str, Any]]:
         """
-        Enhance detections with attribute information.
+        Enhance detections with size and color attributes.
 
         Args:
             detections: List of detection dictionaries
@@ -295,7 +369,7 @@ class YOLOProcessor(BaseVisionProcessor):
             image: Direct image array for video frames (optional)
 
         Returns:
-            Detections with added attributes
+            Detections with added size and color attributes
         """
         # Load image if path is provided and image is not
         if image_path and image is None:
@@ -325,13 +399,13 @@ class YOLOProcessor(BaseVisionProcessor):
                 continue
 
             # Get the object region
-            obj_region = image[y1:y2, x1:x2]
+            obj_region = image[int(y1):int(y2), int(x1):int(x2)]
 
             # Initialize attributes dictionary if not present
             if "attributes" not in det:
                 det["attributes"] = {}
 
-            # Calculate basic size attribute
+            # Calculate size attribute
             area = (x2 - x1) * (y2 - y1)
             image_area = image_width * image_height
             relative_size = area / image_area
@@ -353,100 +427,108 @@ class YOLOProcessor(BaseVisionProcessor):
                 det["attributes"]["color"] = color_info["dominant_color"]
                 det["attributes"]["is_multicolored"] = color_info["is_multicolored"]
 
-                # Add all detected colors
-                det["attributes"]["colors"] = list(color_info["color_percentages"].keys())
-
         return detections
 
-    def _create_summary(self, detections: List[Dict[str, Any]], metrics: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_simple_summary(self, detections) -> Dict[str, Any]:
         """
-        Create a summary that combines basic detections with YOLO11 metrics for images.
+        Create a simple summary from basic YOLOe detections.
 
         Args:
-            detections: List of detection dictionaries
-            metrics: YOLO11 metrics
+            detections: Either a list of detections (for images) or
+                        a dictionary of frames with detections (for videos)
 
         Returns:
             Summary dictionary
         """
-        # Count objects by type
-        counts = {}
-        for det in detections:
-            label = det["label"]
-            if label not in counts:
-                counts[label] = 0
-            counts[label] += 1
-
-        # Create summary
-        summary = {
-            "counts": counts,
-            "total_objects": len(detections),
-            "object_types": list(counts.keys())
-        }
-
-        # Add YOLO11 metrics if available
-        if metrics:
-            if "counting" in metrics:
-                summary["counting"] = metrics["counting"]
-
-            if "distance" in metrics:
-                summary["distance"] = metrics["distance"]
-
-        return summary
-
-    def _create_video_summary(self, frame_detections: Dict[str, List[Dict[str, Any]]], metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a summary that combines frame detections with YOLO11 metrics for videos.
-
-        Args:
-            frame_detections: Dictionary of frame detections
-            metrics: YOLO11 metrics
-
-        Returns:
-            Summary dictionary
-        """
-        # Count objects by type across all frames
-        counts = {}
-        track_ids = set()
-
-        for frame_key, detections in frame_detections.items():
-            if not frame_key.isdigit():  # Skip non-frame keys like "metrics" or "summary"
-                continue
-
+        # For a single image (list of detections)
+        if isinstance(detections, list):
+            # Count objects by type
+            counts = {}
             for det in detections:
                 label = det["label"]
                 if label not in counts:
                     counts[label] = 0
                 counts[label] += 1
 
-                # Track unique objects by track_id
-                if "track_id" in det:
-                    track_ids.add((label, det["track_id"]))
+            return {
+                "counts": counts,
+                "total_objects": len(detections),
+                "object_types": list(counts.keys())
+            }
 
-        # Create summary
-        summary = {
-            "counts": counts,
-            "total_frames_analyzed": len([k for k in frame_detections.keys() if k.isdigit()]),
-            "total_detections": sum(counts.values()),
-            "unique_tracked_objects": len(track_ids),
-            "object_types": list(counts.keys())
-        }
+        # For a video (dictionary of frames)
+        elif isinstance(detections, dict):
+            # Count objects by type across all frames
+            counts = {}
+            track_ids = set()
 
-        # Count unique objects by type
-        unique_by_type = {}
-        for label, _ in track_ids:
-            if label not in unique_by_type:
-                unique_by_type[label] = 0
-            unique_by_type[label] += 1
+            # Go through all frame keys
+            for frame_key, frame_detections in detections.items():
+                if not frame_key.isdigit():  # Skip non-frame keys
+                    continue
 
-        summary["unique_by_type"] = unique_by_type
+                for det in frame_detections:
+                    label = det["label"]
+                    if label not in counts:
+                        counts[label] = 0
+                    counts[label] += 1
+
+                    # Track unique objects by track_id
+                    if "track_id" in det:
+                        track_ids.add((label, det["track_id"]))
+
+            # Count unique objects by type
+            unique_by_type = {}
+            for label, _ in track_ids:
+                if label not in unique_by_type:
+                    unique_by_type[label] = 0
+                unique_by_type[label] += 1
+
+            return {
+                "counts": counts,
+                "total_frames_analyzed": len([k for k in detections.keys() if k.isdigit()]),
+                "total_detections": sum(counts.values()),
+                "unique_tracked_objects": len(track_ids),
+                "unique_by_type": unique_by_type,
+                "object_types": list(counts.keys())
+            }
+
+        # Default empty summary
+        return {}
+
+    def _create_combined_summary(self, frame_detections: Dict[str, Any], metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a combined summary that merges YOLOe detections with YOLO11 metrics.
+
+        Args:
+            frame_detections: Dictionary with frame-by-frame detections
+            metrics: Dictionary with YOLO11 metrics
+
+        Returns:
+            Combined summary dictionary
+        """
+        # Get basic summary from YOLOe
+        summary = self._create_simple_summary(frame_detections)
 
         # Add YOLO11 metrics if available
         if metrics:
             if "counting" in metrics:
-                summary["counting"] = metrics["counting"]
+                counting = metrics["counting"]
+                if "summary" in counting:
+                    summary["counting_summary"] = counting["summary"]
+                if "in_count" in counting and "out_count" in counting:
+                    summary["in_count"] = counting["in_count"]
+                    summary["out_count"] = counting["out_count"]
+                if "class_counts" in counting:
+                    summary["class_direction_counts"] = counting["class_counts"]
 
             if "speed" in metrics:
-                summary["speed"] = metrics["speed"]
+                speed = metrics["speed"]
+                if "total_tracks" in speed:
+                    summary["tracked_objects_with_speed"] = speed["total_tracks"]
+                if "avg_speed" in speed:
+                    summary["average_speed"] = speed["avg_speed"]
+                if "class_speeds" in speed:
+                    summary["class_speeds"] = speed["class_speeds"]
 
         return summary

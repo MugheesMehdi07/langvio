@@ -1,15 +1,11 @@
 """
-Enhanced utility functions that use YOLO11 Solutions for visual analysis
-The key improvement is integration of object counting, distance calculation, and speed estimation
+YOLO11 utilities for object counting, speed estimation, and more
 """
 
 import logging
-import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-import cv2
-import numpy as np
-import torch
+from langvio.prompts.constants import YOLO11_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -29,212 +25,208 @@ def check_yolo11_solutions_available() -> bool:
         return False
 
 
-def process_image_with_yolo11(
-        image_path: str,
-        model_path: str,
-        confidence: float = 0.5
-) -> Dict[str, Any]:
+def initialize_yolo11_tools(width: int, height: int) -> Tuple[Any, Any]:
     """
-    Process an image with YOLO11 Solutions, applying counting and distance metrics.
+    Initialize YOLO11 Solutions tools if available.
 
     Args:
-        image_path: Path to the image file
-        model_path: Path to the YOLO model file
-        confidence: Confidence threshold for detections
+        width: Video width
+        height: Video height
 
     Returns:
-        Dictionary with metrics from YOLO11 Solutions
+        Tuple containing (counter, speed_estimator) - may be None if not available
     """
-    try:
-        # Check if YOLO11 Solutions is available
-        if not check_yolo11_solutions_available():
-            return {"error": "YOLO11 Solutions not available"}
+    counter = None
+    speed_estimator = None
+    has_yolo11_solutions=False
 
+    # Check if YOLO11 Solutions are available
+    has_yolo11_solutions = check_yolo11_solutions_available()
+
+    if has_yolo11_solutions:
+        try:
+            yolo11_config = YOLO11_CONFIG
+            # Create counter with region covering the full frame
+            counter = create_object_counter(
+                model_path=yolo11_config["model_path"],
+                confidence=yolo11_config["confidence"],
+                region=[(0, 0), (width, 0), (width, height), (0, height)]
+            )
+
+            # Create speed estimator
+            speed_estimator = create_speed_estimator(
+                model_path=yolo11_config["model_path"],
+                confidence=yolo11_config["confidence"],
+                region_width=width
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize YOLO11 tools: {e}")
+            has_yolo11_solutions = False
+
+    return counter, speed_estimator
+
+def create_object_counter(model_path: str, confidence: float, region: Optional[list] = None):
+    """
+    Create a YOLO11 ObjectCounter.
+
+    Args:
+        model_path: Path to the YOLO model
+        confidence: Confidence threshold
+        region: Optional counting region coordinates [(x1,y1), (x2,y2), (x3,y3), (x4,y4)]
+
+    Returns:
+        ObjectCounter object or None if not available
+    """
+    if not check_yolo11_solutions_available():
+        return None
+
+    try:
         from ultralytics import solutions
 
-        # Read the image
-        image = cv2.imread(image_path)
-        if image is None:
-            return {"error": f"Failed to read image: {image_path}"}
+        if region is None:
+            # Default region covers entire frame and will be adjusted in first frame
+            region = [(0, 0), (100, 0), (100, 100), (0, 100)]
 
-        height, width = image.shape[:2]
-
-        # Initialize solution objects
         counter = solutions.ObjectCounter(
             model=model_path,
-            region=[(0, 0), (width, 0), (width, height), (0, height)],
+            region=region,
             classes=[],  # Count all classes
-            conf=confidence,
-            verbose=False
-        )
-
-        distance_calculator = solutions.DistanceCalculation(
-            model=model_path,
-            conf=confidence,
-            verbose=False
-        )
-
-        # Process with solutions
-        counter_results = counter.predict(image)
-        distance_results = distance_calculator.predict(image)
-
-        # Extract metrics
-        metrics = {
-            "counting": counter_results,
-            "distance": distance_results
-        }
-
-        return metrics
-
-    except Exception as e:
-        logger.error(f"Error processing image with YOLO11: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return {"error": str(e)}
-
-
-def process_video_with_yolo11(
-        video_path: str,
-        model_path: str,
-        sample_rate: int = 5,
-        confidence: float = 0.5
-) -> Dict[str, Any]:
-    """
-    Process a video with YOLO11 Solutions, applying counting, distance, and speed metrics.
-
-    Args:
-        video_path: Path to the video file
-        model_path: Path to the YOLO model file
-        sample_rate: Process every Nth frame
-        confidence: Confidence threshold for detections
-
-    Returns:
-        Dictionary with metrics from YOLO11 Solutions
-    """
-    try:
-        # Check if YOLO11 Solutions is available
-        if not check_yolo11_solutions_available():
-            return {"error": "YOLO11 Solutions not available"}
-
-        from ultralytics import solutions
-
-        # Open video capture
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            return {"error": f"Failed to open video: {video_path}"}
-
-        # Get video properties
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps <= 0:
-            fps = 25.0  # Default FPS
-
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        # Initialize solution objects
-        counter = solutions.ObjectCounter(
-            model=model_path,
-            region=[(0, 0), (width, 0), (width, height), (0, height)],
-            verbose=False,
             show=False
         )
 
-        speed_estimator = solutions.SpeedEstimator(
-            model=model_path,
-            verbose=False,
-            show=False,
-        )
-
-        # Initialize results
-        counter_results = None
-        speed_results = None
-        frame_idx = 0
-
-        # Process key frames
-        while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
-                break
-
-            # Process at sample rate
-            if frame_idx % sample_rate == 0:
-                logger.info(f"Processing frame {frame_idx}/{total_frames} for metrics")
-
-                    # Update counter (keeps track of objects across frames)
-                counter_frame = counter(frame)
-                counter_results = counter_frame
-
-                # Update speed estimator
-                speed_frame = speed_estimator(frame)
-                speed_results = speed_frame
-
-            frame_idx += 1
-
-        # Release video capture
-        cap.release()
-
-        # Compile metrics
-        metrics = {
-            "counting": counter_results,
-            "speed": speed_results,
-            "frames_processed": frame_idx // sample_rate
-        }
-        print(f"Metrics: {metrics}")
-        return metrics
-
+        return counter
     except Exception as e:
-        logger.error(f"Error processing video with YOLO11: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return {"error": str(e)}
+        logger.error(f"Error creating object counter: {e}")
+        return None
 
 
-def combine_metrics(basic_detections: Dict[str, List[Dict[str, Any]]], yolo11_metrics: Dict[str, Any]) -> Dict[str, Any]:
+def create_speed_estimator(model_path: str, confidence: float, region_width: Optional[int] = None):
     """
-    Combine basic YOLO detections with advanced YOLO11 metrics.
+    Create a YOLO11 SpeedEstimator.
 
     Args:
-        basic_detections: Dictionary with basic detection results
-        yolo11_metrics: Dictionary with YOLO11 metrics
+        model_path: Path to the YOLO model
+        confidence: Confidence threshold
+        region_width: Optional width of the region in pixels
 
     Returns:
-        Combined metrics dictionary
+        SpeedEstimator object or None if not available
     """
-    combined = {}
+    if not check_yolo11_solutions_available():
+        return None
 
-    # Count objects by type from basic detections
-    counts = {}
-    track_ids = set()
+    try:
+        from ultralytics import solutions
 
-    for frame_key, detections in basic_detections.items():
-        if not frame_key.isdigit():  # Skip non-frame keys like "metrics"
-            continue
+        # Create speed estimator
+        speed_estimator = solutions.SpeedEstimator(
+            model=model_path,
+            conf=confidence,
+            show=False,
+            verbose=False
+        )
 
-        for det in detections:
-            label = det["label"]
-            if label not in counts:
-                counts[label] = 0
-            counts[label] += 1
+        return speed_estimator
+    except Exception as e:
+        logger.error(f"Error creating speed estimator: {e}")
+        return None
 
-            # Track unique objects by track_id
-            if "track_id" in det:
-                track_ids.add((label, det["track_id"]))
 
-    # Add basic detection counts
-    combined["counts"] = counts
-    combined["total_objects"] = sum(counts.values())
-    combined["unique_tracked_objects"] = len(track_ids)
+def process_frame_with_yolo11(frame, counter, speed_estimator):
+    """
+    Process a single frame with YOLO11 Solutions.
 
-    # Add YOLO11 metrics if available
-    if yolo11_metrics:
-        if "counting" in yolo11_metrics:
-            combined["yolo11_counts"] = yolo11_metrics["counting"]
+    Args:
+        frame: CV2 frame
+        counter: Object counter instance
+        speed_estimator: Speed estimator instance
 
-        if "speed" in yolo11_metrics:
-            combined["speed_data"] = yolo11_metrics["speed"]
+    Returns:
+        Tuple of (counter_results, speed_results)
+    """
+    counter_results = None
+    speed_results = None
 
-        if "distance" in yolo11_metrics:
-            combined["distance_data"] = yolo11_metrics["distance"]
+    try:
+        # Update counter if available
+        if counter:
+            counter_results = counter(frame.copy())
 
-    return combined
+        # Update speed estimator if available
+        if speed_estimator:
+            speed_results = speed_estimator(frame.copy())
+
+    except Exception as e:
+        logger.error(f"Error processing frame with YOLO11: {e}")
+
+    return counter_results, speed_results
+
+
+def parse_solution_results(solution_results: Any) -> Dict[str, Any]:
+    """
+    Convert YOLO11 SolutionResults objects to well-structured dictionaries.
+
+    Args:
+        solution_results: Either object counting or speed estimation results
+            from YOLO11 Solutions
+
+    Returns:
+        Dictionary with structured information
+    """
+    # If no results or not a proper object, return empty dict
+    if not solution_results:
+        return {}
+
+    # Create a base dictionary
+    parsed_data = {}
+
+    # Check if it's object counting results
+    if hasattr(solution_results, "in_count") and hasattr(solution_results, "out_count"):
+        # Extract the basic counts
+        parsed_data["type"] = "object_counting"
+        parsed_data["in_count"] = solution_results.in_count
+        parsed_data["out_count"] = solution_results.out_count
+        parsed_data["total_tracks"] = solution_results.total_tracks
+
+        # Extract class-wise counts in a more accessible format
+        class_counts = {}
+        if hasattr(solution_results, "classwise_count"):
+            for class_name, directions in solution_results.classwise_count.items():
+                # Only include classes that have non-zero counts
+                if directions["IN"] > 0 or directions["OUT"] > 0:
+                    class_counts[class_name] = {
+                        "in": directions["IN"],
+                        "out": directions["OUT"],
+                        "total": directions["IN"] + directions["OUT"]
+                    }
+
+        parsed_data["class_counts"] = class_counts
+
+        # Add a summary for quick access
+        active_classes = list(class_counts.keys())
+        most_common = None
+        if class_counts:
+            most_common = max(class_counts.items(), key=lambda x: x[1]["total"])[0]
+
+        parsed_data["summary"] = {
+            "total_objects": parsed_data["in_count"] + parsed_data["out_count"],
+            "active_classes": active_classes,
+            "most_common_class": most_common
+        }
+
+    # Check if it's speed estimation results
+    elif hasattr(solution_results, "total_tracks"):
+        parsed_data["type"] = "speed_estimation"
+        parsed_data["total_tracks"] = solution_results.total_tracks
+
+        # If there are additional attributes in the speed results, extract them
+        if hasattr(solution_results, "track_speeds"):
+            parsed_data["track_speeds"] = solution_results.track_speeds
+
+        if hasattr(solution_results, "avg_speed"):
+            parsed_data["avg_speed"] = solution_results.avg_speed
+
+        if hasattr(solution_results, "class_speeds"):
+            parsed_data["class_speeds"] = solution_results.class_speeds
+
+    return parsed_data

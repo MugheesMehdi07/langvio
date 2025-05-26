@@ -5,6 +5,8 @@ Example script for counting objects with Langvio
 import logging
 import os
 
+import cv2
+
 from langvio import create_pipeline
 
 # Set up logging

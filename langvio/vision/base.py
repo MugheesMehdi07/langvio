@@ -10,14 +10,7 @@ import cv2
 from langvio.core.base import Processor
 from langvio.prompts.constants import DEFAULT_VIDEO_SAMPLE_RATE
 from langvio.vision.color_detection import ColorDetector
-from langvio.vision.utils import (
-    calculate_relative_positions,
-    detect_activities,
-    detect_spatial_relationships,
-    filter_by_activities,
-    filter_by_attributes,
-    filter_by_spatial_relations,
-)
+
 
 
 class BaseVisionProcessor(Processor):
@@ -68,30 +61,6 @@ class BaseVisionProcessor(Processor):
             Dictionary with detection results
         """
 
-    def _analyze_video_for_activities(
-        self,
-        frame_detections: Dict[str, List[Dict[str, Any]]],
-        query_params: Dict[str, Any],
-    ) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        Analyze video frames to detect activities.
-
-        Args:
-            frame_detections: Dictionary mapping frame indices to detections
-            query_params: Query parameters
-
-        Returns:
-            Updated frame detections with activity information
-        """
-        # Skip if not asking for activity detection
-        if (
-            not query_params.get("activities")
-            and query_params.get("task_type") != "activity"
-        ):
-            return frame_detections
-
-        # Perform activity detection across frames
-        return detect_activities(frame_detections)
 
     def _get_image_dimensions(self, image_path: str) -> Optional[Tuple[int, int]]:
         """

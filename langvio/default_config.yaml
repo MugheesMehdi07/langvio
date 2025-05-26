@@ -40,7 +40,7 @@ vision:
     yoloe_large:
         type: "yolo"
         model_path: "yoloe-11l-seg-pf.pt"  # YOLOe extra large - most accurate
-        confidence: 0.8
+        confidence: 0.5
         model_type: "yoloe"
     yolo:
       type: "yolo"
