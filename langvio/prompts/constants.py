@@ -19,7 +19,7 @@ DEFAULT_CONFIDENCE_THRESHOLD = 0.25
 DEFAULT_IOU_THRESHOLD = 0.5
 
 # Default sample rate for video processing (every N frames)
-DEFAULT_VIDEO_SAMPLE_RATE = 2
+DEFAULT_VIDEO_SAMPLE_RATE = 5
 
 YOLO11_CONFIG = {
 "model_path": "yolo11n.pt" ,

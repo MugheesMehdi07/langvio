@@ -90,7 +90,6 @@ def create_object_counter(model_path: str, confidence: float, region: Optional[l
         counter = solutions.ObjectCounter(
             model=model_path,
             region=region,
-            classes=[],  # Count all classes
             show=False
         )
 

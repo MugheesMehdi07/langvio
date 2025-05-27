@@ -200,19 +200,17 @@ class YOLOProcessor(BaseVisionProcessor):
                     if not success:
                         break
 
-                    cv2.imshow("Video Frame", frame)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
-
+                    # cv2.imshow("Video Frame", frame)
+                    # if cv2.waitKey(1) & 0xFF == ord('q'):
+                    #     break
 
                     # Process every Nth frame based on sample_rate
-                    # if frame_idx % sample_rate == 0:
+
                     result = self._process_single_frame(
                         frame, frame_idx, total_frames,
                         width, height,
                         counter, speed_estimator
                     )
-
 
                     # Extract results
                     detections = result.get("detections", [])
@@ -232,10 +230,10 @@ class YOLOProcessor(BaseVisionProcessor):
                         frame_detections[str(frame_idx)] = detections
 
                         # Update metrics if available
-                        if "counter_result" in result and result["counter_result"]:
-                            counter_results = result["counter_result"]
-                        if "speed_result" in result and result["speed_result"]:
-                            speed_results = result["speed_result"]
+                    if "counter_result" in result and result["counter_result"]:
+                        counter_results = result["counter_result"]
+                    if "speed_result" in result and result["speed_result"]:
+                        speed_results = result["speed_result"]
 
                     # Increment frame counter
                     frame_idx += 1
@@ -341,8 +339,8 @@ class YOLOProcessor(BaseVisionProcessor):
         metrics = {}
         if counter_results:
             metrics["counting"] = parse_solution_results(counter_results)
-        if speed_results:
-            metrics["speed"] = parse_solution_results(speed_results)
+        # if speed_results:
+        #     metrics["speed"] = parse_solution_results(speed_results)
 
         # Add metrics to result if available
         if metrics:
