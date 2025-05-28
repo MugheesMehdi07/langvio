@@ -130,7 +130,7 @@ class BaseLLMProcessor(Processor):
         return parsed
 
     def generate_explanation(
-        self, query: str, detections: Dict[str, List[Dict[str, Any]]]
+        self, query: str, detections: Dict[str, List[Dict[str, Any]]] , is_video: bool=False
     ) -> str:
         """Generate an explanation based on detection results."""
         self.logger.info("Generating explanation for detection results")
@@ -138,14 +138,17 @@ class BaseLLMProcessor(Processor):
         # Get the original parsed query
         parsed_query = self.parse_query(query)
 
-        # Add unique IDs to each detection for reference
-        indexed_detections, detection_map = index_detections(detections)
+        if is_video:
+            detection_summary = detections
+        else:
+            # Add unique IDs to each detection for reference
+            indexed_detections, detection_map = index_detections(detections)
 
-        # Format detection summary with object IDs
-        detection_summary = format_detection_summary(indexed_detections, parsed_query)
+            # Format detection summary with object IDs
+            detection_summary = format_detection_summary(indexed_detections, parsed_query)
 
         # Create a summary of detections
-        print(detections)
+        print(detection_summary)
         try:
             # Invoke the explanation chain
             response = self.explanation_chain.invoke(

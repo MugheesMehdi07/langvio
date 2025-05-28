@@ -418,7 +418,7 @@ def create_temporal_analysis(time_windows: Dict[int, Dict], fps: float) -> Dict[
         "peak_activity_time": peak_window["time"],
         "peak_activity_count": peak_window["total_objects"],
         "avg_objects_per_window": round(avg_objects, 1),
-        "activity_timeline": timeline_data[:5]  # Limit to first 5 windows for GPT
+        "activity_timeline": timeline_data # Limit to first 5 windows for GPT
     }
 
 
@@ -465,3 +465,25 @@ def identify_object_clusters(detections: List[Dict[str, Any]], distance_threshol
     return clusters
 
 
+def assess_activity_level( total_objects: int, duration: float) -> str:
+    """Simple activity level assessment."""
+    objects_per_minute = total_objects / (duration / 60) if duration > 0 else 0
+
+    if objects_per_minute < 2:
+        return "low"
+    elif objects_per_minute < 8:
+        return "moderate"
+    else:
+        return "high"
+
+
+def get_primary_objects(object_tracker: Dict[str, Dict]) -> List[str]:
+    """Get the most common object types."""
+    type_counts = {}
+    for obj_data in object_tracker.values():
+        obj_type = obj_data["type"]
+        type_counts[obj_type] = type_counts.get(obj_type, 0) + 1
+
+    # Return top 3 most common objects
+    sorted_types = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)
+    return [obj_type for obj_type, _ in sorted_types[:3]]

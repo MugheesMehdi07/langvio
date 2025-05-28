@@ -200,7 +200,7 @@ class Pipeline:
             )
 
         # Generate explanation using all detected objects and metrics
-        explanation = self.llm_processor.generate_explanation(query, all_detections)
+        explanation = self.llm_processor.generate_explanation(query, all_detections,is_video)
 
         # Get highlighted objects from the LLM processor
         highlighted_objects = self.llm_processor.get_highlighted_objects()

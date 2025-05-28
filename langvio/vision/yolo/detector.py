@@ -3,29 +3,15 @@ Clean YOLO-based vision processor focused only on processing logic
 """
 
 import logging
-from typing import Any, Dict, List, Tuple
-
-import cv2
-import torch
 from ultralytics import YOLO, YOLOE
 
 from langvio.prompts.constants import DEFAULT_CONFIDENCE_THRESHOLD, DEFAULT_VIDEO_SAMPLE_RATE
 from langvio.vision.base import BaseVisionProcessor
-from langvio.vision.utils import (
-    optimize_for_memory,
-    extract_detections,
-    add_unified_attributes,
-    compress_detections_for_output,
-    update_object_tracker,
-    update_time_window,
-    analyze_movement_patterns,
-    create_temporal_analysis,
-    identify_object_clusters
-)
+from langvio.vision.utils import *
 from langvio.vision.yolo.yolo11_utils import (
     check_yolo11_solutions_available,
     process_frame_with_yolo11,
-    initialize_yolo11_tools
+    initialize_yolo11_tools, parse_solutions_results
 )
 
 
@@ -380,80 +366,88 @@ class YOLOProcessor(BaseVisionProcessor):
             speed_results: Any,
             video_props: Tuple
     ) -> Dict[str, Any]:
-        """Create compressed video results - no verbose per-frame data."""
+        """Create comprehensive compressed video results with integrated YOLO11 metrics."""
         width, height, fps, total_frames = video_props
         duration = total_frames / fps
 
-        # Analyze object patterns using utility functions
-        movement_patterns = analyze_movement_patterns(object_tracker)
+        # Use existing utility functions
         temporal_analysis = create_temporal_analysis(time_windows, fps)
 
-        # Analyze object lifecycles
-        object_analysis = {}
+        # Parse YOLO11 metrics using existing function
+
+        advanced_stats = parse_solutions_results(counter_results,speed_results)
+
+        # Spatial distribution insights - object sizes and positions
+        spatial_insights = {}
         for obj_key, obj_data in object_tracker.items():
             obj_type = obj_data["type"]
-            if obj_type not in object_analysis:
-                object_analysis[obj_type] = {
+            if obj_type not in spatial_insights:
+                spatial_insights[obj_type] = {
                     "count": 0,
-                    "avg_duration": 0,
-                    "avg_confidence": 0
+                    "avg_size": 0,
+                    "positions": [],
+                    "size_distribution": {"small": 0, "medium": 0, "large": 0}
                 }
 
-            object_analysis[obj_type]["count"] += 1
-            obj_duration = obj_data["last_seen"] - obj_data["first_seen"]
-            object_analysis[obj_type]["avg_duration"] += obj_duration
-            object_analysis[obj_type]["avg_confidence"] += (
-                obj_data["total_confidence"] / obj_data["appearances"]
-            )
+            spatial_insights[obj_type]["count"] += 1
 
-        # Calculate averages
-        for obj_type in object_analysis:
-            count = object_analysis[obj_type]["count"]
-            if count > 0:
-                object_analysis[obj_type]["avg_duration"] = round(
-                    object_analysis[obj_type]["avg_duration"] / count, 1
-                )
-                object_analysis[obj_type]["avg_confidence"] = round(
-                    object_analysis[obj_type]["avg_confidence"] / count, 2
-                )
+            # Get last known position for spatial context
+            if obj_data["positions"]:
+                last_pos = obj_data["positions"][-1]
+                # Convert to relative position (0-1)
+                rel_x = last_pos[0] / width if width > 0 else 0
+                rel_y = last_pos[1] / height if height > 0 else 0
 
-        # Parse YOLO11 metrics
-        metrics = {}
-        if counter_results:
-            metrics["counting"] = parse_solution_results(counter_results)
-        if speed_results:
-            metrics["speed"] = parse_solution_results(speed_results)
+                # Categorize position zones
+                zone_x = "left" if rel_x < 0.33 else "center" if rel_x < 0.67 else "right"
+                zone_y = "top" if rel_y < 0.33 else "middle" if rel_y < 0.67 else "bottom"
+                zone = f"{zone_y}_{zone_x}"
 
-        # COMPRESSED RESULT - no per-frame data!
+                spatial_insights[obj_type]["positions"].append(zone)
+
+                # Estimate object size based on bounding box area (if available in positions data)
+                # This is a simplified approach - could be enhanced with actual bbox data
+                estimated_size = "medium"  # Default
+                spatial_insights[obj_type]["size_distribution"][estimated_size] += 1
+
+        # Process position distributions
+        for obj_type in spatial_insights:
+            positions = spatial_insights[obj_type]["positions"]
+            if positions:
+                # Get most common positions
+                from collections import Counter
+                position_counts = Counter(positions)
+                spatial_insights[obj_type]["common_positions"] = dict(position_counts.most_common(3))
+            del spatial_insights[obj_type]["positions"]  # Remove raw positions list
+
+        # Get most common objects for context
+        most_common = sorted(spatial_insights.items(), key=lambda x: x[1]["count"], reverse=True)[:3]
+        primary_objects = [obj_type for obj_type, _ in most_common]
+
+        # Activity level based on objects per minute
+        objects_per_minute = len(object_tracker) / (duration / 60) if duration > 0 else 0
+        if objects_per_minute < 5:
+            activity_level = "low"
+        elif objects_per_minute < 20:
+            activity_level = "moderate"
+        else:
+            activity_level = "high"
+
         return {
             "summary": {
                 "video_info": {
                     "duration_seconds": round(duration, 1),
                     "resolution": f"{width}x{height}",
-                    "unique_objects_tracked": len(object_tracker),
-                    "frames_analyzed": len([k for k in time_windows.keys()])
+                    "fps": round(fps, 1),
+                    "total_objects_tracked": len(object_tracker),
+                    "time_windows_analyzed": len(time_windows),
+                    "activity_level": activity_level,
+                    "primary_objects": primary_objects
                 },
-                "object_analysis": object_analysis,
-                "movement_patterns": movement_patterns,
+
+                "spatial_distribution": spatial_insights,
                 "temporal_analysis": temporal_analysis,
-                "yolo11_metrics": metrics if metrics else None
-            },
-            "metrics": metrics
+                "advanced_stats": advanced_stats
+            }
         }
 
-    # =============================================================================
-    # LEGACY SUPPORT METHOD (for backward compatibility)
-    # =============================================================================
-
-    def _create_simple_summary(self, detections) -> Dict[str, Any]:
-        """Simplified version for backward compatibility."""
-        if isinstance(detections, list):
-            types = [det["label"] for det in detections if "label" in det]
-            return {
-                "object_types": list(set(types)),
-                "total_objects": len(detections)
-            }
-        elif isinstance(detections, dict) and "summary" in detections:
-            return detections["summary"]
-
-        return {"object_types": [], "total_objects": 0}
