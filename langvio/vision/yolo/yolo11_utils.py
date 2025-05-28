@@ -161,71 +161,72 @@ def process_frame_with_yolo11(frame, counter, speed_estimator):
     return counter_results, speed_results
 
 
-def parse_solution_count_results(solution_results: Any) -> Dict[str, Any]:
+def parse_solutions_results(counter_results: Any, speed_results: Any) -> Dict[str, Any]:
     """
-    Convert YOLO11 SolutionResults objects to well-structured dictionaries.
+    Enhanced parsing of YOLO11 results with better structure for GPT.
 
     Args:
-        solution_results: Either object counting or speed estimation results
-            from YOLO11 Solutions
+        counter_results: Object counting results
+        speed_results: Speed estimation results
 
     Returns:
-        Dictionary with structured information
+        Dictionary with structured YOLO11 metrics
     """
-    # If no results or not a proper object, return empty dict
-    if not solution_results:
-        return {}
+    metrics = {}
 
-    # Create a base dictionary
-    parsed_data = {}
-
-    # Check if it's object counting results
-    if hasattr(solution_results, "in_count") and hasattr(solution_results, "out_count"):
-        # Extract the basic counts
-        parsed_data["type"] = "object_counting"
-        parsed_data["in_count"] = solution_results.in_count
-        parsed_data["out_count"] = solution_results.out_count
-        parsed_data["total_tracks"] = solution_results.total_tracks
-
-        # Extract class-wise counts in a more accessible format
-        class_counts = {}
-        if hasattr(solution_results, "classwise_count"):
-            for class_name, directions in solution_results.classwise_count.items():
-                # Only include classes that have non-zero counts
-                if directions["IN"] > 0 or directions["OUT"] > 0:
-                    class_counts[class_name] = {
-                        "in": directions["IN"],
-                        "out": directions["OUT"],
-                        "total": directions["IN"] + directions["OUT"]
-                    }
-
-        parsed_data["class_counts"] = class_counts
-
-        # Add a summary for quick access
-        active_classes = list(class_counts.keys())
-        most_common = None
-        if class_counts:
-            most_common = max(class_counts.items(), key=lambda x: x[1]["total"])[0]
-
-        parsed_data["summary"] = {
-            "total_objects": parsed_data["in_count"] + parsed_data["out_count"],
-            "active_classes": active_classes,
-            "most_common_class": most_common
+    # Parse counting results
+    if counter_results and hasattr(counter_results, 'in_count'):
+        counting_data = {
+            "total_objects_entered": counter_results.in_count,
+            "total_objects_exited": counter_results.out_count,
+            "net_objects_flow": counter_results.in_count - counter_results.out_count,
+            "total_crossings": counter_results.in_count + counter_results.out_count
         }
 
-    # Check if it's speed estimation results
-    elif hasattr(solution_results, "total_tracks"):
-        parsed_data["type"] = "speed_estimation"
-        parsed_data["total_tracks"] = solution_results.total_tracks
+        # Add class-wise counts if available
+        if hasattr(counter_results, 'classwise_count'):
+            class_breakdown = {}
+            for class_name, directions in counter_results.classwise_count.items():
+                if directions["IN"] > 0 or directions["OUT"] > 0:
+                    class_breakdown[class_name] = {
+                        "entered": directions["IN"],
+                        "exited": directions["OUT"],
+                        "net_flow": directions["IN"] - directions["OUT"]
+                    }
 
-        # If there are additional attributes in the speed results, extract them
-        if hasattr(solution_results, "track_speeds"):
-            parsed_data["track_speeds"] = solution_results.track_speeds
+            if class_breakdown:
+                counting_data["by_object_type"] = class_breakdown
 
-        if hasattr(solution_results, "avg_speed"):
-            parsed_data["avg_speed"] = solution_results.avg_speed
+        metrics["counting"] = counting_data
 
-        if hasattr(solution_results, "class_speeds"):
-            parsed_data["class_speeds"] = solution_results.class_speeds
+    # Parse speed results
+    if speed_results and hasattr(speed_results, 'total_tracks'):
+        speed_data = {
+            "objects_with_speed_data": speed_results.total_tracks
+        }
 
-    return parsed_data
+        # Add average speed if available
+        if hasattr(speed_results, 'avg_speed') and speed_results.avg_speed:
+            speed_data["average_speed_kmh"] = round(speed_results.avg_speed, 1)
+
+        # Add class-wise speeds if available
+        if hasattr(speed_results, 'class_speeds'):
+            speed_by_class = {}
+            for class_name, speeds in speed_results.class_speeds.items():
+                if speeds:  # Only include classes with speed data
+                    avg_speed = sum(speeds) / len(speeds) if speeds else 0
+                    speed_by_class[class_name] = {
+                        "average_speed_kmh": round(avg_speed, 1),
+                        "sample_count": len(speeds),
+                        "speed_range": {
+                            "min": round(min(speeds), 1),
+                            "max": round(max(speeds), 1)
+                        } if len(speeds) > 1 else None
+                    }
+
+            if speed_by_class:
+                speed_data["by_object_type"] = speed_by_class
+
+        metrics["speed_analysis"] = speed_data
+
+    return metrics

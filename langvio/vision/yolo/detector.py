@@ -1,39 +1,39 @@
 """
-Simplified YOLO-based vision processor with integrated YOLOe and YOLO11 processing
+Clean YOLO-based vision processor focused only on processing logic
 """
 
 import logging
-import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import cv2
-import numpy as np
 import torch
 from ultralytics import YOLO, YOLOE
 
 from langvio.prompts.constants import DEFAULT_CONFIDENCE_THRESHOLD, DEFAULT_VIDEO_SAMPLE_RATE
 from langvio.vision.base import BaseVisionProcessor
-from langvio.vision.utils import extract_detections, optimize_for_memory, calculate_relative_positions, detect_spatial_relationships
+from langvio.vision.utils import (
+    optimize_for_memory,
+    extract_detections,
+    add_unified_attributes,
+    compress_detections_for_output,
+    update_object_tracker,
+    update_time_window,
+    analyze_movement_patterns,
+    create_temporal_analysis,
+    identify_object_clusters
+)
 from langvio.vision.yolo.yolo11_utils import (
     check_yolo11_solutions_available,
     process_frame_with_yolo11,
-    parse_solution_count_results, initialize_yolo11_tools
+    initialize_yolo11_tools
 )
 
 
 class YOLOProcessor(BaseVisionProcessor):
-    """Simplified vision processor using YOLO models with integrated YOLO11 metrics"""
+    """Clean vision processor using YOLO models - focused on processing logic only"""
 
     def __init__(self, name: str, model_path: str, confidence: float = DEFAULT_CONFIDENCE_THRESHOLD, **kwargs):
-        """
-        Initialize YOLO processor.
-
-        Args:
-            name: Processor name
-            model_path: Path to the YOLO model
-            confidence: Confidence threshold for detections
-            **kwargs: Additional parameters for YOLO
-        """
+        """Initialize YOLO processor."""
         config = {
             "model_path": model_path,
             "confidence": confidence,
@@ -52,16 +52,10 @@ class YOLOProcessor(BaseVisionProcessor):
             self.logger.info("YOLO11 Solutions not available - using basic detection only")
 
     def initialize(self) -> bool:
-        """
-        Initialize the YOLO model.
-
-        Returns:
-            True if initialization was successful
-        """
+        """Initialize the YOLO model."""
         try:
             self.logger.info(f"Loading {self.model_type} model: {self.config['model_path']}")
 
-            # Use YOLOE by default for better performance
             if self.model_type == "yoloe":
                 self.model = YOLOE(self.config['model_path'])
             else:
@@ -73,219 +67,94 @@ class YOLOProcessor(BaseVisionProcessor):
             return False
 
     def initialize_video_capture(self, video_path: str) -> Tuple[cv2.VideoCapture, Tuple[int, int, float, int]]:
-        """
-        Initialize video capture and extract video properties.
-
-        Args:
-            video_path: Path to the video file
-
-        Returns:
-            Tuple containing (video_capture, (width, height, fps, total_frames))
-
-        Raises:
-            ValueError: If video cannot be opened
-        """
-        # Open video
+        """Initialize video capture and extract video properties."""
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise ValueError(f"Failed to open video: {video_path}")
 
-        # Get video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         if fps <= 0:
-            fps = 25.0  # Default FPS
+            fps = 25.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         return cap, (width, height, fps, total_frames)
 
-    def process_image(self, image_path: str, query_params: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        Process an image with YOLOe with enhanced detection capabilities.
-        For images: only uses YOLOe with attribute computation.
+    # =============================================================================
+    # CORE PROCESSING METHODS
+    # =============================================================================
 
-        Args:
-            image_path: Path to the input image
-            query_params: Parameters from the query processor
-
-        Returns:
-            Dictionary with detection results and attributes
-        """
-        self.logger.info(f"Processing image: {image_path}")
-
-        # Load model if not already loaded
-        if not self.model:
-            self.initialize()
-
-        with torch.no_grad():
-            try:
-                optimize_for_memory()
-
-                # Get image dimensions for relative positioning
-                image_dimensions = self._get_image_dimensions(image_path)
-
-                # Run basic object detection with YOLOe
-                results = self.model(image_path, conf=self.config["confidence"])
-
-                # Extract detections
-                detections = extract_detections(results)
-
-                # Add position, size and color attributes to detections
-                detections = self._enhance_detections_with_attributes(detections, image_path)
-
-                # Calculate relative positions
-                if image_dimensions:
-                    detections = calculate_relative_positions(detections, *image_dimensions)
-                    detections = detect_spatial_relationships(detections)
-
-                # Create result with detections
-                frame_detections = {"0": detections}
-
-                # Create a simple summary of detections
-                frame_detections["summary"] = self._create_simple_summary(detections)
-
-                return frame_detections
-
-            except Exception as e:
-                self.logger.error(f"Error processing image: {e}")
-                import traceback
-                self.logger.error(traceback.format_exc())
-                return {"0": [], "error": str(e)}
-
-    def process_video(
+    def _run_detection_with_attributes(
             self,
-            video_path: str,
+            input_data: Any,  # Can be image_path (str) or frame (np.ndarray)
+            width: int,
+            height: int,
             query_params: Dict[str, Any],
-            sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
-            show_frame: bool = False
-    ) -> Dict[str, List[Dict[str, Any]]]:
+            is_video_frame: bool = False
+    ) -> List[Dict[str, Any]]:
         """
-        Process a video in a single loop, running both YOLOe and YOLO11 on each frame.
+        Core detection method for both images and video frames.
 
         Args:
-            video_path: Path to the input video
-            query_params: Parameters from the query processor
-            sample_rate: Process every Nth frame
+            input_data: Image path (str) for images, frame array for videos
+            width: Image/frame width
+            height: Image/frame height
+            query_params: Query parameters to determine what attributes to compute
+            is_video_frame: Whether this is a video frame
 
         Returns:
-            Dictionary with combined detection results and metrics
+            List of enhanced detections
         """
-        self.logger.info(f"Processing video: {video_path}")
+        # 1. Run YOLO detection
+        results = self.model(input_data, conf=self.config["confidence"])
+        detections = extract_detections(results)
 
-        # Load model if not already loaded
-        if not self.model:
-            self.initialize()
+        if not detections:
+            return []
 
-        # Initialize results container
-        frame_detections = {}
-        counter_results = None
-        metrics = {}
-        cap = None
+        # 2. Determine what attributes to compute based on query
+        needs_color = any(attr.get("attribute") == "color" for attr in query_params.get("attributes", []))
+        needs_spatial = bool(query_params.get("spatial_relations", []))
+        needs_size = any(attr.get("attribute") == "size" for attr in query_params.get("attributes", []))
 
-        try:
-            # 1. Initialize video and auxiliary tools
-            cap, video_props = self.initialize_video_capture(video_path)
-            width, height, fps, total_frames = video_props
-            counter, speed_estimator = initialize_yolo11_tools(width, height)
+        # Skip expensive operations for videos unless specifically needed
+        if is_video_frame:
+            needs_color = False  # Too expensive for video
+            needs_spatial = False  # Too expensive for video
 
-            # 2. Process all frames
-            frame_idx = 0
-            with torch.no_grad():
-                while cap.isOpened():
-                    # Read frame
-                    success, frame = cap.read()
-                    if not success:
-                        break
+        # 3. Add attributes using utility function
+        detections = add_unified_attributes(
+            detections, width, height, input_data,
+            needs_color, needs_spatial, needs_size, is_video_frame
+        )
 
-                    # cv2.imshow("Video Frame", frame)
-                    # if cv2.waitKey(1) & 0xFF == ord('q'):
-                    #     break
-
-                    # Process every Nth frame based on sample_rate
-
-                    result = self._process_single_frame(
-                        frame, frame_idx, total_frames,
-                        width, height,
-                        counter, speed_estimator
-                    )
-
-                    # Extract results
-                    detections = result.get("detections", [])
-
-                    for det in detections:
-                        if "bbox" not in det or "label" not in det:
-                            continue
-
-                        x1, y1, x2, y2 = map(int, det["bbox"])
-                        label = det["label"]
-                        color = (0, 255, 0)  # Green bounding box
-
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                        cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.6, color, 2)
-
-                        frame_detections[str(frame_idx)] = detections
-
-                        # Update metrics if available
-                    if "counter_result" in result and result["counter_result"]:
-                        metrics["counts"] = result["counter_result"]
-                    if "speed_result" in result and result["speed_result"]:
-                        metrics["speed"] = result["speed_result"]
-
-                    # Increment frame counter
-                    frame_idx += 1
-
-
-            # 3. Create summary from results
-            metrics = {}
-            if counter_results:
-                metrics["counting"] = parse_solution_count_results(counter_results)
-            # if speed_results:
-            #     metrics["speed"] = parse_solution_results(speed_results)
-
-            # Add metrics to result if available
-            if metrics:
-                frame_detections["metrics"] = metrics
-                # Create basic summary without metrics
-            frame_detections["summary"] = self._create_simple_summary(frame_detections)
-
-            return frame_detections
-
-        except Exception as e:
-            self.logger.error(f"Error processing video: {e}")
-            import traceback
-            self.logger.error(traceback.format_exc())
-            return {"error": str(e)}
-        finally:
-            # Ensure resources are properly released
-            if cap is not None:
-                cap.release()
+        return detections
 
     def _process_single_frame(
             self,
-            frame: np.ndarray,
+            frame,
             frame_idx: int,
-            total_frames: int,
             width: int,
             height: int,
-            counter: Any,
-            speed_estimator: Any
+            query_params: Dict[str, Any],
+            counter: Any = None,
+            speed_estimator: Any = None
     ) -> Dict[str, Any]:
         """
-        Process a single video frame with both YOLOe and YOLO11.
+        Process a single video frame.
 
         Args:
-            frame: The video frame to process
-            frame_idx: Current frame index
-            total_frames: Total number of frames
-            width: Video width
-            height: Video height
-            counter: YOLO11 counter object or None
-            speed_estimator: YOLO11 speed estimator object or None
+            frame: Video frame
+            frame_idx: Frame index
+            width: Frame width
+            height: Frame height
+            query_params: Query parameters
+            counter: YOLO11 counter (optional)
+            speed_estimator: YOLO11 speed estimator (optional)
 
         Returns:
-            Dictionary with frame processing results
+            Frame processing results
         """
         result = {
             "detections": [],
@@ -294,181 +163,297 @@ class YOLOProcessor(BaseVisionProcessor):
         }
 
         try:
-            self.logger.info(f"Processing frame {frame_idx}/{total_frames}")
-
-            # 1. Run basic object detection with YOLOe
-            model_results = self.model(frame, conf=self.config["confidence"])
-
-            # 2. Extract and enhance detections
-            detections = extract_detections(model_results)
-
-            if len(detections) > 0:
-                # Add position, size and color attributes to detections
-                detections = self._enhance_detections_with_attributes(detections, None, frame)
-
-                # Calculate relative positions
-                detections = calculate_relative_positions(detections, width, height)
-                detections = detect_spatial_relationships(detections)
-
+            # 1. Run detection with attributes
+            detections = self._run_detection_with_attributes(
+                frame, width, height, query_params, is_video_frame=True
+            )
             result["detections"] = detections
 
-            # 3. Run YOLO11 metrics if available
+            # 2. Run YOLO11 metrics if available
             if self.has_yolo11_solutions and (counter or speed_estimator):
                 try:
-                    counter_frame, speed_frame = process_frame_with_yolo11(
+                    counter_result, speed_result = process_frame_with_yolo11(
                         frame, counter, speed_estimator
                     )
-                    result["counter_result"] = counter_frame
-                    result["speed_result"] = speed_frame
+                    result["counter_result"] = counter_result
+                    result["speed_result"] = speed_result
                 except Exception as e:
                     self.logger.warning(f"YOLO11 processing error on frame {frame_idx}: {e}")
 
         except Exception as e:
             self.logger.warning(f"Error processing frame {frame_idx}: {e}")
-            # We return partial results instead of raising to continue processing
 
         return result
 
+    # =============================================================================
+    # IMAGE PROCESSING
+    # =============================================================================
 
-    def _enhance_detections_with_attributes(
-        self,
-        detections: List[Dict[str, Any]],
-        image_path: Optional[str] = None,
-        image: Optional[Any] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        Enhance detections with size and color attributes.
+    def process_image(self, image_path: str, query_params: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+        """Optimized image processing with compressed output."""
+        self.logger.info(f"Processing image: {image_path}")
 
-        Args:
-            detections: List of detection dictionaries
-            image_path: Path to the image (optional)
-            image: Direct image array for video frames (optional)
+        if not self.model:
+            self.initialize()
 
-        Returns:
-            Detections with added size and color attributes
-        """
-        # Load image if path is provided and image is not
-        if image_path and image is None:
+        with torch.no_grad():
             try:
-                image = cv2.imread(image_path)
+                optimize_for_memory()
+
+                # Get image dimensions
+                image_dimensions = self._get_image_dimensions(image_path)
+                if not image_dimensions:
+                    return {"objects": [], "error": "Could not read image dimensions"}
+
+                width, height = image_dimensions
+
+                # Run detection with attributes
+                detections = self._run_detection_with_attributes(
+                    image_path, width, height, query_params, is_video_frame=False
+                )
+
+                # Create compressed results
+                compressed_objects = compress_detections_for_output(detections, is_video=False)
+                summary = self._create_image_summary(detections, width, height, query_params)
+
+                return {
+                    "objects": compressed_objects,
+                    "summary": summary
+                }
+
             except Exception as e:
-                self.logger.error(f"Error loading image for attribute detection: {e}")
-                return detections
+                self.logger.error(f"Error processing image: {e}")
+                return {"objects": [], "error": str(e)}
 
-        # If we don't have an image, return unchanged detections
-        if image is None:
-            return detections
+    def _create_image_summary(
+            self,
+            detections: List[Dict[str, Any]],
+            width: int,
+            height: int,
+            query_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Create optimized image summary."""
+        if not detections:
+            return {
+                "image_info": {"resolution": f"{width}x{height}", "total_objects": 0},
+                "analysis": "No objects detected"
+            }
 
-        image_height, image_width = image.shape[:2]
+        # Analyze patterns
+        types = {}
+        positions = {}
+        sizes = {}
+        colors = {}
 
         for det in detections:
-            # Skip if no bbox
-            if "bbox" not in det:
-                continue
+            # Count types
+            types[det["label"]] = types.get(det["label"], 0) + 1
 
-            # Extract bounding box
-            x1, y1, x2, y2 = det["bbox"]
+            # Count positions (if available)
+            pos = det.get("attributes", {}).get("position", "unknown")
+            if pos != "unknown":
+                positions[pos] = positions.get(pos, 0) + 1
 
-            # Skip invalid boxes
-            if (x1 >= x2 or y1 >= y2 or x1 < 0 or y1 < 0 or
-                x2 > image_width or y2 > image_height):
-                continue
+            # Count sizes (if available)
+            size = det.get("attributes", {}).get("size", "unknown")
+            if size != "unknown":
+                sizes[size] = sizes.get(size, 0) + 1
 
-            # Get the object region
-            obj_region = image[int(y1):int(y2), int(x1):int(x2)]
+            # Count colors (if available)
+            color = det.get("attributes", {}).get("color", "unknown")
+            if color != "unknown":
+                colors[color] = colors.get(color, 0) + 1
 
-            # Initialize attributes dictionary if not present
-            if "attributes" not in det:
-                det["attributes"] = {}
+        # Identify notable patterns
+        notable_patterns = []
 
-            # Calculate size attribute
-            area = (x2 - x1) * (y2 - y1)
-            image_area = image_width * image_height
-            relative_size = area / image_area
+        # Check for clusters
+        if len(detections) > 3:
+            clusters = identify_object_clusters(detections)
+            if clusters:
+                notable_patterns.append(f"Objects form {len(clusters)} main clusters")
 
-            if relative_size < 0.05:
-                det["attributes"]["size"] = "small"
-            elif relative_size < 0.25:
-                det["attributes"]["size"] = "medium"
-            else:
-                det["attributes"]["size"] = "large"
+        # Check for dominant type
+        if types:
+            dominant_type = max(types.items(), key=lambda x: x[1])
+            if dominant_type[1] > len(detections) * 0.4:
+                notable_patterns.append(f"{dominant_type[0]} is dominant ({dominant_type[1]} instances)")
 
-            # Extract dominant color
-            if obj_region.size > 0:
-                # Get color information
-                from langvio.vision.color_detection import ColorDetector
-                color_info = ColorDetector.get_color_profile(obj_region)
+        return {
+            "image_info": {
+                "resolution": f"{width}x{height}",
+                "total_objects": len(detections),
+                "unique_types": len(types)
+            },
+            "object_distribution": {
+                "by_type": types,
+                "by_position": positions if positions else None,
+                "by_size": sizes if sizes else None,
+                "by_color": colors if colors else None
+            },
+            "notable_patterns": notable_patterns,
+            "query_context": query_params.get("task_type", "identification")
+        }
 
-                # Add to detection attributes
-                det["attributes"]["color"] = color_info["dominant_color"]
-                det["attributes"]["is_multicolored"] = color_info["is_multicolored"]
+    # =============================================================================
+    # VIDEO PROCESSING - OPTIMIZED FOR SPEED AND COMPRESSED OUTPUT
+    # =============================================================================
 
-        return detections
+    def process_video(
+            self,
+            video_path: str,
+            query_params: Dict[str, Any],
+            sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Optimized video processing - fast with compressed output.
+        """
+        self.logger.info(f"Processing video: {video_path}")
+
+        if not self.model:
+            self.initialize()
+
+        # Lightweight containers - no per-frame storage
+        object_tracker = {}  # Track objects across video
+        time_windows = {}    # Aggregate into time windows
+        counter_results = None
+        speed_results = None
+        cap = None
+
+        try:
+            # Initialize video
+            cap, video_props = self.initialize_video_capture(video_path)
+            width, height, fps, total_frames = video_props
+            counter, speed_estimator = initialize_yolo11_tools(width, height)
+
+            frame_idx = 0
+            with torch.no_grad():
+                optimize_for_memory()
+
+                while cap.isOpened():
+                    success, frame = cap.read()
+                    if not success:
+                        break
+
+                    # Process every Nth frame for speed
+                    if frame_idx % sample_rate == 0:
+
+                        # Process single frame
+                        result = self._process_single_frame(
+                            frame, frame_idx, width, height, query_params, counter, speed_estimator
+                        )
+
+                        # Update trackers (no per-frame storage)
+                        detections = result.get("detections", [])
+                        if detections:
+                            update_object_tracker(object_tracker, detections, frame_idx, fps)
+
+                            # Aggregate into time windows
+                            time_window = frame_idx // (fps * 2)  # 2-second windows
+                            update_time_window(time_windows, detections, time_window)
+
+                        # Update YOLO11 results (only keep latest)
+                        if result.get("counter_result"):
+                            counter_results = result["counter_result"]
+                        if result.get("speed_result"):
+                            speed_results = result["speed_result"]
+
+                    frame_idx += 1
+
+            # Create compressed final results
+            return self._create_compressed_video_results(
+                object_tracker, time_windows, counter_results, speed_results, video_props
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error processing video: {e}")
+            return {"error": str(e)}
+        finally:
+            if cap:
+                cap.release()
+
+    def _create_compressed_video_results(
+            self,
+            object_tracker: Dict[str, Dict],
+            time_windows: Dict[int, Dict],
+            counter_results: Any,
+            speed_results: Any,
+            video_props: Tuple
+    ) -> Dict[str, Any]:
+        """Create compressed video results - no verbose per-frame data."""
+        width, height, fps, total_frames = video_props
+        duration = total_frames / fps
+
+        # Analyze object patterns using utility functions
+        movement_patterns = analyze_movement_patterns(object_tracker)
+        temporal_analysis = create_temporal_analysis(time_windows, fps)
+
+        # Analyze object lifecycles
+        object_analysis = {}
+        for obj_key, obj_data in object_tracker.items():
+            obj_type = obj_data["type"]
+            if obj_type not in object_analysis:
+                object_analysis[obj_type] = {
+                    "count": 0,
+                    "avg_duration": 0,
+                    "avg_confidence": 0
+                }
+
+            object_analysis[obj_type]["count"] += 1
+            obj_duration = obj_data["last_seen"] - obj_data["first_seen"]
+            object_analysis[obj_type]["avg_duration"] += obj_duration
+            object_analysis[obj_type]["avg_confidence"] += (
+                obj_data["total_confidence"] / obj_data["appearances"]
+            )
+
+        # Calculate averages
+        for obj_type in object_analysis:
+            count = object_analysis[obj_type]["count"]
+            if count > 0:
+                object_analysis[obj_type]["avg_duration"] = round(
+                    object_analysis[obj_type]["avg_duration"] / count, 1
+                )
+                object_analysis[obj_type]["avg_confidence"] = round(
+                    object_analysis[obj_type]["avg_confidence"] / count, 2
+                )
+
+        # Parse YOLO11 metrics
+        metrics = {}
+        if counter_results:
+            metrics["counting"] = parse_solution_results(counter_results)
+        if speed_results:
+            metrics["speed"] = parse_solution_results(speed_results)
+
+        # COMPRESSED RESULT - no per-frame data!
+        return {
+            "summary": {
+                "video_info": {
+                    "duration_seconds": round(duration, 1),
+                    "resolution": f"{width}x{height}",
+                    "unique_objects_tracked": len(object_tracker),
+                    "frames_analyzed": len([k for k in time_windows.keys()])
+                },
+                "object_analysis": object_analysis,
+                "movement_patterns": movement_patterns,
+                "temporal_analysis": temporal_analysis,
+                "yolo11_metrics": metrics if metrics else None
+            },
+            "metrics": metrics
+        }
+
+    # =============================================================================
+    # LEGACY SUPPORT METHOD (for backward compatibility)
+    # =============================================================================
 
     def _create_simple_summary(self, detections) -> Dict[str, Any]:
-        """
-        Create a simple summary from basic YOLOe detections.
-
-        Args:
-            detections: Either a list of detections (for images) or
-                        a dictionary of frames with detections (for videos)
-
-        Returns:
-            Summary dictionary
-        """
-        # For a single image (list of detections)
+        """Simplified version for backward compatibility."""
         if isinstance(detections, list):
-            # Count objects by type
-            counts = {}
-            for det in detections:
-                label = det["label"]
-                if label not in counts:
-                    counts[label] = 0
-                counts[label] += 1
-
+            types = [det["label"] for det in detections if "label" in det]
             return {
-                "counts": counts,
-                "total_objects": len(detections),
-                "object_types": list(counts.keys())
+                "object_types": list(set(types)),
+                "total_objects": len(detections)
             }
+        elif isinstance(detections, dict) and "summary" in detections:
+            return detections["summary"]
 
-        # For a video (dictionary of frames)
-        elif isinstance(detections, dict):
-            # Get basic video statistics
-            frame_keys = [k for k in detections.keys() if k.isdigit()]
-
-            if not frame_keys:
-                return {"object_types": [], "total_frames_analyzed": 0}
-
-            # Collect object types across all frames
-            object_types = set()
-            attributes_found = set()
-            confidence_scores = []
-            total_detections = 0
-
-            for frame_key in frame_keys:
-                frame_detections = detections[frame_key]
-                total_detections += len(frame_detections)
-
-                for det in frame_detections:
-                    object_types.add(det["label"])
-
-                    # Collect confidence scores
-                    if "confidence" in det:
-                        confidence_scores.append(det["confidence"])
-
-                    # Collect available attributes
-                    if "attributes" in det:
-                        attributes_found.update(det["attributes"].keys())
-
-            # Create video summary
-            return {
-                "object_types": list(object_types),
-                "unique_object_types": len(object_types),
-                "total_frames_analyzed": len(frame_keys),
-                "total_detections": total_detections,
-                "avg_detections_per_frame": total_detections / len(frame_keys) if frame_keys else 0
-            }
-
-        # Default empty summary
-        return {}
+        return {"object_types": [], "total_objects": 0}
