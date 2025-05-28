@@ -72,7 +72,6 @@ def format_detection_summary(
     summary_parts = []
 
     # Check if we have metrics or summary data from YOLO11
-    has_metrics = "metrics" in detections
     has_summary = "summary" in detections
 
     # Add YOLO11 metrics summary if available

@@ -201,49 +201,6 @@ def detect_spatial_relationships(
 
 
 
-def filter_by_attributes(
-    detections: List[Dict[str, Any]], required_attributes: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
-    """
-    Filter detections by required attributes.
-
-    Args:
-        detections: List of detection dictionaries
-        required_attributes: List of required attribute dictionaries
-                            (e.g. [{"attribute": "color", "value": "red"}])
-
-    Returns:
-        Filtered list of detections
-    """
-    if not required_attributes:
-        return detections
-
-    filtered = []
-
-    for det in detections:
-        matches_all = True
-
-        for req in required_attributes:
-            attr_name = req.get("attribute")
-            attr_value = req.get("value")
-
-            # Skip if the attribute isn't specified
-            if not attr_name or not attr_value:
-                continue
-
-            # Check if the detection has this attribute with matching value
-            if (
-                attr_name not in det["attributes"]
-                or det["attributes"][attr_name] != attr_value
-            ):
-                matches_all = False
-                break
-
-        if matches_all:
-            filtered.append(det)
-
-    return filtered
-
 
 def filter_by_spatial_relations(
     detections: List[Dict[str, Any]], required_relations: List[Dict[str, Any]]

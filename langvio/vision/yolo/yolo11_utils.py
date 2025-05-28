@@ -161,7 +161,7 @@ def process_frame_with_yolo11(frame, counter, speed_estimator):
     return counter_results, speed_results
 
 
-def parse_solution_results(solution_results: Any) -> Dict[str, Any]:
+def parse_solution_count_results(solution_results: Any) -> Dict[str, Any]:
     """
     Convert YOLO11 SolutionResults objects to well-structured dictionaries.
 

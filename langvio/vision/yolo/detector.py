@@ -16,10 +16,8 @@ from langvio.vision.base import BaseVisionProcessor
 from langvio.vision.utils import extract_detections, optimize_for_memory, calculate_relative_positions, detect_spatial_relationships
 from langvio.vision.yolo.yolo11_utils import (
     check_yolo11_solutions_available,
-    create_object_counter,
-    create_speed_estimator,
     process_frame_with_yolo11,
-    parse_solution_results, initialize_yolo11_tools
+    parse_solution_count_results, initialize_yolo11_tools
 )
 
 
@@ -182,7 +180,7 @@ class YOLOProcessor(BaseVisionProcessor):
         # Initialize results container
         frame_detections = {}
         counter_results = None
-        speed_results = None
+        metrics = {}
         cap = None
 
         try:
@@ -231,15 +229,28 @@ class YOLOProcessor(BaseVisionProcessor):
 
                         # Update metrics if available
                     if "counter_result" in result and result["counter_result"]:
-                        counter_results = result["counter_result"]
+                        metrics["counts"] = result["counter_result"]
                     if "speed_result" in result and result["speed_result"]:
-                        speed_results = result["speed_result"]
+                        metrics["speed"] = result["speed_result"]
 
                     # Increment frame counter
                     frame_idx += 1
 
+
             # 3. Create summary from results
-            return self._finalize_results(frame_detections, counter_results, speed_results)
+            metrics = {}
+            if counter_results:
+                metrics["counting"] = parse_solution_count_results(counter_results)
+            # if speed_results:
+            #     metrics["speed"] = parse_solution_results(speed_results)
+
+            # Add metrics to result if available
+            if metrics:
+                frame_detections["metrics"] = metrics
+                # Create basic summary without metrics
+            frame_detections["summary"] = self._create_simple_summary(frame_detections)
+
+            return frame_detections
 
         except Exception as e:
             self.logger.error(f"Error processing video: {e}")
@@ -318,39 +329,6 @@ class YOLOProcessor(BaseVisionProcessor):
 
         return result
 
-    def _finalize_results(
-            self,
-            frame_detections: Dict[str, List[Dict[str, Any]]],
-            counter_results: Any,
-            speed_results: Any
-    ) -> Dict[str, Any]:
-        """
-        Finalize and structure the results with metrics and summaries.
-
-        Args:
-            frame_detections: Dictionary mapping frame indices to detections
-            counter_results: Results from the YOLO11 counter
-            speed_results: Results from the YOLO11 speed estimator
-
-        Returns:
-            Structured results dictionary
-        """
-        # Parse YOLO11 metrics for easier use by LLM
-        metrics = {}
-        if counter_results:
-            metrics["counting"] = parse_solution_results(counter_results)
-        # if speed_results:
-        #     metrics["speed"] = parse_solution_results(speed_results)
-
-        # Add metrics to result if available
-        if metrics:
-            frame_detections["metrics"] = metrics
-            frame_detections["summary"] = self._create_combined_summary(frame_detections, metrics)
-        else:
-            # Create basic summary without metrics
-            frame_detections["summary"] = self._create_simple_summary(frame_detections)
-
-        return frame_detections
 
     def _enhance_detections_with_attributes(
         self,
@@ -456,77 +434,41 @@ class YOLOProcessor(BaseVisionProcessor):
 
         # For a video (dictionary of frames)
         elif isinstance(detections, dict):
-            # Count objects by type across all frames
-            counts = {}
-            track_ids = set()
+            # Get basic video statistics
+            frame_keys = [k for k in detections.keys() if k.isdigit()]
 
-            # Go through all frame keys
-            for frame_key, frame_detections in detections.items():
-                if not frame_key.isdigit():  # Skip non-frame keys
-                    continue
+            if not frame_keys:
+                return {"object_types": [], "total_frames_analyzed": 0}
+
+            # Collect object types across all frames
+            object_types = set()
+            attributes_found = set()
+            confidence_scores = []
+            total_detections = 0
+
+            for frame_key in frame_keys:
+                frame_detections = detections[frame_key]
+                total_detections += len(frame_detections)
 
                 for det in frame_detections:
-                    label = det["label"]
-                    if label not in counts:
-                        counts[label] = 0
-                    counts[label] += 1
+                    object_types.add(det["label"])
 
-                    # Track unique objects by track_id
-                    if "track_id" in det:
-                        track_ids.add((label, det["track_id"]))
+                    # Collect confidence scores
+                    if "confidence" in det:
+                        confidence_scores.append(det["confidence"])
 
-            # Count unique objects by type
-            unique_by_type = {}
-            for label, _ in track_ids:
-                if label not in unique_by_type:
-                    unique_by_type[label] = 0
-                unique_by_type[label] += 1
+                    # Collect available attributes
+                    if "attributes" in det:
+                        attributes_found.update(det["attributes"].keys())
 
+            # Create video summary
             return {
-                "counts": counts,
-                "total_frames_analyzed": len([k for k in detections.keys() if k.isdigit()]),
-                "total_detections": sum(counts.values()),
-                "unique_tracked_objects": len(track_ids),
-                "unique_by_type": unique_by_type,
-                "object_types": list(counts.keys())
+                "object_types": list(object_types),
+                "unique_object_types": len(object_types),
+                "total_frames_analyzed": len(frame_keys),
+                "total_detections": total_detections,
+                "avg_detections_per_frame": total_detections / len(frame_keys) if frame_keys else 0
             }
 
         # Default empty summary
         return {}
-
-    def _create_combined_summary(self, frame_detections: Dict[str, Any], metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a combined summary that merges YOLOe detections with YOLO11 metrics.
-
-        Args:
-            frame_detections: Dictionary with frame-by-frame detections
-            metrics: Dictionary with YOLO11 metrics
-
-        Returns:
-            Combined summary dictionary
-        """
-        # Get basic summary from YOLOe
-        summary = self._create_simple_summary(frame_detections)
-
-        # Add YOLO11 metrics if available
-        if metrics:
-            if "counting" in metrics:
-                counting = metrics["counting"]
-                if "summary" in counting:
-                    summary["counting_summary"] = counting["summary"]
-                if "in_count" in counting and "out_count" in counting:
-                    summary["in_count"] = counting["in_count"]
-                    summary["out_count"] = counting["out_count"]
-                if "class_counts" in counting:
-                    summary["class_direction_counts"] = counting["class_counts"]
-
-            if "speed" in metrics:
-                speed = metrics["speed"]
-                if "total_tracks" in speed:
-                    summary["tracked_objects_with_speed"] = speed["total_tracks"]
-                if "avg_speed" in speed:
-                    summary["average_speed"] = speed["avg_speed"]
-                if "class_speeds" in speed:
-                    summary["class_speeds"] = speed["class_speeds"]
-
-        return summary
