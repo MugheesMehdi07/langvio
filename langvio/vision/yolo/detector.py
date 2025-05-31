@@ -99,15 +99,16 @@ class YOLOProcessor(BaseVisionProcessor):
         if not detections:
             return []
 
-        # 2. Determine what attributes to compute based on query
-        needs_color = any(attr.get("attribute") == "color" for attr in query_params.get("attributes", []))
-        needs_spatial = bool(query_params.get("spatial_relations", []))
-        needs_size = any(attr.get("attribute") == "size" for attr in query_params.get("attributes", []))
+
 
         # Skip expensive operations for videos unless specifically needed
         if is_video_frame:
-            needs_color = False  # Too expensive for video
-            needs_spatial = False  # Too expensive for video
+            # 2. Determine what attributes to compute based on query
+            needs_color = any(attr.get("attribute") == "color" for attr in query_params.get("attributes", []))
+            needs_spatial = bool(query_params.get("spatial_relations", []))
+            needs_size = any(attr.get("attribute") == "size" for attr in query_params.get("attributes", []))
+        else:
+            needs_color = needs_spatial =  needs_size = True
 
         # 3. Add attributes using utility function
         detections = add_unified_attributes(
