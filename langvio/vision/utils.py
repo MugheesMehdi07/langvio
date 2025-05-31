@@ -230,7 +230,9 @@ def compress_detections_for_output(detections: List[Dict[str, Any]], is_video: b
         obj = {
             "id": det.get("object_id", f"obj_{len(compressed)}"),
             "type": det["label"],
-            "confidence": round(det["confidence"], 2)
+            "label": det["label"],
+            "confidence": round(det["confidence"], 2),
+            "bbox": det["bbox"]  # Keep bounding box for visualization
         }
 
         # Add attributes only if they exist

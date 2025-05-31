@@ -99,8 +99,6 @@ class YOLOProcessor(BaseVisionProcessor):
         if not detections:
             return []
 
-
-
         # Skip expensive operations for videos unless specifically needed
         if is_video_frame:
             # 2. Determine what attributes to compute based on query

@@ -290,11 +290,12 @@ class Pipeline:
             # For images, we still have frame-level data
             original_box_color = visualization_config["box_color"]
             highlight_color = [0, 0, 255]  # Red color (BGR) for highlighted objects
+            image_objects = all_detections.get("objects", [])
 
             self.media_processor.visualize_image_with_highlights(
                 media_path,
                 output_path,
-                all_detections.get("0", []),  # Use all detections for the single frame
+                image_objects,
                 [obj["detection"] for obj in highlighted_objects],  # Extract detection objects
                 original_box_color=original_box_color,
                 highlight_color=highlight_color,
