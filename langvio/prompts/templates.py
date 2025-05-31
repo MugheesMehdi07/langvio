@@ -111,9 +111,9 @@ HIGHLIGHT_OBJECTS:
 
 Input query: "Are there any red objects in this image?"
 Detection results:
-- [obj_0] car (confidence: 0.95) - color:red, position: center-left
-- [obj_1] car (confidence: 0.87) - color:blue, position: top-right
-- [obj_2] book (confidence: 0.92) - color:red, position: bottom-right
+- car (confidence: 0.95) - color:red, position: center-left
+- car (confidence: 0.87) - color:blue, position: top-right
+- book (confidence: 0.92) - color:red, position: bottom-right
 
 Output:
 EXPLANATION:

@@ -20,9 +20,7 @@ from langvio.prompts.templates import (
     SYSTEM_PROMPT,
 )
 from langvio.utils.llm_utils import (
-    format_detection_summary,
-    index_detections,
-    parse_explanation_response,
+    parse_explanation_response, format_video_summary, process_image_detections_and_format_summary,
 )
 
 
@@ -130,7 +128,7 @@ class BaseLLMProcessor(Processor):
         return parsed
 
     def generate_explanation(
-        self, query: str, detections: Dict[str, List[Dict[str, Any]]] , is_video: bool=False
+            self, query: str, detections: Dict[str, List[Dict[str, Any]]], is_video: bool = False
     ) -> str:
         """Generate an explanation based on detection results."""
         self.logger.info("Generating explanation for detection results")
@@ -139,16 +137,17 @@ class BaseLLMProcessor(Processor):
         parsed_query = self.parse_query(query)
 
         if is_video:
-            detection_summary = detections
+            # For videos, we have compressed results - format them directly
+            detection_summary = format_video_summary(detections, parsed_query)
+
+            # No object highlighting for videos since we don't have per-frame data
+            self._highlighted_objects = []
+
         else:
-            # Add unique IDs to each detection for reference
-            indexed_detections, detection_map = index_detections(detections)
+            # For images, use the existing indexing and formatting approach
+            detection_summary, detection_map = process_image_detections_and_format_summary(detections, parsed_query)
 
-            # Format detection summary with object IDs
-            detection_summary = format_detection_summary(indexed_detections, parsed_query)
 
-        # Create a summary of detections
-        print(detection_summary)
         try:
             # Invoke the explanation chain
             response = self.explanation_chain.invoke(
@@ -162,20 +161,31 @@ class BaseLLMProcessor(Processor):
 
             # Parse the response
             if response and hasattr(response, "content"):
-                explanation_text, highlight_objects = parse_explanation_response(
-                    response.content, detection_map
-                )
+                if is_video:
+                    # For videos, just return the explanation without highlighting
+                    explanation_text = response.content
+                    if "EXPLANATION:" in explanation_text:
+                        explanation_text = explanation_text.split("EXPLANATION:", 1)[1].strip()
 
-                # Store the highlighted objects for visualization
-                self._highlighted_objects = highlight_objects
+                    # Clean up any highlight sections that might appear
+                    if "HIGHLIGHT_OBJECTS:" in explanation_text:
+                        explanation_text = explanation_text.split("HIGHLIGHT_OBJECTS:")[0].strip()
 
-                return explanation_text
+                    self._highlighted_objects = []
+                    return explanation_text
+                else:
+                    # For images, use the existing parsing with highlighting
+                    explanation_text, highlight_objects = parse_explanation_response(
+                        response.content, detection_map
+                    )
+                    self._highlighted_objects = highlight_objects
+                    return explanation_text
             else:
                 return "Error generating explanation: No valid response from LLM"
 
         except Exception as e:
             self.logger.error(f"Error generating explanation: {e}")
-            return f"Error analyzing the image: {e}"
+            return f"Error analyzing the media: {e}"
 
     def get_highlighted_objects(self) -> List[Dict[str, Any]]:
         """

@@ -264,23 +264,13 @@ class Pipeline:
     def _create_visualization(
             self,
             media_path: str,
-            all_detections: Dict[str, List[Dict[str, Any]]],
+            all_detections: Dict[str, Any],
             highlighted_objects: List[Dict[str, Any]],
             query_params: Dict[str, Any],
             is_video: bool,
     ) -> str:
         """
-        Create visualization with all detected objects and highlighted ones.
-
-        Args:
-            media_path: Path to input media
-            all_detections: All detection results
-            highlighted_objects: Objects to highlight with a different color
-            query_params: Query parameters
-            is_video: Whether the media is a video
-
-        Returns:
-            Path to the output visualization
+        Create visualization adapted for new compressed video results structure.
         """
         # Generate output path
         output_path = self.media_processor.get_output_path(media_path)
@@ -288,35 +278,24 @@ class Pipeline:
         # Get visualization config
         visualization_config = self._get_visualization_config(query_params)
 
-        # Store original box color to use for non-highlighted objects
-        original_box_color = visualization_config["box_color"]
-
-        # Use a different, more prominent color for highlighted objects
-        highlight_color = [0, 0, 255]  # Red color (BGR) for highlighted objects
-
         if is_video:
-            # For videos, we'll pass all detections and use a different visualization approach
-            # that distinguishes highlighted objects
-            self.media_processor.visualize_video_with_highlights(
+            # For videos, create visualization with both detections and summary
+            self._create_video_detection_visualization(
                 media_path,
                 output_path,
-                all_detections,  # Use all detections instead of just highlighted ones
-                highlighted_objects,  # Pass highlighted objects separately
-                original_box_color=original_box_color,
-                highlight_color=highlight_color,
-                text_color=visualization_config["text_color"],
-                line_thickness=visualization_config["line_thickness"],
-                show_attributes=visualization_config.get("show_attributes", True),
-                show_confidence=visualization_config.get("show_confidence", True),
+                all_detections,
+                visualization_config
             )
         else:
-            # For images, we'll pass all detections and use a different visualization approach
-            # that distinguishes highlighted objects
+            # For images, we still have frame-level data
+            original_box_color = visualization_config["box_color"]
+            highlight_color = [0, 0, 255]  # Red color (BGR) for highlighted objects
+
             self.media_processor.visualize_image_with_highlights(
                 media_path,
                 output_path,
-                all_detections["0"],  # Use all detections for the single frame
-                [obj["detection"] for obj in highlighted_objects],  # Extract just the detection objects
+                all_detections.get("0", []),  # Use all detections for the single frame
+                [obj["detection"] for obj in highlighted_objects],  # Extract detection objects
                 original_box_color=original_box_color,
                 highlight_color=highlight_color,
                 text_color=visualization_config["text_color"],
@@ -326,3 +305,123 @@ class Pipeline:
             )
 
         return output_path
+
+    def _create_video_detection_visualization(
+            self,
+            video_path: str,
+            output_path: str,
+            compressed_results: Dict[str, Any],
+            viz_config: Dict[str, Any]
+    ) -> None:
+        """
+        Create video visualization with both object detection and summary overlay.
+        Re-runs detection on video frames to show bounding boxes while using compressed results for overlay.
+        """
+        import cv2
+
+        try:
+            # Open input video
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                import shutil
+                shutil.copy2(video_path, output_path)
+                return
+
+            # Get video properties
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+
+            # Create video writer
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+            # Extract summary info for overlay
+            summary = compressed_results.get("summary", {})
+            video_info = summary.get("video_info", {})
+            advanced_stats = summary.get("advanced_stats", {})
+
+            # Create overlay text
+            overlay_lines = []
+            if "primary_objects" in video_info:
+                overlay_lines.append(f"Objects: {', '.join(video_info['primary_objects'])}")
+
+            if "counting" in advanced_stats:
+                counting = advanced_stats["counting"]
+                if "in_count" in counting and "out_count" in counting:
+                    overlay_lines.append(f"In: {counting['in_count']}, Out: {counting['out_count']}")
+
+            if "speed" in advanced_stats:
+                speed = advanced_stats["speed"]
+                if "avg_speed" in speed:
+                    overlay_lines.append(f"Avg Speed: {speed['avg_speed']:.1f} km/h")
+
+            # Initialize vision model for detection (reuse from vision processor)
+            vision_model = self.vision_processor.model
+            confidence = self.vision_processor.config.get("confidence", 0.5)
+
+            frame_idx = 0
+            sample_rate = 5  # Process every 5th frame for performance
+
+            # Process frames with detection and overlay
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                # Run detection on sampled frames
+                if frame_idx % sample_rate == 0 and vision_model:
+                    try:
+                        # Run YOLO detection on current frame
+                        results = vision_model(frame, conf=confidence)
+
+                        # Draw bounding boxes
+                        for result in results:
+                            boxes = result.boxes
+                            for box in boxes:
+                                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                                conf = float(box.conf[0])
+                                cls_id = int(box.cls[0])
+                                label = result.names[cls_id]
+
+                                # Draw bounding box
+                                color = viz_config.get("box_color", [0, 255, 0])
+                                thickness = viz_config.get("line_thickness", 2)
+                                cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
+
+                                # Draw label
+                                label_text = f"{label} {conf:.2f}"
+                                text_color = viz_config.get("text_color", [255, 255, 255])
+                                cv2.putText(
+                                    frame, label_text, (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1
+                                )
+                    except Exception as e:
+                        self.logger.warning(f"Detection failed on frame {frame_idx}: {e}")
+
+                # Add summary overlay (top-left corner)
+                y_offset = 30
+                for line in overlay_lines:
+                    # Add background for better text visibility
+                    text_size = cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
+                    cv2.rectangle(frame, (5, y_offset - 25), (15 + text_size[0], y_offset + 5), (0, 0, 0), -1)
+
+                    cv2.putText(
+                        frame, line, (10, y_offset),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                        viz_config.get("text_color", [255, 255, 255]), 2
+                    )
+                    y_offset += 35
+
+                writer.write(frame)
+                frame_idx += 1
+
+            cap.release()
+            writer.release()
+            self.logger.info(f"Created video detection visualization: {output_path}")
+
+        except Exception as e:
+            self.logger.error(f"Error creating video visualization: {e}")
+            # Fallback: copy original video
+            import shutil
+            shutil.copy2(video_path, output_path)
