@@ -4,7 +4,7 @@ Enhanced utility functions for LLM processing with better YOLO11 metrics handlin
 
 import json
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Counter
 
 
 def process_image_detections_and_format_summary(
@@ -109,118 +109,342 @@ def process_image_detections_and_format_summary(
     return "\n".join(summary_parts), detection_map
 
 def format_video_summary(
-        compressed_results: Dict[str, Any], parsed_query: Dict[str, Any]
+        video_results: Dict[str, Any], parsed_query: Dict[str, Any]
 ) -> str:
     """
-    Format compressed video results for LLM explanation.
+    Enhanced format for comprehensive video results with better frame data handling.
 
     Args:
-        compressed_results: Compressed video analysis results
+        video_results: Complete video analysis results
         parsed_query: Parsed query parameters
 
     Returns:
-        Formatted summary string for LLM
+        Formatted summary string optimized for LLM processing
     """
     summary_parts = []
 
-    # Extract the summary section
-    summary = compressed_results.get("summary", {})
+    # Extract main components
+    summary = video_results.get("summary", {})
+    frame_detections = video_results.get("frame_detections", {})
+    processing_info = video_results.get("processing_info", {})
 
-    # Video basic info
+    # === VIDEO OVERVIEW ===
     video_info = summary.get("video_info", {})
     if video_info:
-        summary_parts.append("# Video Analysis Summary")
-        summary_parts.append(f"Duration: {video_info.get('duration_seconds', 0)} seconds")
-        summary_parts.append(f"Resolution: {video_info.get('resolution', 'unknown')}")
-        summary_parts.append(f"Activity Level: {video_info.get('activity_level', 'unknown')}")
+        summary_parts.append("# COMPREHENSIVE VIDEO ANALYSIS REPORT")
+        summary_parts.append(
+            f"Duration: {video_info.get('duration_seconds', 0)}s | Resolution: {video_info.get('resolution', 'unknown')} | FPS: {video_info.get('fps', 0)}")
+        summary_parts.append(f"Activity Level: {video_info.get('activity_level', 'unknown').upper()}")
 
         if video_info.get('primary_objects'):
-            summary_parts.append(f"Primary Objects: {', '.join(video_info['primary_objects'])}")
+            summary_parts.append(f"Primary Objects: {', '.join(video_info['primary_objects'][:5])}")
 
-        summary_parts.append(f"Total Objects Tracked: {video_info.get('total_objects_tracked', 0)}")
+    # === YOLO11 COUNTING RESULTS (PRIORITY SECTION) ===
+    counting = summary.get("counting_analysis", {})
+    if counting:
+        summary_parts.append("\n## 🎯 YOLO11 OBJECT COUNTING ANALYSIS")
+        summary_parts.append(f"**BOUNDARY CROSSINGS:** {counting.get('total_crossings', 0)} total events")
+        summary_parts.append(f"**FLOW DIRECTION:** {counting.get('flow_direction', 'unknown').upper()}")
+        summary_parts.append(
+            f"**NET MOVEMENT:** {counting.get('net_flow', 0)} objects ({'inward' if counting.get('net_flow', 0) > 0 else 'outward' if counting.get('net_flow', 0) < 0 else 'balanced'})")
 
-    # Spatial distribution
-    spatial_dist = summary.get("spatial_distribution", {})
-    if spatial_dist:
-        summary_parts.append("\n## Spatial Distribution")
-        for obj_type, info in spatial_dist.items():
-            summary_parts.append(f"- {obj_type}: {info.get('count', 0)} instances")
+        # Detailed breakdown
+        summary_parts.append(f"- Objects Entered Zone: {counting.get('objects_entered', 0)}")
+        summary_parts.append(f"- Objects Exited Zone: {counting.get('objects_exited', 0)}")
 
-            # Add position info if available
-            if info.get('common_positions'):
-                positions = ', '.join([f"{pos}({count})" for pos, count in info['common_positions'].items()])
-                summary_parts.append(f"  Common positions: {positions}")
+        # Class-wise analysis
+        if counting.get('by_object_type'):
+            summary_parts.append("\n**COUNTING BY OBJECT TYPE:**")
+            for obj_type, data in counting['by_object_type'].items():
+                entered = data.get('entered', 0)
+                exited = data.get('exited', 0)
+                net = data.get('net_flow', 0)
+                dominance = data.get('dominance', 'unknown')
+                summary_parts.append(
+                    f"  • {obj_type.upper()}: {entered} in, {exited} out (net: {net:+d}, trend: {dominance})")
 
-            # Add size distribution if available
-            if info.get('size_distribution'):
-                sizes = info['size_distribution']
-                size_info = ', '.join([f"{size}:{count}" for size, count in sizes.items() if count > 0])
-                if size_info:
-                    summary_parts.append(f"  Size distribution: {size_info}")
+        if counting.get('most_active_type'):
+            summary_parts.append(f"\n**MOST ACTIVE OBJECT:** {counting['most_active_type'].upper()}")
 
-    # Temporal analysis
-    temporal = summary.get("temporal_analysis", {})
+    # === SPEED ANALYSIS (if available) ===
+    speed = summary.get("speed_analysis", {})
+    if speed and speed.get("speed_available"):
+        summary_parts.append("\n## 🚀 YOLO11 SPEED ANALYSIS")
+        summary_parts.append(f"**Objects with Speed Data:** {speed.get('objects_with_speed', 0)}")
+
+        if speed.get('average_speed_kmh'):
+            summary_parts.append(
+                f"**Average Speed:** {speed['average_speed_kmh']} km/h ({speed.get('speed_category', 'unknown')} pace)")
+
+        # Class-wise speeds
+        if speed.get('by_object_type'):
+            summary_parts.append("\n**SPEED BY OBJECT TYPE:**")
+            for obj_type, speed_data in speed['by_object_type'].items():
+                avg_speed = speed_data.get('average_speed', 0)
+                sample_count = speed_data.get('sample_count', 0)
+                category = speed_data.get('speed_category', 'unknown')
+                summary_parts.append(f"  • {obj_type}: {avg_speed} km/h ({category}, {sample_count} samples)")
+
+    # === FRAME-BY-FRAME ACTIVITY ANALYSIS ===
+    if frame_detections:
+        frame_analysis = analyze_frame_activity(frame_detections)
+        summary_parts.append("\n## 📊 FRAME-BY-FRAME ACTIVITY ANALYSIS")
+        summary_parts.append(
+            f"**Frames Analyzed:** {len(frame_detections)} of {processing_info.get('total_frames', 0)}")
+        summary_parts.append(
+            f"**Peak Activity:** Frame {frame_analysis['peak_frame']} with {frame_analysis['peak_count']} objects")
+        summary_parts.append(f"**Average Objects per Frame:** {frame_analysis['avg_objects']:.1f}")
+
+        # Activity timeline (key moments)
+        if frame_analysis.get('activity_timeline'):
+            summary_parts.append("\n**KEY ACTIVITY MOMENTS:**")
+            for moment in frame_analysis['activity_timeline'][:5]:  # Top 5 moments
+                frame_num = moment['frame']
+                count = moment['count']
+                types = moment['types']
+                time_sec = frame_num * video_info.get('fps', 30) / 30  # Approximate time
+                summary_parts.append(f"  • Frame {frame_num} (t={time_sec:.1f}s): {count} objects - {types}")
+
+    # === SPATIAL RELATIONSHIPS ===
+    spatial = summary.get("spatial_relationships", {})
+    if spatial:
+        summary_parts.append("\n## 🗺️ SPATIAL RELATIONSHIP ANALYSIS")
+
+        common_relations = spatial.get("common_relations", {})
+        if common_relations:
+            summary_parts.append("**Most Common Spatial Relations:**")
+            for relation, count in list(common_relations.items())[:5]:
+                summary_parts.append(f"  • {relation.replace('_', ' ').title()}: {count} occurrences")
+
+        frequent_pairs = spatial.get("frequent_pairs", {})
+        if frequent_pairs:
+            summary_parts.append("\n**Frequently Co-occurring Object Pairs:**")
+            for pair, count in list(frequent_pairs.items())[:5]:
+                summary_parts.append(f"  • {pair}: {count} co-occurrences")
+
+        spatial_patterns = spatial.get("spatial_patterns", {})
+        if spatial_patterns:
+            summary_parts.append("\n**Top Spatial Patterns:**")
+            sorted_patterns = sorted(spatial_patterns.items(), key=lambda x: x[1], reverse=True)
+            for pattern, count in sorted_patterns[:5]:
+                formatted_pattern = pattern.replace('-', ' → ').replace('_', ' ')
+                summary_parts.append(f"  • {formatted_pattern}: {count} times")
+
+    # === OBJECT CHARACTERISTICS ANALYSIS ===
+    object_analysis = summary.get("object_analysis", {})
+    if object_analysis:
+        summary_parts.append("\n## 🔍 DETAILED OBJECT ANALYSIS")
+
+        characteristics = object_analysis.get("object_characteristics", {})
+        most_common = object_analysis.get("most_common_types", [])
+
+        if most_common:
+            summary_parts.append(f"**Object Type Diversity:** {len(characteristics)} unique types detected")
+            summary_parts.append(f"**Most Common Types:** {', '.join(most_common[:5])}")
+
+        # Detailed analysis for top 3 object types
+        summary_parts.append("\n**TOP OBJECT TYPES DETAILED ANALYSIS:**")
+        for obj_type in most_common[:3]:
+            if obj_type in characteristics:
+                char = characteristics[obj_type]
+                summary_parts.append(f"\n  📋 **{obj_type.upper()}:**")
+                summary_parts.append(f"    - Total Instances: {char.get('total_instances', 0)}")
+                summary_parts.append(f"    - Movement Behavior: {char.get('movement_behavior', 'unknown')}")
+
+                common_attrs = char.get('common_attributes', {})
+                if common_attrs:
+                    top_attrs = sorted(common_attrs.items(), key=lambda x: x[1], reverse=True)[:3]
+                    attrs_str = ', '.join(
+                        [f"{attr.split(':')[1] if ':' in attr else attr}({count})" for attr, count in top_attrs])
+                    summary_parts.append(f"    - Common Attributes: {attrs_str}")
+
+    # === TEMPORAL MOVEMENT ANALYSIS ===
+    temporal = summary.get("temporal_relationships", {})
     if temporal:
-        summary_parts.append("\n## Temporal Analysis")
-        if temporal.get('peak_activity_time') is not None:
-            summary_parts.append(f"Peak Activity Time: {temporal['peak_activity_time']} seconds")
-        if temporal.get('peak_activity_count'):
-            summary_parts.append(f"Peak Activity Count: {temporal['peak_activity_count']} objects")
-        if temporal.get('avg_objects_per_window'):
-            summary_parts.append(f"Average Objects per Window: {temporal['avg_objects_per_window']:.1f}")
+        summary_parts.append("\n## ⏱️ TEMPORAL MOVEMENT ANALYSIS")
 
-        # Add timeline if available (limit to key periods)
-        if temporal.get('activity_timeline'):
-            summary_parts.append("Activity Timeline:")
-            for period in temporal['activity_timeline'][:3]:  # Limit to 3 periods
-                time = period.get('time', 0)
-                total = period.get('total_objects', 0)
-                types = period.get('object_types', {})
-                type_str = ', '.join([f"{obj}:{count}" for obj, count in types.items()])
-                summary_parts.append(f"  {time}s: {total} objects ({type_str})")
+        movement = temporal.get("movement_patterns", {})
+        if movement:
+            stationary = movement.get("stationary_count", 0)
+            moving = movement.get("moving_count", 0)
+            fast_moving = movement.get("fast_moving_count", 0)
 
-    # Advanced statistics (counting and speed)
-    advanced_stats = summary.get("advanced_stats", {})
-    if advanced_stats:
-        summary_parts.append("\n## Advanced Statistics")
+            summary_parts.append(f"**Movement Distribution:**")
+            summary_parts.append(f"  • Stationary Objects: {stationary}")
+            summary_parts.append(f"  • Moving Objects: {moving}")
+            summary_parts.append(f"  • Fast Moving Objects: {fast_moving}")
 
-        # Counting data
-        if "counting" in advanced_stats:
-            counting = advanced_stats["counting"]
-            summary_parts.append("### Object Counting")
-            if counting.get('in_count') is not None and counting.get('out_count') is not None:
-                summary_parts.append(f"Objects Entered: {counting['in_count']}")
-                summary_parts.append(f"Objects Exited: {counting['out_count']}")
-                summary_parts.append(f"Net Flow: {counting['in_count'] - counting['out_count']}")
+            # Movement directions
+            directions = movement.get("primary_directions", {})
+            if directions:
+                summary_parts.append("\n**Primary Movement Directions:**")
+                for direction, objects in directions.items():
+                    count = len(objects) if isinstance(objects, list) else objects
+                    summary_parts.append(f"  • {direction.replace('_', ' ').title()}: {count} objects")
 
-            # Class-wise counting
-            if counting.get('class_counts'):
-                summary_parts.append("By Object Type:")
-                for obj_type, counts in counting['class_counts'].items():
-                    summary_parts.append(f"  {obj_type}: in={counts.get('in', 0)}, out={counts.get('out', 0)}")
+        # Co-occurrence events
+        co_events = temporal.get("co_occurrence_events", 0)
+        if co_events > 0:
+            summary_parts.append(f"\n**Object Interaction Events:** {co_events}")
 
-        # Speed data
-        if "speed" in advanced_stats:
-            speed = advanced_stats["speed"]
-            summary_parts.append("### Speed Analysis")
-            if speed.get('avg_speed'):
-                summary_parts.append(f"Average Speed: {speed['avg_speed']:.1f} km/h")
-            if speed.get('total_tracks'):
-                summary_parts.append(f"Objects with Speed Data: {speed['total_tracks']}")
+            interactions = temporal.get("interaction_summary", [])
+            if interactions:
+                summary_parts.append("**Key Interactions:**")
+                for interaction in interactions[:3]:
+                    obj1 = interaction.get('object1', 'unknown')
+                    obj2 = interaction.get('object2', 'unknown')
+                    relationship = interaction.get('relationship', 'unknown')
+                    summary_parts.append(f"  • {obj1} ↔ {obj2}: {relationship}")
 
-            # Class-wise speeds
-            if speed.get('class_speeds'):
-                summary_parts.append("Speed by Object Type:")
-                for obj_type, speed_info in speed['class_speeds'].items():
-                    avg_speed = speed_info.get('avg_speed', 0)
-                    sample_count = speed_info.get('sample_count', 0)
-                    summary_parts.append(f"  {obj_type}: {avg_speed:.1f} km/h (samples: {sample_count})")
+    # === PRIMARY INSIGHTS ===
+    insights = summary.get("primary_insights", [])
+    if insights:
+        summary_parts.append("\n## 💡 KEY INSIGHTS & CONCLUSIONS")
+        for i, insight in enumerate(insights, 1):
+            summary_parts.append(f"{i}. {insight}")
 
-    # Add query context
+    # === QUERY CONTEXT ===
+    summary_parts.append(f"\n## 🎯 QUERY ANALYSIS CONTEXT")
+    summary_parts.append(f"**Query Type:** {parsed_query.get('task_type', 'identification').upper()}")
+
     if parsed_query.get("target_objects"):
-        summary_parts.append(f"\nQuery Target Objects: {', '.join(parsed_query['target_objects'])}")
+        summary_parts.append(f"**Target Objects:** {', '.join(parsed_query['target_objects'])}")
 
-    summary_parts.append(f"Query Task Type: {parsed_query.get('task_type', 'unknown')}")
+    if parsed_query.get("count_objects"):
+        summary_parts.append("**Counting Analysis:** ✅ COMPLETED (YOLO11 results above)")
+
+    if parsed_query.get("attributes"):
+        attrs = [f"{attr.get('attribute', 'unknown')}:{attr.get('value', 'unknown')}" for attr in
+                 parsed_query['attributes']]
+        summary_parts.append(f"**Requested Attributes:** {', '.join(attrs)}")
+
+    # === TECHNICAL METADATA ===
+    summary_parts.append(f"\n## ⚙️ PROCESSING METADATA")
+    summary_parts.append(
+        f"**Analysis Coverage:** {processing_info.get('frames_analyzed', 0)}/{processing_info.get('total_frames', 0)} frames")
+    summary_parts.append(f"**YOLO11 Enhanced:** {'✅ YES' if processing_info.get('yolo11_enabled') else '❌ NO'}")
+    summary_parts.append(f"**Analysis Type:** {processing_info.get('analysis_type', 'unknown').upper()}")
+
+    return "\n".join(summary_parts)
+
+
+def analyze_frame_activity(frame_detections: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+    """
+    Analyze frame-by-frame activity to extract key insights.
+
+    Args:
+        frame_detections: Dictionary mapping frame numbers to detection lists
+
+    Returns:
+        Dictionary with frame activity analysis
+    """
+    if not frame_detections:
+        return {"peak_frame": 0, "peak_count": 0, "avg_objects": 0.0, "activity_timeline": []}
+
+    frame_counts = {}
+    frame_types = {}
+    total_objects = 0
+
+    # Analyze each frame
+    for frame_key, detections in frame_detections.items():
+        frame_num = int(frame_key)
+        count = len(detections)
+        frame_counts[frame_num] = count
+        total_objects += count
+
+        # Track object types in this frame
+        types_in_frame = Counter(det.get('label', 'unknown') for det in detections)
+        frame_types[frame_num] = types_in_frame
+
+    # Find peak activity
+    peak_frame = max(frame_counts.items(), key=lambda x: x[1]) if frame_counts else (0, 0)
+    avg_objects = total_objects / len(frame_counts) if frame_counts else 0.0
+
+    # Create activity timeline for significant moments
+    activity_timeline = []
+    sorted_frames = sorted(frame_counts.items(), key=lambda x: x[1], reverse=True)
+
+    for frame_num, count in sorted_frames[:10]:  # Top 10 most active frames
+        types = frame_types.get(frame_num, {})
+        types_str = ', '.join([f"{obj_type}({cnt})" for obj_type, cnt in types.most_common(3)])
+
+        activity_timeline.append({
+            "frame": frame_num,
+            "count": count,
+            "types": types_str
+        })
+
+    return {
+        "peak_frame": peak_frame[0],
+        "peak_count": peak_frame[1],
+        "avg_objects": avg_objects,
+        "activity_timeline": activity_timeline,
+        "total_frames_with_activity": len([c for c in frame_counts.values() if c > 0]),
+        "frame_counts": frame_counts  # For potential additional analysis
+    }
+
+
+def create_frame_summary_for_llm(frame_detections: Dict[str, List[Dict[str, Any]]], max_frames: int = 20) -> str:
+    """
+    Create a concise frame summary for LLM when full frame data is needed.
+
+    Args:
+        frame_detections: Dictionary mapping frame numbers to detection lists
+        max_frames: Maximum number of frames to include in detail
+
+    Returns:
+        Formatted frame summary string
+    """
+    if not frame_detections:
+        return "No frame data available."
+
+    summary_parts = []
+    summary_parts.append("## DETAILED FRAME ANALYSIS")
+
+    # Sort frames by activity level (most active first)
+    frame_activity = [(int(frame_key), len(detections)) for frame_key, detections in frame_detections.items()]
+    frame_activity.sort(key=lambda x: x[1], reverse=True)
+
+    # Include top active frames and some representative frames
+    selected_frames = []
+
+    # Top 10 most active frames
+    selected_frames.extend([frame_num for frame_num, _ in frame_activity[:10]])
+
+    # Add some evenly distributed frames for temporal coverage
+    all_frame_nums = sorted([int(k) for k in frame_detections.keys()])
+    if len(all_frame_nums) > 10:
+        step = len(all_frame_nums) // min(10, max_frames - 10)
+        representative_frames = all_frame_nums[::step]
+        selected_frames.extend(representative_frames)
+
+    # Remove duplicates and sort
+    selected_frames = sorted(list(set(selected_frames)))[:max_frames]
+
+    summary_parts.append(f"Showing {len(selected_frames)} most relevant frames out of {len(frame_detections)} total:")
+
+    for frame_num in selected_frames:
+        frame_key = str(frame_num)
+        if frame_key in frame_detections:
+            detections = frame_detections[frame_key]
+
+            if not detections:
+                continue
+
+            # Count objects by type
+            object_counts = Counter(det.get('label', 'unknown') for det in detections)
+            objects_summary = ', '.join([f"{obj_type}({count})" for obj_type, count in object_counts.most_common()])
+
+            # Note any special attributes
+            special_attrs = []
+            for det in detections:
+                attrs = det.get('attributes', {})
+                if 'color' in attrs and attrs['color'] != 'unknown':
+                    special_attrs.append(f"{attrs['color']} {det.get('label', 'object')}")
+
+            attr_note = f" | Notable: {', '.join(special_attrs[:3])}" if special_attrs else ""
+
+            summary_parts.append(f"Frame {frame_num}: {len(detections)} objects ({objects_summary}){attr_note}")
 
     return "\n".join(summary_parts)
 
