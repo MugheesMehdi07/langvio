@@ -7,6 +7,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 import torch
+from typing import Any, Dict, List, Optional, Tuple
+import numpy as np
+from collections import defaultdict, deque
 
 
 def optimize_for_memory():
@@ -332,97 +335,6 @@ def update_time_window(
         windows[window_idx]["total"] += 1
 
 
-def analyze_movement_patterns(object_tracker: Dict[str, Dict]) -> Dict[str, Any]:
-    """
-    Analyze movement patterns from object tracker.
-
-    Args:
-        object_tracker: Dictionary of tracked objects
-
-    Returns:
-        Movement analysis dictionary
-    """
-    patterns = {
-        "stationary_objects": 0,
-        "moving_objects": 0,
-        "directional_movement": {}
-    }
-
-    for obj_key, obj_data in object_tracker.items():
-        positions = obj_data["positions"]
-        obj_type = obj_data["type"]
-
-        if len(positions) < 2:
-            patterns["stationary_objects"] += 1
-            continue
-
-        # Calculate movement distance
-        first_pos = positions[0]
-        last_pos = positions[-1]
-        distance = ((last_pos[0] - first_pos[0])**2 + (last_pos[1] - first_pos[1])**2)**0.5
-
-        if distance < 50:  # Threshold for stationary
-            patterns["stationary_objects"] += 1
-        else:
-            patterns["moving_objects"] += 1
-
-            # Determine primary direction
-            dx = last_pos[0] - first_pos[0]
-            dy = last_pos[1] - first_pos[1]
-
-            if abs(dx) > abs(dy):
-                direction = "right" if dx > 0 else "left"
-            else:
-                direction = "down" if dy > 0 else "up"
-
-            # Track directional movement by object type
-            if obj_type not in patterns["directional_movement"]:
-                patterns["directional_movement"][obj_type] = {}
-            patterns["directional_movement"][obj_type][direction] = \
-                patterns["directional_movement"][obj_type].get(direction, 0) + 1
-
-    return patterns
-
-
-def create_temporal_analysis(time_windows: Dict[int, Dict], fps: float) -> Dict[str, Any]:
-    """
-    Create temporal analysis from time windows.
-
-    Args:
-        time_windows: Dictionary of time windows
-        fps: Video FPS
-
-    Returns:
-        Temporal analysis dictionary
-    """
-    if not time_windows:
-        return {}
-
-    # Convert window indices to timestamps
-    timeline_data = []
-    for window_idx, window_data in sorted(time_windows.items()):
-        timestamp = window_idx * 2  # 2-second windows
-        timeline_data.append({
-            "time": timestamp,
-            "total_objects": window_data["total"],
-            "object_types": window_data["counts"]
-        })
-
-    # Find peak activity
-    if timeline_data:
-        peak_window = max(timeline_data, key=lambda x: x["total_objects"])
-        avg_objects = sum(item["total_objects"] for item in timeline_data) / len(timeline_data)
-    else:
-        peak_window = {"time": 0, "total_objects": 0}
-        avg_objects = 0
-
-    return {
-        "peak_activity_time": peak_window["time"],
-        "peak_activity_count": peak_window["total_objects"],
-        "avg_objects_per_window": round(avg_objects, 1),
-        "activity_timeline": timeline_data # Limit to first 5 windows for GPT
-    }
-
 
 def identify_object_clusters(detections: List[Dict[str, Any]], distance_threshold: int = 150) -> List[List[int]]:
     """
@@ -467,37 +379,9 @@ def identify_object_clusters(detections: List[Dict[str, Any]], distance_threshol
     return clusters
 
 
-def assess_activity_level( total_objects: int, duration: float) -> str:
-    """Simple activity level assessment."""
-    objects_per_minute = total_objects / (duration / 60) if duration > 0 else 0
-
-    if objects_per_minute < 2:
-        return "low"
-    elif objects_per_minute < 8:
-        return "moderate"
-    else:
-        return "high"
-
-
-def get_primary_objects(object_tracker: Dict[str, Dict]) -> List[str]:
-    """Get the most common object types."""
-    type_counts = {}
-    for obj_data in object_tracker.values():
-        obj_type = obj_data["type"]
-        type_counts[obj_type] = type_counts.get(obj_type, 0) + 1
-
-    # Return top 3 most common objects
-    sorted_types = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)
-    return [obj_type for obj_type, _ in sorted_types[:3]]
-
-
 """
 Enhanced temporal and spatial analysis utilities for video processing
 """
-
-from typing import Any, Dict, List, Optional, Tuple
-import numpy as np
-from collections import defaultdict, deque
 
 
 class TemporalObjectTracker:
