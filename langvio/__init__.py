@@ -8,6 +8,17 @@ __version__ = "0.3.0"
 from dotenv import load_dotenv
 load_dotenv()
 
+import cv2
+import torch
+
+# OpenCV optimizations
+cv2.setNumThreads(4)  # Adjust based on your CPU
+cv2.setUseOptimized(True)
+
+# PyTorch optimizations
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
+
 # Initialize the global model registry
 from langvio.core.registry import ModelRegistry
 registry = ModelRegistry()

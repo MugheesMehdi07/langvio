@@ -56,6 +56,9 @@ class YOLOVideoProcessor:
                 optimize_for_memory()
 
                 while cap.isOpened():
+                    self.logger.info(
+                        f"Processing frame {frame_idx}/{total_frames}")
+
                     success, frame = cap.read()
                     if not success:
                         break
@@ -84,6 +87,7 @@ class YOLOVideoProcessor:
                         final_speed_results = frame_result["speed_result"]
 
                     frame_idx += 1
+
 
             # Generate comprehensive results
             return self._create_enhanced_video_results(
@@ -178,7 +182,19 @@ class YOLOVideoProcessor:
         """Run basic YOLO detection without attributes"""
         try:
             # Run YOLO detection
-            results = self.model(frame, conf=self.config["confidence"])
+            optimized_settings = {
+                'conf': self.config["confidence"],
+                'iou': 0.5,
+                'max_det': 100,  # Limit max detections
+                'verbose': False,
+                'save': False,
+                'show': False,
+                'half': torch.cuda.is_available(),  # Use FP16 if available
+                'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+                'augment': False,  # Disable test-time augmentation
+            }
+
+            results = self.model(frame, **optimized_settings)
             detections = extract_detections(results)
             return detections
         except Exception as e:

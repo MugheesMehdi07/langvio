@@ -11,7 +11,13 @@
                 <i class="fas fa-arrow-left"></i> New Analysis
             </a>
         </div>
-        <p class="text-muted">Query: "{{ query }}" <small>(processed in {{ processing_time }} seconds)</small></p>
+        <p class="text-muted">
+            Query: "{{ query }}"
+            <small>({{ task_type|title }} analysis, processed in {{ processing_time }} seconds)</small>
+            {% if highlighted_objects_count > 0 %}
+            <span class="badge bg-warning text-dark">{{ highlighted_objects_count }} objects highlighted</span>
+            {% endif %}
+        </p>
     </div>
 </div>
 
@@ -33,18 +39,27 @@
                     <img src="{{ result_url }}" alt="Processed image" class="img-fluid">
                     {% endif %}
                 </div>
-                
+
                 <div class="mt-3">
                     <a href="{{ result_url }}" class="btn btn-sm btn-primary" download>
                         <i class="fas fa-download"></i> Download
                     </a>
+
+                    {% if target_objects %}
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <strong>Searched for:</strong> {{ target_objects|join(", ") }}
+                        </small>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Explanation and Stats -->
+
+    <!-- Analysis Results -->
     <div class="col-lg-6 mb-4">
+        <!-- Explanation Card -->
         <div class="card mb-4">
             <div class="card-header">
                 <i class="fas fa-comment-alt"></i> Explanation
@@ -55,7 +70,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Object Counts Card -->
         {% if object_counts %}
         <div class="card mb-4 stats-card">
@@ -67,7 +82,7 @@
                     <tbody>
                         {% for label, count in object_counts.items() %}
                         <tr>
-                            <td><strong>{{ label }}</strong></td>
+                            <td><strong>{{ label|title }}</strong></td>
                             <td>{{ count }}</td>
                         </tr>
                         {% endfor %}
@@ -76,8 +91,88 @@
             </div>
         </div>
         {% endif %}
-        
-        <!-- Video Stats Card -->
+
+        <!-- Image-specific stats -->
+        {% if not is_video and image_stats %}
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <i class="fas fa-image"></i> Image Analysis
+            </div>
+            <div class="card-body">
+                <table class="stats-table">
+                    <tbody>
+                        {% if image_stats.resolution %}
+                        <tr>
+                            <td><strong>Resolution</strong></td>
+                            <td>{{ image_stats.resolution }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if image_stats.total_objects is defined %}
+                        <tr>
+                            <td><strong>Total Objects</strong></td>
+                            <td>{{ image_stats.total_objects }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if image_stats.unique_types is defined %}
+                        <tr>
+                            <td><strong>Unique Types</strong></td>
+                            <td>{{ image_stats.unique_types }}</td>
+                        </tr>
+                        {% endif %}
+
+                        {% if image_stats.by_position %}
+                        <tr>
+                            <td colspan="2"><strong>By Position</strong></td>
+                        </tr>
+                        {% for position, count in image_stats.by_position.items() %}
+                        <tr>
+                            <td class="ps-3">{{ position|replace('-', ' ')|title }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+
+                        {% if image_stats.by_size %}
+                        <tr>
+                            <td colspan="2"><strong>By Size</strong></td>
+                        </tr>
+                        {% for size, count in image_stats.by_size.items() %}
+                        <tr>
+                            <td class="ps-3">{{ size|title }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+
+                        {% if image_stats.by_color %}
+                        <tr>
+                            <td colspan="2"><strong>By Color</strong></td>
+                        </tr>
+                        {% for color, count in image_stats.by_color.items() %}
+                        <tr>
+                            <td class="ps-3">{{ color|replace('_', ' ')|title }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                {% if image_stats.notable_patterns %}
+                <div class="mt-3">
+                    <h6>Notable Patterns:</h6>
+                    <ul class="mb-0">
+                        {% for pattern in image_stats.notable_patterns %}
+                        <li><small>{{ pattern }}</small></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Video-specific stats -->
         {% if is_video and video_stats %}
         <div class="card mb-4 stats-card">
             <div class="card-header">
@@ -86,50 +181,340 @@
             <div class="card-body">
                 <table class="stats-table">
                     <tbody>
-                        {% if video_stats.frames_processed %}
+                        {% if video_stats.duration is defined %}
                         <tr>
-                            <td><strong>Frames Processed</strong></td>
-                            <td>{{ video_stats.frames_processed }}</td>
+                            <td><strong>Duration</strong></td>
+                            <td>{{ "%.1f"|format(video_stats.duration) }}s</td>
                         </tr>
                         {% endif %}
-                        
-                        {% if video_stats.unique_objects %}
-                            <tr>
-                                <td colspan="2"><strong>Unique Objects</strong></td>
-                            </tr>
-                            {% for label, count in video_stats.unique_objects.items() %}
-                            <tr>
-                                <td class="ps-3">{{ label }}</td>
-                                <td>{{ count }}</td>
-                            </tr>
-                            {% endfor %}
+                        {% if video_stats.resolution %}
+                        <tr>
+                            <td><strong>Resolution</strong></td>
+                            <td>{{ video_stats.resolution }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if video_stats.activity_level %}
+                        <tr>
+                            <td><strong>Activity Level</strong></td>
+                            <td>{{ video_stats.activity_level|replace('_', ' ')|title }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if video_stats.frames_analyzed is defined and video_stats.total_frames is defined %}
+                        <tr>
+                            <td><strong>Frames Analyzed</strong></td>
+                            <td>{{ video_stats.frames_analyzed }} / {{ video_stats.total_frames }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if video_stats.yolo11_enabled is defined %}
+                        <tr>
+                            <td><strong>Enhanced Analysis</strong></td>
+                            <td>{{ "✅ YOLO11" if video_stats.yolo11_enabled else "❌ Basic" }}</td>
+                        </tr>
                         {% endif %}
                     </tbody>
                 </table>
+
+                {% if video_stats.primary_objects %}
+                <div class="mt-3">
+                    <h6>Primary Objects:</h6>
+                    <div class="d-flex flex-wrap">
+                        {% for obj in video_stats.primary_objects[:5] %}
+                        <span class="badge bg-info me-1 mb-1">{{ obj|title }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
-        
-        <!-- Additional Stats Card -->
-        {% if stats and stats.counts %}
+
+        <!-- YOLO11 Counting Results -->
+        {% if video_stats.counting %}
         <div class="card mb-4 stats-card">
             <div class="card-header">
-                <i class="fas fa-clipboard-list"></i> Summary Statistics
+                <i class="fas fa-calculator"></i> YOLO11 Counting Analysis
             </div>
             <div class="card-body">
                 <table class="stats-table">
                     <tbody>
-                        {% for category, count in stats.counts.items() %}
                         <tr>
-                            <td><strong>{{ category }}</strong></td>
-                            <td>{{ count }}</td>
+                            <td><strong>Total Crossings</strong></td>
+                            <td>{{ video_stats.counting.total_crossings }}</td>
                         </tr>
-                        {% endfor %}
-                        
-                        {% if stats.total_unique_objects %}
                         <tr>
-                            <td><strong>Total Unique Objects</strong></td>
-                            <td>{{ stats.total_unique_objects }}</td>
+                            <td><strong>Objects Entered</strong></td>
+                            <td>{{ video_stats.counting.objects_entered }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Objects Exited</strong></td>
+                            <td>{{ video_stats.counting.objects_exited }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Net Flow</strong></td>
+                            <td>{{ video_stats.counting.net_flow }} ({{ video_stats.counting.flow_direction }})</td>
+                        </tr>
+                        {% if video_stats.counting.most_active_type %}
+                        <tr>
+                            <td><strong>Most Active Type</strong></td>
+                            <td>{{ video_stats.counting.most_active_type|title }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                {% if video_stats.counting.by_object_type %}
+                <div class="mt-3">
+                    <h6>By Object Type:</h6>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>In</th>
+                                <th>Out</th>
+                                <th>Net</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for obj_type, counts in video_stats.counting.by_object_type.items() %}
+                            <tr>
+                                <td>{{ obj_type|title }}</td>
+                                <td>{{ counts.entered }}</td>
+                                <td>{{ counts.exited }}</td>
+                                <td>{{ counts.net_flow }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Speed Analysis -->
+        {% if video_stats.speed %}
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <i class="fas fa-tachometer-alt"></i> Speed Analysis
+            </div>
+            <div class="card-body">
+                <table class="stats-table">
+                    <tbody>
+                        <tr>
+                            <td><strong>Objects with Speed</strong></td>
+                            <td>{{ video_stats.speed.objects_with_speed }}</td>
+                        </tr>
+                        {% if video_stats.speed.average_speed_kmh %}
+                        <tr>
+                            <td><strong>Average Speed</strong></td>
+                            <td>{{ video_stats.speed.average_speed_kmh }} km/h ({{ video_stats.speed.speed_category|replace('_', ' ')|title }})</td>
+                        </tr>
+                        {% endif %}
+                        {% if video_stats.speed.fastest_type %}
+                        <tr>
+                            <td><strong>Fastest Type</strong></td>
+                            <td>{{ video_stats.speed.fastest_type|title }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                {% if video_stats.speed.by_object_type %}
+                <div class="mt-3">
+                    <h6>Speed by Object Type:</h6>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Avg Speed (km/h)</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for obj_type, speed_info in video_stats.speed.by_object_type.items() %}
+                            <tr>
+                                <td>{{ obj_type|title }}</td>
+                                <td>{{ speed_info.average_speed }}</td>
+                                <td>{{ speed_info.speed_category|replace('_', ' ')|title }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Movement Analysis -->
+        {% if video_stats.movement %}
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <i class="fas fa-running"></i> Movement Analysis
+            </div>
+            <div class="card-body">
+                <table class="stats-table">
+                    <tbody>
+                        <tr>
+                            <td><strong>Stationary Objects</strong></td>
+                            <td>{{ video_stats.movement.stationary_count }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Moving Objects</strong></td>
+                            <td>{{ video_stats.movement.moving_count }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fast Moving Objects</strong></td>
+                            <td>{{ video_stats.movement.fast_moving_count }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                {% if video_stats.movement.primary_directions %}
+                <div class="mt-3">
+                    <h6>Primary Movement Directions:</h6>
+                    {% for direction, count in video_stats.movement.primary_directions.items() %}
+                    <span class="badge bg-secondary me-1 mb-1">
+                        {{ direction|replace('_', ' ')|title }}: {{ count if count is number else count|length }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Primary Insights -->
+        {% if video_stats.primary_insights %}
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <i class="fas fa-lightbulb"></i> Key Insights
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    {% for insight in video_stats.primary_insights %}
+                    <li class="mb-2">{{ insight }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {% endif %} <!-- End video stats -->
+
+        <!-- Detailed Objects List -->
+        {% if detailed_objects %}
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> Detected Objects Details
+                {% if detailed_objects|length >= 10 %}
+                <small class="text-muted">(showing first 10)</small>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Object</th>
+                                <th>Confidence</th>
+                                {% if is_video %}
+                                <th>Frame</th>
+                                {% endif %}
+                                <th>Attributes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for obj in detailed_objects %}
+                            <tr>
+                                <td><code>{{ obj.id }}</code></td>
+                                <td>
+                                    <strong>{{ obj.label|title }}</strong>
+                                    {% if obj.track_id %}
+                                    <br><small class="text-muted">Track: {{ obj.track_id }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.2f"|format(obj.confidence) }}</td>
+                                {% if is_video %}
+                                <td>{{ obj.frame }}</td>
+                                {% endif %}
+                                <td>
+                                    {% if obj.attributes %}
+                                    <div class="d-flex flex-wrap">
+                                        {% for attr, value in obj.attributes.items() %}
+                                        {% if value and value != "unknown" %}
+                                        <span class="badge bg-light text-dark me-1 mb-1" style="font-size: 0.7em;">
+                                            {{ attr }}: {{ value|replace('_', ' ')|title }}
+                                        </span>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <small class="text-muted">None</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Query Parameters Summary -->
+        {% if query_params %}
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Analysis Configuration
+            </div>
+            <div class="card-body">
+                <table class="stats-table">
+                    <tbody>
+                        <tr>
+                            <td><strong>Task Type</strong></td>
+                            <td>{{ task_type|replace('_', ' ')|title }}</td>
+                        </tr>
+                        {% if query_params.count_objects %}
+                        <tr>
+                            <td><strong>Counting Enabled</strong></td>
+                            <td>✅ Yes</td>
+                        </tr>
+                        {% endif %}
+                        {% if target_objects %}
+                        <tr>
+                            <td><strong>Target Objects</strong></td>
+                            <td>{{ target_objects|join(", ")|title }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if requested_attributes %}
+                        <tr>
+                            <td><strong>Requested Attributes</strong></td>
+                            <td>
+                                {% for attr in requested_attributes %}
+                                <span class="badge bg-info me-1">
+                                    {{ attr.attribute if attr.attribute else 'unknown' }}:{{ attr.value if attr.value else 'any' }}
+                                </span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if query_params.spatial_relations %}
+                        <tr>
+                            <td><strong>Spatial Relations</strong></td>
+                            <td>
+                                {% for rel in query_params.spatial_relations %}
+                                <span class="badge bg-warning text-dark me-1">
+                                    {{ rel.relation if rel.relation else 'unknown' }}
+                                </span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if query_params.activities %}
+                        <tr>
+                            <td><strong>Activity Detection</strong></td>
+                            <td>{{ query_params.activities|join(", ")|title }}</td>
                         </tr>
                         {% endif %}
                     </tbody>
@@ -139,6 +524,86 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Additional Technical Details (Collapsible) -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#technicalDetails" aria-expanded="false" aria-controls="technicalDetails">
+                    <i class="fas fa-cog"></i> Technical Details
+                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                </button>
+            </div>
+            <div class="collapse" id="technicalDetails">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Processing Information</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Media Type:</strong> {{ "Video" if is_video else "Image" }}</li>
+                                <li><strong>Processing Time:</strong> {{ processing_time }}s</li>
+                                <li><strong>Objects Highlighted:</strong> {{ highlighted_objects_count }}</li>
+                                {% if is_video and video_stats.yolo11_enabled is defined %}
+                                <li><strong>YOLO11 Enhanced:</strong> {{ "Yes" if video_stats.yolo11_enabled else "No" }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Query Analysis</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Original Query:</strong> "{{ query }}"</li>
+                                <li><strong>Analysis Type:</strong> {{ task_type|replace('_', ' ')|title }}</li>
+                                {% if query_params.custom_instructions %}
+                                <li><strong>Custom Instructions:</strong> {{ query_params.custom_instructions }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    {% if is_video and video_stats.spatial %}
+                    <div class="mt-3">
+                        <h6>Spatial Relationship Patterns</h6>
+                        <div class="row">
+                            {% if video_stats.spatial.common_relations %}
+                            <div class="col-md-4">
+                                <strong>Common Relations:</strong>
+                                <ul class="small">
+                                    {% for relation, count in video_stats.spatial.common_relations.items() %}
+                                    <li>{{ relation|replace('_', ' ')|title }}: {{ count }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            {% if video_stats.spatial.frequent_pairs %}
+                            <div class="col-md-4">
+                                <strong>Frequent Pairs:</strong>
+                                <ul class="small">
+                                    {% for pair, count in video_stats.spatial.frequent_pairs.items() %}
+                                    <li>{{ pair }}: {{ count }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            {% if video_stats.spatial.spatial_patterns %}
+                            <div class="col-md-4">
+                                <strong>Spatial Patterns:</strong>
+                                <ul class="small">
+                                    {% for pattern, count in video_stats.spatial.spatial_patterns.items() %}
+                                    <li>{{ pattern|replace('-', ' → ')|replace('_', ' ') }}: {{ count }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -146,10 +611,33 @@
     // Auto-resize explanation text
     document.addEventListener('DOMContentLoaded', function() {
         const explanation = document.querySelector('.explanation');
-        if (explanation.scrollHeight > 300) {
+        if (explanation && explanation.scrollHeight > 300) {
             explanation.style.maxHeight = '300px';
             explanation.style.overflowY = 'auto';
         }
+
+        // Add tooltips to badges and technical terms
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Handle collapsible sections
+        const collapseElementList = [].slice.call(document.querySelectorAll('.collapse'));
+        const collapseList = collapseElementList.map(function (collapseEl) {
+            const button = document.querySelector('[data-bs-target="#' + collapseEl.id + '"]');
+            if (button) {
+                collapseEl.addEventListener('show.bs.collapse', function () {
+                    button.querySelector('.fa-chevron-down').classList.add('fa-chevron-up');
+                    button.querySelector('.fa-chevron-down').classList.remove('fa-chevron-down');
+                });
+                collapseEl.addEventListener('hide.bs.collapse', function () {
+                    button.querySelector('.fa-chevron-up').classList.add('fa-chevron-down');
+                    button.querySelector('.fa-chevron-up').classList.remove('fa-chevron-up');
+                });
+            }
+            return new bootstrap.Collapse(collapseEl, {toggle: false});
+        });
     });
 </script>
 {% endblock %}

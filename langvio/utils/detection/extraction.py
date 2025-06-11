@@ -1,29 +1,69 @@
 """
 Core detection extraction and enhancement utilities
 """
-
+import gc
 import os
 from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 import torch
 
+from langvio.llm.factory import logger
+
 
 def optimize_for_memory():
-    """Set PyTorch memory optimization settings"""
-    # Set environment variables to reduce memory fragmentation
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    try:
+        # Set environment variables for memory optimization
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:128"
 
-    # Enable memory caching to reduce allocations
-    torch.cuda.empty_cache()
+        # Check if CUDA is available and working
+        cuda_available = torch.cuda.is_available()
+        if cuda_available:
+            try:
+                # Test CUDA functionality
+                test_tensor = torch.zeros(1, device='cuda')
+                del test_tensor
 
-    # Set to use TF32 precision if available (for Ampere and later GPUs)
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
+                # Clear cache
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
 
-    # Set inference mode for PyTorch
-    torch.set_grad_enabled(False)
+                # Set memory management
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+                torch.backends.cudnn.benchmark = False  # More stable for varying sizes
+                torch.backends.cudnn.deterministic = True
 
+                logger.info("CUDA memory optimization successful")
+
+            except Exception as e:
+                logger.warning(f"CUDA optimization failed: {e}, falling back to CPU")
+                cuda_available = False
+                force_cpu_mode()
+
+        # CPU optimizations
+        if not cuda_available:
+            torch.set_num_threads(min(4, os.cpu_count()))  # Limit CPU threads
+            torch.set_grad_enabled(False)
+
+        # General PyTorch optimizations
+        torch.set_grad_enabled(False)
+
+        # Python garbage collection
+        gc.collect()
+
+    except Exception as e:
+            logger.error(f"Memory optimization failed: {e}")
+
+
+def force_cpu_mode():
+    """Force CPU mode when CUDA fails"""
+    try:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        logger.info("Forced CPU mode")
+    except Exception as e:
+        logger.warning(f"Error forcing CPU mode: {e}")
 
 def extract_detections(results) -> List[Dict[str, Any]]:
     """Extract detections from YOLO results with basic attributes"""
@@ -67,6 +107,8 @@ def add_unified_attributes(
         return detections
 
     # Get image data for color detection if needed
+
+    needs_color = not is_video_frame # setting color detection false
     image_data = None
     if needs_color:
         if is_video_frame:
