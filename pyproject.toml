@@ -1,16 +1,20 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "langvio"
-version = "0.1.0"
+version = "0.3.0"
 description = "Connect language models to vision models for natural language visual analysis"
 readme = "README.md"
+license = {text = "MIT"}
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
-license = {text = "MIT"}
+maintainers = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["computer-vision", "llm", "ai", "yolo", "langchain", "object-detection"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -19,31 +23,69 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+    "Topic :: Text Processing :: Linguistic",
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "torch>=1.7.0",
-    "numpy>=1.18.0",
-    "opencv-python>=4.5.0",
-    "pyyaml>=5.4.0",
-    "langchain>=0.0.267",
+    "torch>=1.9.0",
     "ultralytics>=8.0.0",
+    "opencv-python>=4.5.0",
+    "numpy>=1.20.0",
     "pillow>=8.0.0",
+    "langchain-core>=0.1.0",
+    "langchain-community>=0.0.10",
+    "pyyaml>=6.0",
+    "python-dotenv>=0.19.0",
     "tqdm>=4.64.0",
-    "requests>=2.25.0",
 ]
 
 [project.optional-dependencies]
 openai = [
-    "openai>=0.27.0",
+    "openai>=1.0.0",
+    "langchain-openai>=0.0.1",
+]
+google = [
+    "google-generativeai>=0.3.0",
+    "langchain-google-genai>=0.0.1",
+]
+anthropic = [
+    "anthropic>=0.5.0",
+    "langchain-anthropic>=0.0.1",
+]
+all-llm = [
+    "langvio[openai,google,anthropic]",
+]
+webapp = [
+    "flask>=2.0.0",
+    "werkzeug>=2.0.0",
 ]
 dev = [
-    "pytest>=6.0.0",
-    "black>=21.5b2",
-    "isort>=5.9.1",
-    "flake8>=3.9.2",
-    "mypy>=0.910",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "flake8>=5.0.0",
+    "mypy>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/MugheesMehdi07/langvio"
+Documentation = "https://github.com/MugheesMehdi07/langvio#readme"
+Repository = "https://github.com/MugheesMehdi07/langvio"
+Issues = "https://github.com/MugheesMehdi07/langvio/issues"
+Changelog = "https://github.com/MugheesMehdi07/langvio/blob/main/CHANGELOG.md"
 
 [project.scripts]
 langvio = "langvio.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["langvio*"]
+exclude = ["tests*", "examples*", "webapp*", "docs*"]
+
+[tool.setuptools.package-data]
+langvio = ["*.yaml", "*.yml", "*.json"]

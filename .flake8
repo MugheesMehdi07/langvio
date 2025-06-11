@@ -1,6 +1,4 @@
 [flake8]
-max-line-length = 100
-exclude = .git,__pycache__,build,dist,venv
-# E203 conflicts with Black formatting for slices
-# W503 line break before binary operator - conflicting with newer style guides
-ignore = E203,W503
+max-line-length = 88
+exclude = .git,__pycache__,build,dist,venv,env,.venv,.eggs,*.egg
+ignore = E203,W503  # Black compatibility

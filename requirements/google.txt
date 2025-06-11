@@ -1,0 +1,3 @@
+-r base.txt
+google-generativeai>=0.3.0
+langchain-google-genai>=0.0.1

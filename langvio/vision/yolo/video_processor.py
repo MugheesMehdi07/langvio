@@ -27,6 +27,7 @@ class YOLOVideoProcessor:
         self.has_yolo11_solutions = has_yolo11_solutions
         self.logger = logging.getLogger(__name__)
 
+
     def process(self, video_path: str, query_params: Dict[str, Any], sample_rate: int) -> Dict[str, Any]:
         """Process video with enhanced analysis strategy"""
         self.logger.info(f"Processing video: {video_path}")

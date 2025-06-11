@@ -1,0 +1,3 @@
+-r base.txt
+openai>=1.0.0
+langchain-openai>=0.0.1

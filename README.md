@@ -1,17 +1,60 @@
-# Langvio: Connecting Language Models to Vision Models
+# 🧠 Langvio: Natural Language Computer Vision
 
-Langvio is a Python framework that connects language models (LLMs) with vision models to enable natural language visual analysis. This library makes it easy to analyze images (and videos) using natural language queries.
+<div align="center">
 
-## Features
+![Langvio Logo](https://img.shields.io/badge/Langvio-Vision%20%2B%20Language-blue?style=for-the-badge&logo=python)
 
-- **Natural Language Interface**: Query visual content using natural language
-- **Multimodal Integration**: Seamlessly connects LLMs with vision models
-- **Flexible Architecture**: Supports multiple LLM providers (OpenAI, Google Gemini)
-- **Rich Analysis**: Detect objects, attributes, spatial relationships, and more
-- **YOLO Integration**: Powered by YOLOv11 for fast and accurate object detection
-- **Extensible Design**: Easy to add new models and capabilities
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://badge.fury.io/py/langvio.svg)](https://badge.fury.io/py/langvio)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://langvio.readthedocs.io/)
 
-## Installation
+**Connect language models to vision models for natural language visual analysis**
+
+[🚀 Quick Start](#-quick-start) • [📖 Documentation](https://langvio.readthedocs.io/) • [🎯 Examples](#-examples) • [🔧 Installation](#-installation) • [🤝 Contributing](#-contributing)
+
+</div>
+
+---
+
+## ✨ What is Langvio?
+
+Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by state-of-the-art vision models and language models.
+
+### 🎯 Key Features
+
+- **🗣️ Natural Language Interface**: Ask questions like "Count all red cars" or "Find people wearing yellow"
+- **🎥 Multi-Modal Support**: Works with both images and videos
+- **🚀 Powered by YOLO**: Uses YOLOv11 and YOLOe for fast, accurate object detection
+- **🤖 LLM Integration**: Supports OpenAI GPT and Google Gemini for intelligent explanations
+- **📊 Advanced Analytics**: Object counting, speed estimation, spatial relationships
+- **🎨 Visual Output**: Generates annotated images/videos with detection highlights
+- **🌐 Web Interface**: Includes a Flask web app for easy interaction
+- **🔧 Extensible**: Easy to add new models and capabilities
+
+## 🎬 See It In Action
+
+```python
+import langvio
+
+# Create a pipeline
+pipeline = langvio.create_pipeline()
+
+# Analyze an image
+result = pipeline.process(
+    query="Count how many people are wearing red shirts",
+    media_path="street_scene.jpg"
+)
+
+print(result['explanation'])
+# Output: "I found 3 people wearing red shirts in the image. 
+#          Two are located in the center-left area, and one is on the right side."
+
+# View the annotated result
+print(f"Annotated image saved to: {result['output_path']}")
+```
+
+## 🔧 Installation
 
 ### Basic Installation
 
@@ -19,12 +62,12 @@ Langvio is a Python framework that connects language models (LLMs) with vision m
 pip install langvio
 ```
 
-### With LLM Providers
+### With LLM Provider Support
 
-Langvio supports multiple LLM providers. Install the ones you need:
+Choose your preferred language model provider:
 
 ```bash
-# For OpenAI models
+# For OpenAI models (GPT-3.5, GPT-4)
 pip install langvio[openai]
 
 # For Google Gemini models
@@ -37,200 +80,305 @@ pip install langvio[all-llm]
 pip install langvio[dev]
 ```
 
-## Quick Start
+### Environment Setup
 
-```python
-import os
-from langvio import create_pipeline
-
-# Create a pipeline
-pipeline = create_pipeline()
-
-# Create output directory
-output_dir = "./output"
-os.makedirs(output_dir, exist_ok=True)
-
-# Process an image with a natural language query
-image_path = "path/to/your/image.jpg"
-query = "What objects are in this image?"
-
-# Run the query
-result = pipeline.process(query, image_path)
-
-# View the results
-print(f"Explanation: {result['explanation']}")
-print(f"Output saved to: {result['output_path']}")
-```
-
-## Using Environment Variables
-
-Langvio supports loading API keys from a `.env` file:
-
-1. Create a `.env` file in your project directory:
+1. **Create a `.env` file** for your API keys:
 
 ```bash
 # Copy the template
 cp .env.template .env
-
-# Edit the file with your actual API keys
-nano .env  # or use your preferred editor
 ```
 
-2. Add your API keys:
+2. **Add your API keys** to `.env`:
 
-```
-GOOGLE_API_KEY=your_actual_google_api_key_here
-OPENAI_API_KEY=your_actual_openai_api_key_here
-# Add other API keys as needed
+```env
+# For OpenAI
+OPENAI_API_KEY=your_openai_api_key_here
+
+# For Google Gemini  
+GOOGLE_API_KEY=your_google_api_key_here
 ```
 
-3. Langvio will automatically load these environment variables:
+3. **Langvio automatically loads** these environment variables!
+
+## 🚀 Quick Start
+
+### Basic Usage
 
 ```python
 import langvio
 
-# API keys are automatically loaded from .env file
+# Create a pipeline (automatically detects available LLM providers)
 pipeline = langvio.create_pipeline()
+
+# Process an image
+result = pipeline.process(
+    query="What objects are in this image?",
+    media_path="path/to/your/image.jpg"
+)
+
+print(result['explanation'])
+print(f"Output: {result['output_path']}")
 ```
 
-**Important**: Add `.env` to your `.gitignore` file to prevent accidentally committing your API keys:
+### Video Analysis
+
+```python
+# Analyze videos with temporal understanding
+result = pipeline.process(
+    query="Count vehicles crossing the intersection",
+    media_path="traffic_video.mp4"
+)
+
+# Get detailed analysis including speed and movement patterns
+print(result['explanation'])
+```
+
+### Web Interface
 
 ```bash
-echo ".env" >> .gitignore
+# Launch the web interface
+cd webapp
+python app.py
+
+# Visit http://localhost:5000 in your browser
 ```
 
-## Query Types
+## 🎯 Examples
 
-Langvio supports various types of visual analysis:
-
-### Basic Object Detection
+### Object Detection & Counting
 
 ```python
-query = "What objects are in this image?"
+# Count specific objects
+pipeline.process("How many cars are in this parking lot?", "parking.jpg")
+
+# Find objects by attributes  
+pipeline.process("Find all red objects in this image", "scene.jpg")
+
+# Spatial relationships
+pipeline.process("What objects are on the table?", "kitchen.jpg")
 ```
 
-### Object Counting
+### Video Analysis
 
 ```python
-query = "Count how many people are in this image"
+# Track movement patterns
+pipeline.process("Track people walking through the scene", "crowd.mp4")
+
+# Speed analysis
+pipeline.process("What's the average speed of vehicles?", "highway.mp4")
+
+# Activity detection
+pipeline.process("Detect any unusual activities", "security_footage.mp4")
 ```
 
-### Attribute Detection
+### Advanced Queries
 
 ```python
-query = "Find all red objects in this image"
+# Complex multi-part analysis
+pipeline.process(
+    "Count people and vehicles, identify their locations, and note distinctive colors",
+    "street_scene.jpg"
+)
+
+# Verification tasks
+pipeline.process("Is there a dog in this image?", "park_scene.jpg")
+
+# Temporal analysis
+pipeline.process("How many people entered vs exited the building?", "entrance.mp4")
 ```
 
-### Spatial Relationships
+## 🏗️ Architecture
 
-```python
-query = "Find any objects on the table"
+```mermaid
+graph TD
+    A[User Query] --> B[LLM Processor]
+    B --> C[Query Parser]
+    C --> D[Vision Processor]
+    D --> E[YOLO Detection]
+    E --> F[Attribute Analysis]
+    F --> G[Spatial Relationships]
+    G --> H[Temporal Tracking]
+    H --> I[LLM Explanation]
+    I --> J[Visualization]
+    J --> K[Output]
 ```
 
-### Verification
+### Core Components
 
-```python
-query = "Is there a refrigerator in this kitchen?"
-```
+- **🧠 LLM Processor**: Parses queries and generates explanations (OpenAI, Google Gemini)
+- **👁️ Vision Processor**: Detects objects and attributes (YOLO, YOLOe)
+- **🎨 Media Processor**: Creates visualizations and handles I/O
+- **⚙️ Pipeline**: Orchestrates the entire workflow
 
-### Combined Analysis
+## 📊 Supported Models
 
-```python
-query = "Analyze this street scene. Count people and vehicles, identify their locations relative to each other, and note any distinctive colors."
-```
+### Vision Models
+- **YOLOv11** (nano, small, medium, large, extra-large)
+- **YOLOe** (enhanced YOLO variants)
+- Automatic model selection based on performance needs
 
-## Advanced Configuration
+### Language Models
+- **OpenAI**: GPT-3.5 Turbo, GPT-4 Turbo
+- **Google**: Gemini Pro, Gemini Flash
+- Extensible architecture for adding more providers
+
+## 🛠️ Configuration
 
 ### Custom Configuration
 
-Langvio can be configured using YAML files:
-
-```python
-pipeline = create_pipeline(config_path="path/to/your/config.yaml")
-```
-
-Example configuration file:
-
 ```yaml
+# config.yaml
 llm:
-  default: "gpt-4"
+  default: "gemini"
   models:
-    gpt-4:
-      model_name: "gpt-4-turbo"
+    gemini:
+      model_name: "gemini-2.0-flash"
       model_kwargs:
-        temperature: 0.1
+        temperature: 0.2
 
 vision:
-  default: "yolo"
+  default: "yoloe_large"
   models:
-    yolo:
-      type: "yolo"
-      model_path: "yolov11x.pt"  # Using a larger model
-      confidence: 0.3
+    yoloe_large:
+      model_path: "yoloe-11l-seg-pf.pt"
+      confidence: 0.5
 
 media:
-  output_dir: "./custom_output"
+  output_dir: "./results"
   visualization:
-    box_color: [0, 0, 255]  # Red boxes
-    text_color: [255, 255, 255]  # White text
-    line_thickness: 3
+    box_color: [0, 255, 0]
+    line_thickness: 2
+```
+
+```python
+# Use custom configuration
+pipeline = langvio.create_pipeline(config_path="config.yaml")
 ```
 
 ### Command Line Interface
 
-Langvio includes a command-line interface:
+```bash
+# Basic usage
+langvio --query "Count the cars" --media image.jpg
+
+# With custom configuration
+langvio --query "Find red objects" --media scene.jpg --config custom.yaml
+
+# List available models
+langvio --list-models
+```
+
+## 🌟 Advanced Features
+
+### YOLO11 Solutions Integration
+
+- **Object Counting**: Automatic boundary-crossing detection
+- **Speed Estimation**: Real-time speed analysis for video
+- **Advanced Tracking**: Multi-object tracking across frames
+
+### Spatial Relationship Analysis
+
+- **Positional Understanding**: "objects on the table", "cars in the parking lot"
+- **Relative Positioning**: left/right, above/below, near/far relationships
+- **Containment Detection**: objects inside other objects
+
+### Temporal Analysis (Video)
+
+- **Movement Patterns**: Track object trajectories and behaviors
+- **Activity Recognition**: Detect activities and interactions
+- **Temporal Relationships**: Understand object co-occurrence
+
+### Color & Attribute Detection
+
+- **Advanced Color Recognition**: 50+ color categories with confidence scoring
+- **Size Classification**: Automatic small/medium/large categorization
+- **Multi-attribute Analysis**: Combined color, size, and position analysis
+
+## 🚀 Performance & Optimization
+
+### Model Selection Strategy
+
+```python
+# Automatic model selection based on use case
+pipeline = langvio.create_pipeline()  # Uses best available model
+
+# Manual model selection for specific needs
+pipeline = langvio.create_pipeline(
+    vision_name="yoloe_large",  # High accuracy
+    llm_name="gpt-4"           # Advanced reasoning
+)
+```
+
+### Optimization Tips
+
+- **YOLOe models**: Better accuracy for complex scenes
+- **YOLO11 models**: Faster processing for real-time applications
+- **Confidence thresholds**: Adjust based on precision/recall needs
+- **Frame sampling**: Control video processing speed vs accuracy
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+### Development Setup
 
 ```bash
-langvio --query "What objects are in this image?" --media path/to/image.jpg
+# Clone the repository
+git clone https://github.com/yourusername/langvio.git
+cd langvio
+
+# Install in development mode
+pip install -e .[dev]
+
+# Run tests
+pytest
+
+# Format code
+black langvio/
+isort langvio/
 ```
 
-Options:
+### Contributing Guidelines
 
-```
---query, -q      Natural language query
---media, -m      Path to image or video file
---config, -c     Path to configuration file
---llm, -l        LLM processor to use
---vision, -v     Vision processor to use
---output, -o     Output directory
---log-level      Logging level (DEBUG, INFO, WARNING, ERROR)
---log-file       Path to log file
---list-models    List available models and exit
-```
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-## Architecture
+## 📚 Documentation
 
-Langvio uses a pipeline architecture that consists of:
+- **📖 [Full Documentation](https://langvio.readthedocs.io/)**: Comprehensive guides and API reference
+- **🎯 [Examples](./examples/)**: Ready-to-run example scripts
+- **🌐 [Web App](./webapp/)**: Flask web interface for easy testing
+- **⚙️ [Configuration](./examples/config_examples/)**: Sample configuration files
 
-1. **LLM Processor**: Processes natural language queries and generates explanations
-2. **Vision Processor**: Detects objects and attributes in images
-3. **Media Processor**: Handles image loading and visualization
+## 🔗 Links & Resources
 
-The framework is designed to be extensible, allowing new models and capabilities to be added easily.
+- **🐙 [GitHub Repository](https://github.com/yourusername/langvio)**
+- **📦 [PyPI Package](https://pypi.org/project/langvio/)**
+- **📖 [Documentation](https://langvio.readthedocs.io/)**
+- **🐛 [Issue Tracker](https://github.com/yourusername/langvio/issues)**
+- **💬 [Discussions](https://github.com/yourusername/langvio/discussions)**
 
-## Example Use Cases
+## 📄 License
 
-- **Content Analysis**: "Describe what's in this image"
-- **Object Finding**: "Find all instances of dogs in this photo"
-- **Attribute Analysis**: "What color are the cars in this image?"
-- **Scene Understanding**: "Analyze the spatial layout of this room"
-- **Visual QA**: "Is there anyone wearing a red shirt in this image?"
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-## Supported Models
+## 🙏 Acknowledgments
 
-### LLM Models
+- **Ultralytics** for the amazing YOLO models
+- **LangChain** for LLM integration framework
+- **OpenAI** and **Google** for language model APIs
+- **OpenCV** for computer vision utilities
 
-- OpenAI GPT (3.5, 4)
-- Google Gemini
+---
 
-### Vision Models
+<div align="center">
 
-- YOLOv11 (various sizes)
+**⭐ Star us on GitHub if Langvio helps you!**
 
-## Contributing
+[⭐ Star](https://github.com/yourusername/langvio) • [🔗 Share](https://twitter.com/intent/tweet?text=Check%20out%20Langvio%20-%20Natural%20Language%20Computer%20Vision!&url=https://github.com/yourusername/langvio) • [🐛 Report Bug](https://github.com/yourusername/langvio/issues)
 
-Contributions are welcome! Please check out our contributing guidelines in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+</div>
