@@ -1,24 +1,51 @@
-# Welcome to Langvio
+# Langvio Documentation
 
-<div align="center" markdown>
-
-![Langvio Logo](assets/logo.png){ width="200" }
-
-**Natural Language Computer Vision**
-
-*Connect language models to vision models for intelligent visual analysis*
-
-[Get Started](getting-started/installation.md){ .md-button .md-button--primary }
-[View Examples](examples/basic-examples.md){ .md-button }
-[GitHub Repository](https://github.com/yourusername/langvio){ .md-button }
-
-</div>
-
----
+Welcome to **Langvio** - a powerful Python framework that connects large language models (LLMs) with computer vision models to enable natural language visual analysis.
 
 ## What is Langvio?
 
-Langvio bridges the gap between human language and computer vision. Ask questions about images and videos in plain English, and get intelligent analysis powered by state-of-the-art vision models and language models.
+Langvio bridges the gap between natural language understanding and computer vision by allowing you to analyze images and videos using simple, conversational queries. Instead of writing complex computer vision code, you can ask questions like:
+
+- "Count how many people are in this image"
+- "Find all red objects in this video" 
+- "Are there any vehicles moving from left to right?"
+- "Describe the spatial relationships between objects"
+
+## Key Features
+
+### 🔍 **Natural Language Interface**
+Query visual content using everyday language - no computer vision expertise required.
+
+### 🤖 **Multi-Modal Integration** 
+Seamlessly connects leading LLMs (OpenAI GPT, Google Gemini) with state-of-the-art vision models (YOLOv11, YOLOe).
+
+### 📊 **Rich Analysis Capabilities**
+- Object detection and identification
+- Object counting and tracking
+- Attribute analysis (color, size, position)
+- Spatial relationship detection
+- Motion analysis and speed estimation
+- Activity recognition
+
+### 🎯 **YOLO11 Enhanced**
+Advanced features powered by YOLO11 Solutions:
+- Precise object counting with boundary crossing detection
+- Speed estimation and movement analysis
+- Object tracking across video frames
+
+### 🌐 **Flexible Deployment**
+- Python API for integration
+- Web interface for interactive use
+- Command-line interface for automation
+- Configurable pipeline architecture
+
+### 🚀 **Production Ready**
+- Memory-optimized processing
+- Configurable confidence thresholds
+- Comprehensive error handling
+- Extensible architecture for custom models
+
+## Quick Example
 
 ```python
 import langvio
@@ -26,170 +53,138 @@ import langvio
 # Create a pipeline
 pipeline = langvio.create_pipeline()
 
-# Ask a question about your image
+# Analyze an image with natural language
 result = pipeline.process(
-    query="How many people are wearing red shirts?",
+    query="Count how many people are wearing red clothing",
     media_path="street_scene.jpg"
 )
 
-print(result['explanation'])
-# Output: "I found 3 people wearing red shirts in the image..."
+print(f"Analysis: {result['explanation']}")
+print(f"Visualization saved to: {result['output_path']}")
 ```
 
-## Key Features
+## Supported Use Cases
 
-<div class="grid cards" markdown>
+### 🏭 **Industrial & Manufacturing**
+- Quality control and defect detection
+- Assembly line monitoring
+- Safety compliance verification
+- Inventory management
 
--   :material-chat-processing:{ .lg .middle } __Natural Language Interface__
-
-    ---
-
-    Ask questions in plain English. No need to learn complex APIs or computer vision terminology.
-
-    [:octicons-arrow-right-24: Learn more](guides/query-types.md)
-
--   :material-camera-burst:{ .lg .middle } __Multi-Modal Support__
-
-    ---
-
-    Works with both images and videos. Analyze static scenes or track objects over time.
-
-    [:octicons-arrow-right-24: Image Guide](guides/image-analysis.md)
-
--   :material-rocket-launch:{ .lg .middle } __Powered by YOLO__
-
-    ---
-
-    Uses YOLOv11 and YOLOe for fast, accurate object detection with advanced tracking capabilities.
-
-    [:octicons-arrow-right-24: Architecture](development/architecture.md)
-
--   :material-brain:{ .lg .middle } __LLM Integration__
-
-    ---
-
-    Supports OpenAI GPT and Google Gemini for intelligent explanations and complex reasoning.
-
-    [:octicons-arrow-right-24: Configuration](guides/configuration.md)
-
--   :material-chart-line:{ .lg .middle } __Advanced Analytics__
-
-    ---
-
-    Object counting, speed estimation, spatial relationships, and temporal analysis.
-
-    [:octicons-arrow-right-24: Video Analysis](guides/video-analysis.md)
-
--   :material-web:{ .lg .middle } __Web Interface__
-
-    ---
-
-    Includes a Flask web application for easy interaction and demonstration.
-
-    [:octicons-arrow-right-24: Web Interface](getting-started/web-interface.md)
-
-</div>
-
-## Quick Example
-
-=== "Image Analysis"
-
-    ```python
-    import langvio
-    
-    pipeline = langvio.create_pipeline()
-    
-    # Basic object detection
-    result = pipeline.process(
-        "What objects are in this image?",
-        "scene.jpg"
-    )
-    ```
-
-=== "Object Counting"
-
-    ```python
-    import langvio
-    
-    pipeline = langvio.create_pipeline()
-    
-    # Count specific objects
-    result = pipeline.process(
-        "Count all the cars in the parking lot",
-        "parking_lot.jpg"
-    )
-    ```
-
-=== "Video Analysis"
-
-    ```python
-    import langvio
-    
-    pipeline = langvio.create_pipeline()
-    
-    # Analyze video content
-    result = pipeline.process(
-        "How many people crossed the street?",
-        "traffic_video.mp4"
-    )
-    ```
-
-=== "Attribute Detection"
-
-    ```python
-    import langvio
-    
-    pipeline = langvio.create_pipeline()
-    
-    # Find objects by attributes
-    result = pipeline.process(
-        "Find all red objects in this scene",
-        "colorful_scene.jpg"
-    )
-    ```
-
-## Use Cases
-
-**🏢 Business & Retail**
-- Customer analytics and behavior tracking
-- Inventory management and product recognition
-- Queue length monitoring and optimization
-
-**🛡️ Security & Surveillance** 
-- Automated threat detection and monitoring
-- Perimeter security and access control
-- Incident analysis and reporting
-
-**🚗 Transportation & Traffic**
-- Traffic flow analysis and optimization
+### 🚗 **Transportation & Traffic**
 - Vehicle counting and classification
-- Speed monitoring and safety analysis
+- Traffic flow analysis
+- Speed monitoring
+- Parking space management
 
-**🔬 Research & Academia**
-- Wildlife monitoring and behavior studies
-- Medical image analysis and diagnostics
-- Scientific data collection and analysis
+### 🏥 **Healthcare & Research**
+- Medical image analysis
+- Research data analysis
+- Equipment monitoring
+- Patient safety applications
+
+### 🛒 **Retail & E-commerce**
+- Product catalog analysis
+- Customer behavior insights
+- Inventory tracking
+- Visual search applications
+
+### 🏠 **Security & Surveillance**
+- Perimeter monitoring
+- Activity detection
+- Crowd analysis
+- Incident investigation
+
+## Architecture Overview
+
+Langvio uses a modular pipeline architecture:
+
+```mermaid
+graph LR
+    A[Natural Language Query] --> B[LLM Processor]
+    B --> C[Structured Parameters]
+    C --> D[Vision Processor]
+    E[Image/Video] --> D
+    D --> F[Detection Results]
+    F --> G[LLM Processor]
+    G --> H[Natural Language Explanation]
+    F --> I[Visualization Engine]
+    I --> J[Annotated Output]
+```
+
+### Core Components
+
+- **LLM Processors**: Parse queries and generate explanations (OpenAI GPT, Google Gemini)
+- **Vision Processors**: Perform object detection and analysis (YOLOv11, YOLOe)
+- **Media Processors**: Handle visualization and output generation
+- **Configuration System**: Flexible model and parameter management
 
 ## Getting Started
 
-Ready to start using Langvio? Follow our quick installation guide:
+### Installation
 
-1. **[Install Langvio](getting-started/installation.md)** - Set up the library with your preferred LLM provider
-2. **[Quick Start](getting-started/quick-start.md)** - Run your first analysis in 5 minutes
-3. **[Examples](examples/basic-examples.md)** - Explore real-world use cases
-4. **[Configuration](guides/configuration.md)** - Customize for your needs
+```bash
+# Basic installation
+pip install langvio
+
+# With OpenAI support
+pip install langvio[openai]
+
+# With Google Gemini support  
+pip install langvio[google]
+
+# With all LLM providers
+pip install langvio[all-llm]
+```
+
+### Environment Setup
+
+```bash
+# Create .env file with your API keys
+echo "OPENAI_API_KEY=your_openai_key" >> .env
+echo "GOOGLE_API_KEY=your_google_key" >> .env
+```
+
+### First Analysis
+
+```python
+import langvio
+
+# Create pipeline with best available models
+pipeline = langvio.create_pipeline()
+
+# Process an image
+result = pipeline.process(
+    query="What objects are in this image?",
+    media_path="path/to/your/image.jpg"
+)
+
+print(result['explanation'])
+```
+
+# Langvio Documentation
+
+## Quick Links
+- [Getting Started](getting-started.md) - Installation and first analysis
+- [Configuration](configuration.md) - Customize models and settings
+- [Examples](examples.md) - Practical use cases and code samples
+- [API Reference](api-reference.md) - Complete function documentation
+- [Advanced Features](advanced-features.md) - Complex workflows and optimization
+
+## Additional Resources
+- [GitHub Repository](https://github.com/MugheesMehdi07/langvio)
+- [PyPI Package](https://pypi.org/project/langvio/)
+- [Issues & Support](https://github.com/MugheesMehdi07/langvio/issues)
 
 ## Community & Support
 
-- **📖 Documentation**: Complete guides and API reference
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/yourusername/langvio/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/yourusername/langvio/discussions)
-- **📧 Email**: support@langvio.dev
+- **GitHub**: [github.com/MugheesMehdi07/langvio](https://github.com/MugheesMehdi07/langvio)
+- **Issues**: Report bugs and request features on GitHub
+- **Discussions**: Join the community discussions
+- **Documentation**: Complete API reference and guides
 
 ## License
 
-Langvio is released under the [MIT License](license.md). Feel free to use it in your projects!
+Langvio is released under the MIT License. See [License](license.md) for details.
 
 ---
-
-*Built with ❤️ by the Langvio team*
