@@ -80,10 +80,14 @@ class Pipeline:
             self.logger.info(f"Parsed query params: {query_params}")
 
             # 2. Run detection with vision processor
-            all_detections = self.processor_manager.process_media(media_path, query_params)
+            all_detections = self.processor_manager.process_media(
+                media_path, query_params
+            )
 
             # 3. Generate explanation using all detected objects and metrics
-            explanation = self.processor_manager.generate_explanation(query, all_detections)
+            explanation = self.processor_manager.generate_explanation(
+                query, all_detections
+            )
 
             # 4. Get highlighted objects from the LLM processor
             highlighted_objects = self.processor_manager.get_highlighted_objects()

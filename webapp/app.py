@@ -164,7 +164,7 @@ def extract_video_stats(detections):
             "net_flow": counting.get("net_flow", 0),
             "flow_direction": counting.get("flow_direction", "unknown"),
             "by_object_type": counting.get("by_object_type", {}),
-            "most_active_type": counting.get("most_active_type", None)
+            "most_active_type": counting.get("most_active_type", None),
         }
 
     # Speed analysis
@@ -175,7 +175,7 @@ def extract_video_stats(detections):
             "average_speed_kmh": speed.get("average_speed_kmh", 0),
             "speed_category": speed.get("speed_category", "unknown"),
             "by_object_type": speed.get("by_object_type", {}),
-            "fastest_type": speed.get("fastest_type", None)
+            "fastest_type": speed.get("fastest_type", None),
         }
 
     # Temporal relationships
@@ -196,13 +196,15 @@ def extract_video_stats(detections):
         stats["spatial"] = {
             "common_relations": spatial.get("common_relations", {}),
             "frequent_pairs": spatial.get("frequent_pairs", {}),
-            "spatial_patterns": spatial.get("spatial_patterns", {})
+            "spatial_patterns": spatial.get("spatial_patterns", {}),
         }
 
     # Object analysis
     object_analysis = summary.get("object_analysis", {})
     if object_analysis:
-        stats["object_characteristics"] = object_analysis.get("object_characteristics", {})
+        stats["object_characteristics"] = object_analysis.get(
+            "object_characteristics", {}
+        )
         stats["most_common_types"] = object_analysis.get("most_common_types", [])
         stats["total_unique_objects"] = object_analysis.get("total_unique_objects", 0)
 
@@ -236,6 +238,7 @@ def get_object_counts_from_detections(detections, is_video_file):
             # Fallback: count from frame detections
             frame_detections = detections.get("frame_detections", {})
             from collections import Counter
+
             all_objects = Counter()
 
             for frame_key, frame_dets in frame_detections.items():
@@ -254,6 +257,7 @@ def get_object_counts_from_detections(detections, is_video_file):
         if not object_counts:
             objects = detections.get("objects", [])
             from collections import Counter
+
             counts = Counter()
             for obj in objects:
                 if "label" in obj:
@@ -320,6 +324,7 @@ def process_media():
 
             # Copy the result file to the static directory
             import shutil
+
             shutil.copy2(output_path, destination)
 
             # Determine if the file is a video or image
@@ -359,14 +364,16 @@ def process_media():
                         for det in frame_detections[frame_key]:
                             obj_signature = f"{det.get('label', 'unknown')}_{det.get('object_id', 'unknown')}"
                             if obj_signature not in seen_objects:
-                                detailed_objects.append({
-                                    "id": det.get("object_id", "unknown"),
-                                    "label": det.get("label", "unknown"),
-                                    "confidence": det.get("confidence", 0),
-                                    "frame": frame_key,
-                                    "attributes": det.get("attributes", {}),
-                                    "track_id": det.get("track_id", None)
-                                })
+                                detailed_objects.append(
+                                    {
+                                        "id": det.get("object_id", "unknown"),
+                                        "label": det.get("label", "unknown"),
+                                        "confidence": det.get("confidence", 0),
+                                        "frame": frame_key,
+                                        "attributes": det.get("attributes", {}),
+                                        "track_id": det.get("track_id", None),
+                                    }
+                                )
                                 seen_objects.add(obj_signature)
 
                                 if len(detailed_objects) >= 10:  # Limit to 10 objects
@@ -377,18 +384,20 @@ def process_media():
                 # For images, get objects from the objects list
                 objects = detections.get("objects", [])
                 for obj in objects[:10]:  # Limit to 10 objects
-                    detailed_objects.append({
-                        "id": obj.get("id", "unknown"),
-                        "label": obj.get("label", "unknown"),
-                        "confidence": obj.get("confidence", 0),
-                        "frame": "0",  # Images are frame 0
-                        "attributes": {
-                            "size": obj.get("size", "unknown"),
-                            "color": obj.get("color", "unknown"),
-                            "position": obj.get("position", "unknown")
-                        },
-                        "track_id": None
-                    })
+                    detailed_objects.append(
+                        {
+                            "id": obj.get("id", "unknown"),
+                            "label": obj.get("label", "unknown"),
+                            "confidence": obj.get("confidence", 0),
+                            "frame": "0",  # Images are frame 0
+                            "attributes": {
+                                "size": obj.get("size", "unknown"),
+                                "color": obj.get("color", "unknown"),
+                                "position": obj.get("position", "unknown"),
+                            },
+                            "track_id": None,
+                        }
+                    )
 
             # Return the results page with enhanced data
             return render_template(
@@ -398,18 +407,15 @@ def process_media():
                 is_video=is_video_file,
                 query=query,
                 processing_time=round(processing_time, 2),
-
                 # Original stats format for backwards compatibility
                 stats=image_stats if not is_video_file else video_stats,
                 object_counts=object_counts,
                 video_stats=video_stats,
-
                 # Enhanced data from new format
                 image_stats=image_stats,
                 detailed_objects=detailed_objects,
                 highlighted_objects_count=highlighted_objects_count,
                 query_params=query_params,
-
                 # Additional context
                 task_type=query_params.get("task_type", "identification"),
                 target_objects=query_params.get("target_objects", []),

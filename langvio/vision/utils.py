@@ -2,29 +2,24 @@
 Enhanced utilities for vision processing - imports from reorganized modules
 """
 
-# Import core detection utilities
-from langvio.utils.detection import (
-    extract_detections,
-    optimize_for_memory,
-    add_unified_attributes,
-    add_tracking_info,
-    add_color_attributes,
-    add_size_and_position_attributes,
-    compress_detections_for_output,
-    identify_object_clusters
-)
-
-# Import spatial utilities
-from langvio.utils.spatial import (
-    add_spatial_relationships,
-    calculate_relative_positions,
-    detect_spatial_relationships
-)
-
+from collections import defaultdict, deque
 # Keep the complex temporal analysis classes here as they're vision-specific
 from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
-from collections import defaultdict, deque
+
+# Import core detection utilities
+from langvio.utils.detection import (add_color_attributes,
+                                     add_size_and_position_attributes,
+                                     add_tracking_info, add_unified_attributes,
+                                     compress_detections_for_output,
+                                     extract_detections,
+                                     identify_object_clusters,
+                                     optimize_for_memory)
+# Import spatial utilities
+from langvio.utils.spatial import (add_spatial_relationships,
+                                   calculate_relative_positions,
+                                   detect_spatial_relationships)
 
 
 class TemporalObjectTracker:
@@ -32,21 +27,27 @@ class TemporalObjectTracker:
 
     def __init__(self, max_history: int = 30):
         self.max_history = max_history
-        self.object_histories = defaultdict(lambda: {
-            "positions": deque(maxlen=max_history),
-            "timestamps": deque(maxlen=max_history),
-            "attributes": deque(maxlen=max_history),
-            "first_seen": None,
-            "last_seen": None,
-            "total_appearances": 0
-        })
+        self.object_histories = defaultdict(
+            lambda: {
+                "positions": deque(maxlen=max_history),
+                "timestamps": deque(maxlen=max_history),
+                "attributes": deque(maxlen=max_history),
+                "first_seen": None,
+                "last_seen": None,
+                "total_appearances": 0,
+            }
+        )
 
-    def update_frame(self, frame_idx: int, detections: List[Dict[str, Any]], fps: float):
+    def update_frame(
+        self, frame_idx: int, detections: List[Dict[str, Any]], fps: float
+    ):
         """Update tracking with new frame detections."""
         timestamp = frame_idx / fps
 
         for det in detections:
-            track_id = det.get("track_id", f"untracked_{det.get('object_id', 'unknown')}")
+            track_id = det.get(
+                "track_id", f"untracked_{det.get('object_id', 'unknown')}"
+            )
             obj_key = f"{det['label']}_{track_id}"
 
             history = self.object_histories[obj_key]
@@ -72,7 +73,7 @@ class TemporalObjectTracker:
             "moving_objects": [],
             "fast_moving_objects": [],
             "directional_movements": defaultdict(list),
-            "interaction_events": []
+            "interaction_events": [],
         }
 
         for obj_key, history in self.object_histories.items():
@@ -83,24 +84,30 @@ class TemporalObjectTracker:
             # Calculate movement metrics
             positions = list(history["positions"])
             movement_distance = self._calculate_total_movement(positions)
-            avg_speed = self._calculate_average_speed(positions, list(history["timestamps"]))
+            avg_speed = self._calculate_average_speed(
+                positions, list(history["timestamps"])
+            )
             primary_direction = self._get_primary_direction(positions)
 
             # Categorize object movement
             if movement_distance < 50:  # Threshold for stationary
                 patterns["stationary_objects"].append(obj_key)
             elif avg_speed > 100:  # Threshold for fast movement
-                patterns["fast_moving_objects"].append({
-                    "object": obj_key,
-                    "avg_speed": avg_speed,
-                    "direction": primary_direction
-                })
+                patterns["fast_moving_objects"].append(
+                    {
+                        "object": obj_key,
+                        "avg_speed": avg_speed,
+                        "direction": primary_direction,
+                    }
+                )
             else:
-                patterns["moving_objects"].append({
-                    "object": obj_key,
-                    "avg_speed": avg_speed,
-                    "direction": primary_direction
-                })
+                patterns["moving_objects"].append(
+                    {
+                        "object": obj_key,
+                        "avg_speed": avg_speed,
+                        "direction": primary_direction,
+                    }
+                )
 
             # Track directional movements
             if primary_direction:
@@ -114,21 +121,25 @@ class TemporalObjectTracker:
 
         obj_keys = list(self.object_histories.keys())
         for i, obj1_key in enumerate(obj_keys):
-            for obj2_key in obj_keys[i + 1:]:
+            for obj2_key in obj_keys[i + 1 :]:
                 obj1_hist = self.object_histories[obj1_key]
                 obj2_hist = self.object_histories[obj2_key]
 
                 # Check for temporal overlap
                 overlap = self._calculate_temporal_overlap(obj1_hist, obj2_hist)
                 if overlap > 0.5:  # Significant overlap
-                    relationships.append({
-                        "object1": obj1_key.split('_')[0],  # Get object type
-                        "object2": obj2_key.split('_')[0],
-                        "relationship": "co_occurring",
-                        "overlap_ratio": overlap,
-                        "duration": min(obj1_hist["last_seen"] - obj1_hist["first_seen"],
-                                        obj2_hist["last_seen"] - obj2_hist["first_seen"])
-                    })
+                    relationships.append(
+                        {
+                            "object1": obj1_key.split("_")[0],  # Get object type
+                            "object2": obj2_key.split("_")[0],
+                            "relationship": "co_occurring",
+                            "overlap_ratio": overlap,
+                            "duration": min(
+                                obj1_hist["last_seen"] - obj1_hist["first_seen"],
+                                obj2_hist["last_seen"] - obj2_hist["first_seen"],
+                            ),
+                        }
+                    )
 
         return relationships
 
@@ -141,11 +152,13 @@ class TemporalObjectTracker:
         for i in range(1, len(positions)):
             dx = positions[i][0] - positions[i - 1][0]
             dy = positions[i][1] - positions[i - 1][1]
-            total_distance += (dx ** 2 + dy ** 2) ** 0.5
+            total_distance += (dx**2 + dy**2) ** 0.5
 
         return total_distance
 
-    def _calculate_average_speed(self, positions: List[Tuple], timestamps: List[float]) -> float:
+    def _calculate_average_speed(
+        self, positions: List[Tuple], timestamps: List[float]
+    ) -> float:
         """Calculate average speed in pixels per second."""
         if len(positions) < 2 or len(timestamps) < 2:
             return 0
@@ -176,8 +189,12 @@ class TemporalObjectTracker:
 
     def _calculate_temporal_overlap(self, hist1: Dict, hist2: Dict) -> float:
         """Calculate temporal overlap ratio between two objects."""
-        if not (hist1["first_seen"] and hist1["last_seen"] and
-                hist2["first_seen"] and hist2["last_seen"]):
+        if not (
+            hist1["first_seen"]
+            and hist1["last_seen"]
+            and hist2["first_seen"]
+            and hist2["last_seen"]
+        ):
             return 0
 
         # Calculate overlap period
@@ -188,7 +205,9 @@ class TemporalObjectTracker:
             return 0
 
         overlap_duration = overlap_end - overlap_start
-        total_duration = max(hist1["last_seen"], hist2["last_seen"]) - min(hist1["first_seen"], hist2["first_seen"])
+        total_duration = max(hist1["last_seen"], hist2["last_seen"]) - min(
+            hist1["first_seen"], hist2["first_seen"]
+        )
 
         return overlap_duration / total_duration if total_duration > 0 else 0
 
@@ -208,23 +227,30 @@ class SpatialRelationshipAnalyzer:
         frame_relationships = []
 
         for i, det1 in enumerate(detections):
-            for j, det2 in enumerate(detections[i + 1:], i + 1):
+            for j, det2 in enumerate(detections[i + 1 :], i + 1):
                 relationship = self._analyze_object_pair(det1, det2)
                 if relationship:
                     frame_relationships.append(relationship)
 
                     # Track patterns
-                    pattern_key = f"{det1['label']}-{relationship['relation']}-{det2['label']}"
+                    pattern_key = (
+                        f"{det1['label']}-{relationship['relation']}-{det2['label']}"
+                    )
                     self.spatial_patterns[pattern_key] += 1
 
         # Store relationships with timestamp
         if frame_relationships:
-            self.relationship_history[len(self.relationship_history)] = frame_relationships
+            self.relationship_history[len(self.relationship_history)] = (
+                frame_relationships
+            )
 
     def get_common_spatial_patterns(self, min_occurrences: int = 3) -> Dict[str, int]:
         """Get spatial patterns that occur frequently."""
-        return {pattern: count for pattern, count in self.spatial_patterns.items()
-                if count >= min_occurrences}
+        return {
+            pattern: count
+            for pattern, count in self.spatial_patterns.items()
+            if count >= min_occurrences
+        }
 
     def get_relationship_summary(self) -> Dict[str, Any]:
         """Get summary of spatial relationships throughout video."""
@@ -237,20 +263,24 @@ class SpatialRelationshipAnalyzer:
 
         for frame_rels in self.relationship_history.values():
             for rel in frame_rels:
-                relation_counts[rel['relation']] += 1
+                relation_counts[rel["relation"]] += 1
                 pair_key = f"{rel['object1']}-{rel['object2']}"
                 object_pair_counts[pair_key] += 1
 
         return {
-            "most_common_relations": dict(sorted(relation_counts.items(),
-                                                 key=lambda x: x[1], reverse=True)[:5]),
-            "frequent_object_pairs": dict(sorted(object_pair_counts.items(),
-                                                 key=lambda x: x[1], reverse=True)[:5]),
+            "most_common_relations": dict(
+                sorted(relation_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            ),
+            "frequent_object_pairs": dict(
+                sorted(object_pair_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            ),
             "spatial_patterns": self.get_common_spatial_patterns(),
-            "total_relationship_events": sum(relation_counts.values())
+            "total_relationship_events": sum(relation_counts.values()),
         }
 
-    def _analyze_object_pair(self, det1: Dict[str, Any], det2: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _analyze_object_pair(
+        self, det1: Dict[str, Any], det2: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """Analyze spatial relationship between two objects."""
         if not (det1.get("center") and det2.get("center")):
             return None
@@ -261,7 +291,7 @@ class SpatialRelationshipAnalyzer:
         # Calculate relative positions
         dx = center2[0] - center1[0]
         dy = center2[1] - center1[1]
-        distance = (dx ** 2 + dy ** 2) ** 0.5
+        distance = (dx**2 + dy**2) ** 0.5
 
         # Determine primary relationship
         if distance < 100:  # Close proximity
@@ -276,5 +306,5 @@ class SpatialRelationshipAnalyzer:
             "object2": det2["label"],
             "relation": relation,
             "distance": distance,
-            "confidence": min(det1.get("confidence", 0.5), det2.get("confidence", 0.5))
+            "confidence": min(det1.get("confidence", 0.5), det2.get("confidence", 0.5)),
         }

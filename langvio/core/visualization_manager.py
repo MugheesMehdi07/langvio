@@ -20,8 +20,11 @@ class VisualizationManager:
         self.logger = logging.getLogger(__name__)
 
     def create_visualization(
-            self, media_path: str, detections: Dict[str, Any],
-            highlighted_objects: List[Dict[str, Any]], query_params: Dict[str, Any]
+        self,
+        media_path: str,
+        detections: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        query_params: Dict[str, Any],
     ) -> str:
         """Create visualization with highlighted objects"""
         # Generate output path
@@ -36,12 +39,20 @@ class VisualizationManager:
         if is_video:
             # For videos, create visualization with comprehensive data
             self._create_video_visualization(
-                media_path, output_path, detections, highlighted_objects, visualization_config
+                media_path,
+                output_path,
+                detections,
+                highlighted_objects,
+                visualization_config,
             )
         else:
             # For images, we have object-level data
             self._create_image_visualization(
-                media_path, output_path, detections, highlighted_objects, visualization_config
+                media_path,
+                output_path,
+                detections,
+                highlighted_objects,
+                visualization_config,
             )
 
         return output_path
@@ -75,8 +86,12 @@ class VisualizationManager:
         return viz_config
 
     def _create_image_visualization(
-            self, image_path: str, output_path: str, detections: Dict[str, Any],
-            highlighted_objects: List[Dict[str, Any]], viz_config: Dict[str, Any]
+        self,
+        image_path: str,
+        output_path: str,
+        detections: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        viz_config: Dict[str, Any],
     ) -> None:
         """Create image visualization"""
         original_box_color = viz_config["box_color"]
@@ -87,7 +102,9 @@ class VisualizationManager:
             image_path,
             output_path,
             image_objects,
-            [obj["detection"] for obj in highlighted_objects],  # Extract detection objects
+            [
+                obj["detection"] for obj in highlighted_objects
+            ],  # Extract detection objects
             original_box_color=original_box_color,
             highlight_color=highlight_color,
             text_color=viz_config["text_color"],
@@ -97,8 +114,12 @@ class VisualizationManager:
         )
 
     def _create_video_visualization(
-            self, video_path: str, output_path: str, video_results: Dict[str, Any],
-            highlighted_objects: List[Dict[str, Any]], viz_config: Dict[str, Any]
+        self,
+        video_path: str,
+        output_path: str,
+        video_results: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        viz_config: Dict[str, Any],
     ) -> None:
         """Create enhanced video visualization"""
         import cv2
@@ -112,6 +133,7 @@ class VisualizationManager:
             if not frame_detections:
                 # Fallback: copy original video if no detections
                 import shutil
+
                 shutil.copy2(video_path, output_path)
                 return
 
@@ -119,6 +141,7 @@ class VisualizationManager:
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
                 import shutil
+
                 shutil.copy2(video_path, output_path)
                 return
 
@@ -150,11 +173,16 @@ class VisualizationManager:
                 frame_key = str(frame_idx)
                 if frame_key in frame_detections:
                     frame = self._draw_detections_on_frame(
-                        frame, frame_detections[frame_key], highlighted_lookup, viz_config
+                        frame,
+                        frame_detections[frame_key],
+                        highlighted_lookup,
+                        viz_config,
                     )
 
                 # Add comprehensive overlay
-                frame = self._add_comprehensive_overlay(frame, overlay_info, frame_idx, fps)
+                frame = self._add_comprehensive_overlay(
+                    frame, overlay_info, frame_idx, fps
+                )
 
                 writer.write(frame)
                 frame_idx += 1
@@ -167,35 +195,40 @@ class VisualizationManager:
             self.logger.error(f"Error creating enhanced video visualization: {e}")
             # Fallback: copy original video
             import shutil
+
             shutil.copy2(video_path, output_path)
 
     def _prepare_overlay_information(self, summary: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare comprehensive overlay information from video summary"""
-        overlay_info = {
-            "lines": [],
-            "stats": {},
-            "insights": []
-        }
+        overlay_info = {"lines": [], "stats": {}, "insights": []}
 
         # Video info
         video_info = summary.get("video_info", {})
         if video_info.get("primary_objects"):
-            overlay_info["lines"].append(f"Objects: {', '.join(video_info['primary_objects'][:3])}")
+            overlay_info["lines"].append(
+                f"Objects: {', '.join(video_info['primary_objects'][:3])}"
+            )
 
         # YOLO11 counting results (PRIORITY)
         counting = summary.get("counting_analysis", {})
         if counting:
             if "total_crossings" in counting:
-                overlay_info["lines"].append(f"Crossings: {counting['total_crossings']}")
+                overlay_info["lines"].append(
+                    f"Crossings: {counting['total_crossings']}"
+                )
             if "net_flow" in counting and counting["net_flow"] != 0:
                 flow_direction = "In" if counting["net_flow"] > 0 else "Out"
-                overlay_info["lines"].append(f"Net Flow: {abs(counting['net_flow'])} {flow_direction}")
+                overlay_info["lines"].append(
+                    f"Net Flow: {abs(counting['net_flow'])} {flow_direction}"
+                )
 
         # Speed analysis
         speed = summary.get("speed_analysis", {})
         if speed and speed.get("speed_available"):
             if "average_speed_kmh" in speed:
-                overlay_info["lines"].append(f"Avg Speed: {speed['average_speed_kmh']} km/h")
+                overlay_info["lines"].append(
+                    f"Avg Speed: {speed['average_speed_kmh']} km/h"
+                )
 
         # Movement patterns
         temporal = summary.get("temporal_relationships", {})
@@ -204,7 +237,9 @@ class VisualizationManager:
             if movement:
                 moving_count = movement.get("moving_count", 0)
                 stationary_count = movement.get("stationary_count", 0)
-                overlay_info["lines"].append(f"Moving: {moving_count}, Static: {stationary_count}")
+                overlay_info["lines"].append(
+                    f"Moving: {moving_count}, Static: {stationary_count}"
+                )
 
         # Primary insights
         insights = summary.get("primary_insights", [])
@@ -213,7 +248,11 @@ class VisualizationManager:
         return overlay_info
 
     def _draw_detections_on_frame(
-            self, frame, detections: List[Dict[str, Any]], highlighted_lookup: set, viz_config: Dict[str, Any]
+        self,
+        frame,
+        detections: List[Dict[str, Any]],
+        highlighted_lookup: set,
+        viz_config: Dict[str, Any],
     ):
         """Draw detections on frame with highlighting support"""
         default_color = viz_config.get("box_color", [0, 255, 0])
@@ -269,21 +308,20 @@ class VisualizationManager:
                     (x1, y1 - text_size[1] - 5),
                     (x1 + text_size[0], y1),
                     color,
-                    -1
+                    -1,
                 )
 
                 # Draw text
-                cv2.putText(
-                    frame, label, (x1, y1 - 5),
-                    font, font_scale, text_color, 1
-                )
+                cv2.putText(frame, label, (x1, y1 - 5), font, font_scale, text_color, 1)
 
             except Exception as e:
                 continue  # Skip problematic detections
 
         return frame
 
-    def _add_comprehensive_overlay(self, frame, overlay_info: Dict[str, Any], frame_idx: int, fps: float):
+    def _add_comprehensive_overlay(
+        self, frame, overlay_info: Dict[str, Any], frame_idx: int, fps: float
+    ):
         """Add comprehensive overlay with stats and insights"""
         height, width = frame.shape[:2]
 
@@ -298,8 +336,13 @@ class VisualizationManager:
             y_offset = 30
             for line in overlay_info["lines"]:
                 cv2.putText(
-                    overlay, line, (15, y_offset),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2
+                    overlay,
+                    line,
+                    (15, y_offset),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    2,
                 )
                 y_offset += 25
 
@@ -312,23 +355,35 @@ class VisualizationManager:
             panel_height = len(insights) * 25 + 20
             panel_y = height - panel_height - 10
 
-            cv2.rectangle(overlay, (10, panel_y), (panel_width, height - 10), (0, 0, 0), -1)
+            cv2.rectangle(
+                overlay, (10, panel_y), (panel_width, height - 10), (0, 0, 0), -1
+            )
 
             y_offset = panel_y + 20
             for insight in insights:
                 # Truncate long insights
                 display_insight = insight[:50] + "..." if len(insight) > 50 else insight
                 cv2.putText(
-                    overlay, display_insight, (15, y_offset),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1  # Yellow text
+                    overlay,
+                    display_insight,
+                    (15, y_offset),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 255),
+                    1,  # Yellow text
                 )
                 y_offset += 25
 
         # Top-right timestamp
         timestamp = f"Time: {frame_idx / fps:.1f}s"
         cv2.putText(
-            overlay, timestamp, (width - 150, 30),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2
+            overlay,
+            timestamp,
+            (width - 150, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2,
         )
 
         # Blend overlay with original frame (60% transparency)

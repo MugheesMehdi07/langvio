@@ -19,9 +19,12 @@ def check_yolo11_solutions_available() -> bool:
     """
     try:
         from ultralytics import solutions
+
         return True
     except (ImportError, AttributeError):
-        logger.warning("YOLO11 Solutions not available. Install with: pip install ultralytics>=8.0.0")
+        logger.warning(
+            "YOLO11 Solutions not available. Install with: pip install ultralytics>=8.0.0"
+        )
         return False
 
 
@@ -38,7 +41,7 @@ def initialize_yolo11_tools(width: int, height: int) -> Tuple[Any, Any]:
     """
     counter = None
     speed_estimator = None
-    has_yolo11_solutions=False
+    has_yolo11_solutions = False
 
     # Check if YOLO11 Solutions are available
     has_yolo11_solutions = check_yolo11_solutions_available()
@@ -50,14 +53,14 @@ def initialize_yolo11_tools(width: int, height: int) -> Tuple[Any, Any]:
             counter = create_object_counter(
                 model_path=yolo11_config["model_path"],
                 confidence=yolo11_config["confidence"],
-                region=[(0, 0), (width, 0), (width, height), (0, height)]
+                region=[(0, 0), (width, 0), (width, height), (0, height)],
             )
 
             # Create speed estimator
             speed_estimator = create_speed_estimator(
                 model_path=yolo11_config["model_path"],
                 confidence=yolo11_config["confidence"],
-                region_width=width
+                region_width=width,
             )
         except Exception as e:
             logger.warning(f"Failed to initialize YOLO11 tools: {e}")
@@ -65,7 +68,10 @@ def initialize_yolo11_tools(width: int, height: int) -> Tuple[Any, Any]:
 
     return counter, speed_estimator
 
-def create_object_counter(model_path: str, confidence: float, region: Optional[list] = None):
+
+def create_object_counter(
+    model_path: str, confidence: float, region: Optional[list] = None
+):
     """
     Create a YOLO11 ObjectCounter.
 
@@ -87,11 +93,7 @@ def create_object_counter(model_path: str, confidence: float, region: Optional[l
             # Default region covers entire frame and will be adjusted in first frame
             region = [(0, 0), (100, 0), (100, 100), (0, 100)]
 
-        counter = solutions.ObjectCounter(
-            model=model_path,
-            region=region,
-            show=False
-        )
+        counter = solutions.ObjectCounter(model=model_path, region=region, show=False)
 
         return counter
     except Exception as e:
@@ -99,7 +101,9 @@ def create_object_counter(model_path: str, confidence: float, region: Optional[l
         return None
 
 
-def create_speed_estimator(model_path: str, confidence: float, region_width: Optional[int] = None):
+def create_speed_estimator(
+    model_path: str, confidence: float, region_width: Optional[int] = None
+):
     """
     Create a YOLO11 SpeedEstimator.
 
@@ -119,10 +123,7 @@ def create_speed_estimator(model_path: str, confidence: float, region_width: Opt
 
         # Create speed estimator
         speed_estimator = solutions.SpeedEstimator(
-            model=model_path,
-            conf=confidence,
-            show=False,
-            verbose=False
+            model=model_path, conf=confidence, show=False, verbose=False
         )
 
         return speed_estimator
@@ -159,5 +160,3 @@ def process_frame_with_yolo11(frame, counter, speed_estimator):
         logger.error(f"Error processing frame with YOLO11: {e}")
 
     return counter_results, speed_results
-
-

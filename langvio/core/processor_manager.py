@@ -93,7 +93,9 @@ class ProcessorManager:
 
         return self.llm_processor.parse_query(query)
 
-    def process_media(self, media_path: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
+    def process_media(
+        self, media_path: str, query_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Process media file with vision processor"""
         if not self.vision_processor:
             raise ValueError("Vision processor not set")
@@ -114,9 +116,7 @@ class ProcessorManager:
             )
         else:
             # Get all detections with YOLO11 metrics integrated for image
-            return self.vision_processor.process_image(
-                media_path, query_params
-            )
+            return self.vision_processor.process_image(media_path, query_params)
 
     def generate_explanation(self, query: str, detections: Dict[str, Any]) -> str:
         """Generate explanation using LLM processor"""

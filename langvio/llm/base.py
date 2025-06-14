@@ -14,15 +14,11 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from langvio.core.base import Processor
 from langvio.prompts.constants import TASK_TYPES
-from langvio.prompts.templates import (
-    EXPLANATION_TEMPLATE,
-    QUERY_PARSING_TEMPLATE,
-    SYSTEM_PROMPT,
-)
+from langvio.prompts.templates import (EXPLANATION_TEMPLATE,
+                                       QUERY_PARSING_TEMPLATE, SYSTEM_PROMPT)
 from langvio.utils.llm_utils import (
-
-    parse_explanation_response, format_video_summary, process_image_detections_and_format_summary,
-)
+    format_video_summary, parse_explanation_response,
+    process_image_detections_and_format_summary)
 
 
 class BaseLLMProcessor(Processor):
@@ -129,7 +125,10 @@ class BaseLLMProcessor(Processor):
         return parsed
 
     def generate_explanation(
-            self, query: str, detections: Dict[str, List[Dict[str, Any]]], is_video: bool = False
+        self,
+        query: str,
+        detections: Dict[str, List[Dict[str, Any]]],
+        is_video: bool = False,
     ) -> str:
         """Generate an explanation based on detection results."""
         self.logger.info("Generating explanation for detection results")
@@ -146,8 +145,9 @@ class BaseLLMProcessor(Processor):
 
         else:
             # For images, use the existing indexing and formatting approach
-            detection_summary, detection_map = process_image_detections_and_format_summary(detections, parsed_query)
-
+            detection_summary, detection_map = (
+                process_image_detections_and_format_summary(detections, parsed_query)
+            )
 
         try:
             # Invoke the explanation chain
@@ -166,11 +166,15 @@ class BaseLLMProcessor(Processor):
                     # For videos, just return the explanation without highlighting
                     explanation_text = response.content
                     if "EXPLANATION:" in explanation_text:
-                        explanation_text = explanation_text.split("EXPLANATION:", 1)[1].strip()
+                        explanation_text = explanation_text.split("EXPLANATION:", 1)[
+                            1
+                        ].strip()
 
                     # Clean up any highlight sections that might appear
                     if "HIGHLIGHT_OBJECTS:" in explanation_text:
-                        explanation_text = explanation_text.split("HIGHLIGHT_OBJECTS:")[0].strip()
+                        explanation_text = explanation_text.split("HIGHLIGHT_OBJECTS:")[
+                            0
+                        ].strip()
 
                     self._highlighted_objects = []
                     return explanation_text
@@ -233,7 +237,7 @@ class BaseLLMProcessor(Processor):
                     class_counts[class_name] = {
                         "in": directions["IN"],
                         "out": directions["OUT"],
-                        "total": directions["IN"] + directions["OUT"]
+                        "total": directions["IN"] + directions["OUT"],
                     }
 
             parsed_data["class_counts"] = class_counts
@@ -243,7 +247,11 @@ class BaseLLMProcessor(Processor):
             parsed_data["summary"] = {
                 "total_objects": parsed_data["in_count"] + parsed_data["out_count"],
                 "active_classes": active_classes,
-                "most_common_class": max(class_counts.items(), key=lambda x: x[1]["total"])[0] if class_counts else None
+                "most_common_class": (
+                    max(class_counts.items(), key=lambda x: x[1]["total"])[0]
+                    if class_counts
+                    else None
+                ),
             }
 
         # Check if it's speed estimation results

@@ -44,4 +44,3 @@ class Processor(ABC):
         processor = cls(name, config)
         processor.initialize()
         return processor
-

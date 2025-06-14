@@ -3,19 +3,19 @@ YOLO video processing module
 """
 
 import logging
-from typing import Any, Dict, List, Tuple
 from collections import defaultdict
+from typing import Any, Dict, List, Tuple
+
 import cv2
 import torch
 
-from langvio.vision.utils import (
-    extract_detections, optimize_for_memory, add_tracking_info,
-    add_color_attributes, add_size_and_position_attributes,
-    TemporalObjectTracker, SpatialRelationshipAnalyzer
-)
-from langvio.vision.yolo.yolo11_utils import (
-    process_frame_with_yolo11, initialize_yolo11_tools
-)
+from langvio.vision.utils import (SpatialRelationshipAnalyzer,
+                                  TemporalObjectTracker, add_color_attributes,
+                                  add_size_and_position_attributes,
+                                  add_tracking_info, extract_detections,
+                                  optimize_for_memory)
+from langvio.vision.yolo.yolo11_utils import (initialize_yolo11_tools,
+                                              process_frame_with_yolo11)
 
 
 class YOLOVideoProcessor:
@@ -27,8 +27,9 @@ class YOLOVideoProcessor:
         self.has_yolo11_solutions = has_yolo11_solutions
         self.logger = logging.getLogger(__name__)
 
-
-    def process(self, video_path: str, query_params: Dict[str, Any], sample_rate: int) -> Dict[str, Any]:
+    def process(
+        self, video_path: str, query_params: Dict[str, Any], sample_rate: int
+    ) -> Dict[str, Any]:
         """Process video with enhanced analysis strategy"""
         self.logger.info(f"Processing video: {video_path}")
 
@@ -57,8 +58,7 @@ class YOLOVideoProcessor:
                 optimize_for_memory()
 
                 while cap.isOpened():
-                    self.logger.info(
-                        f"Processing frame {frame_idx}/{total_frames}")
+                    self.logger.info(f"Processing frame {frame_idx}/{total_frames}")
 
                     success, frame = cap.read()
                     if not success:
@@ -66,8 +66,13 @@ class YOLOVideoProcessor:
 
                     # Process every frame for counting/speed (required for YOLO11)
                     frame_result = self._process_frame_with_strategy(
-                        frame, frame_idx, width, height,
-                        analysis_config, counter, speed_estimator
+                        frame,
+                        frame_idx,
+                        width,
+                        height,
+                        analysis_config,
+                        counter,
+                        speed_estimator,
                     )
 
                     # Store for visualization if frame was processed
@@ -75,11 +80,15 @@ class YOLOVideoProcessor:
                         frame_detections[str(frame_idx)] = frame_result["detections"]
 
                     # Update temporal tracking (every frame)
-                    temporal_tracker.update_frame(frame_idx, frame_result["detections"], fps)
+                    temporal_tracker.update_frame(
+                        frame_idx, frame_result["detections"], fps
+                    )
 
                     # Update spatial relationships (every N frames for performance)
                     if frame_idx % analysis_config["spatial_update_interval"] == 0:
-                        spatial_analyzer.update_relationships(frame_result["detections"])
+                        spatial_analyzer.update_relationships(
+                            frame_result["detections"]
+                        )
 
                     # Update YOLO11 results
                     if frame_result.get("counter_result"):
@@ -89,11 +98,15 @@ class YOLOVideoProcessor:
 
                     frame_idx += 1
 
-
             # Generate comprehensive results
             return self._create_enhanced_video_results(
-                frame_detections, temporal_tracker, spatial_analyzer,
-                final_counter_results, final_speed_results, video_props, query_params
+                frame_detections,
+                temporal_tracker,
+                spatial_analyzer,
+                final_counter_results,
+                final_speed_results,
+                video_props,
+                query_params,
             )
 
         except Exception as e:
@@ -103,7 +116,9 @@ class YOLOVideoProcessor:
             if cap:
                 cap.release()
 
-    def _initialize_video_capture(self, video_path: str) -> Tuple[cv2.VideoCapture, Tuple[int, int, float, int]]:
+    def _initialize_video_capture(
+        self, video_path: str
+    ) -> Tuple[cv2.VideoCapture, Tuple[int, int, float, int]]:
         """Initialize video capture and extract video properties"""
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -123,8 +138,13 @@ class YOLOVideoProcessor:
         task_type = query_params.get("task_type", "identification")
 
         # Color analysis frequency based on query
-        needs_color = any(attr.get("attribute") == "color" for attr in query_params.get("attributes", []))
-        color_analysis_interval = 3 if needs_color else 10  # Every 3rd frame if color needed
+        needs_color = any(
+            attr.get("attribute") == "color"
+            for attr in query_params.get("attributes", [])
+        )
+        color_analysis_interval = (
+            3 if needs_color else 10
+        )  # Every 3rd frame if color needed
 
         # Spatial analysis frequency
         needs_spatial = bool(query_params.get("spatial_relations", []))
@@ -136,19 +156,23 @@ class YOLOVideoProcessor:
             "needs_temporal": task_type in ["tracking", "activity"],
             "color_analysis_interval": color_analysis_interval,
             "spatial_update_interval": spatial_update_interval,
-            "frame_processing_interval": 1 if task_type == "counting" else 2  # Every frame for counting
+            "frame_processing_interval": (
+                1 if task_type == "counting" else 2
+            ),  # Every frame for counting
         }
 
     def _process_frame_with_strategy(
-            self, frame, frame_idx: int, width: int, height: int,
-            analysis_config: Dict[str, Any], counter: Any = None, speed_estimator: Any = None
+        self,
+        frame,
+        frame_idx: int,
+        width: int,
+        height: int,
+        analysis_config: Dict[str, Any],
+        counter: Any = None,
+        speed_estimator: Any = None,
     ) -> Dict[str, Any]:
         """Process frame with optimized strategy based on analysis needs"""
-        result = {
-            "detections": [],
-            "counter_result": None,
-            "speed_result": None
-        }
+        result = {"detections": [], "counter_result": None, "speed_result": None}
 
         try:
             # Always run basic detection
@@ -159,7 +183,9 @@ class YOLOVideoProcessor:
 
             # Color analysis on selected frames only
             if frame_idx % analysis_config["color_analysis_interval"] == 0:
-                detections = add_color_attributes(detections, frame, analysis_config["needs_color"])
+                detections = add_color_attributes(
+                    detections, frame, analysis_config["needs_color"]
+                )
 
             # Size and position attributes (always, as they're fast)
             detections = add_size_and_position_attributes(detections, width, height)
@@ -184,15 +210,15 @@ class YOLOVideoProcessor:
         try:
             # Run YOLO detection
             optimized_settings = {
-                'conf': self.config["confidence"],
-                'iou': 0.5,
-                'max_det': 100,  # Limit max detections
-                'verbose': False,
-                'save': False,
-                'show': False,
-                'half': torch.cuda.is_available(),  # Use FP16 if available
-                'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-                'augment': False,  # Disable test-time augmentation
+                "conf": self.config["confidence"],
+                "iou": 0.5,
+                "max_det": 100,  # Limit max detections
+                "verbose": False,
+                "save": False,
+                "show": False,
+                "half": torch.cuda.is_available(),  # Use FP16 if available
+                "device": "cuda" if torch.cuda.is_available() else "cpu",
+                "augment": False,  # Disable test-time augmentation
             }
 
             results = self.model(frame, **optimized_settings)
@@ -203,15 +229,25 @@ class YOLOVideoProcessor:
             return []
 
     def _create_enhanced_video_results(
-            self, frame_detections: Dict[str, List[Dict[str, Any]]],
-            temporal_tracker: TemporalObjectTracker, spatial_analyzer: SpatialRelationshipAnalyzer,
-            counter_results: Any, speed_results: Any, video_props: Tuple, query_params: Dict[str, Any]
+        self,
+        frame_detections: Dict[str, List[Dict[str, Any]]],
+        temporal_tracker: TemporalObjectTracker,
+        spatial_analyzer: SpatialRelationshipAnalyzer,
+        counter_results: Any,
+        speed_results: Any,
+        video_props: Tuple,
+        query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Create comprehensive video results with temporal, spatial, and YOLO11 analysis"""
         from langvio.vision.yolo.result_formatter import YOLOResultFormatter
 
         formatter = YOLOResultFormatter()
         return formatter.create_enhanced_video_results(
-            frame_detections, temporal_tracker, spatial_analyzer,
-            counter_results, speed_results, video_props, query_params
+            frame_detections,
+            temporal_tracker,
+            spatial_analyzer,
+            counter_results,
+            speed_results,
+            video_props,
+            query_params,
         )

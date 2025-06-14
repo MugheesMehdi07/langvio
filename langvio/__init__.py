@@ -6,6 +6,7 @@ __version__ = "0.3.0"
 
 # Try to load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import cv2
@@ -21,22 +22,19 @@ if torch.cuda.is_available():
 
 # Initialize the global model registry
 from langvio.core.registry import ModelRegistry
+
 registry = ModelRegistry()
 
 # Import main components for easier access
 from langvio.core.pipeline import Pipeline
 from langvio.llm.base import BaseLLMProcessor
 from langvio.vision.base import BaseVisionProcessor
-
 # Register YOLOe and YOLO processors
 from langvio.vision.yolo.detector import YOLOProcessor
 
 # Register the YOLO processor with different configurations
 registry.register_vision_processor(
-    "yolo",
-    YOLOProcessor,
-    model_path="yolo11n.pt",
-    confidence=0.5
+    "yolo", YOLOProcessor, model_path="yolo11n.pt", confidence=0.5
 )
 
 # Register the YOLOe processor with different sizes
@@ -45,7 +43,7 @@ registry.register_vision_processor(
     YOLOProcessor,
     model_path="yoloe-11s-seg-pf.pt",
     confidence=0.5,
-    model_type="yoloe"
+    model_type="yoloe",
 )
 
 registry.register_vision_processor(
@@ -53,7 +51,7 @@ registry.register_vision_processor(
     YOLOProcessor,
     model_path="yoloe-11m-seg-pf.pt",
     confidence=0.5,
-    model_type="yoloe"
+    model_type="yoloe",
 )
 
 registry.register_vision_processor(
@@ -61,11 +59,12 @@ registry.register_vision_processor(
     YOLOProcessor,
     model_path="yoloe-11l-seg-pf.pt",
     confidence=0.5,
-    model_type="yoloe"
+    model_type="yoloe",
 )
 
 # Register LLM processors using the factory
 from langvio.llm.factory import register_llm_processors
+
 register_llm_processors(registry)
 
 

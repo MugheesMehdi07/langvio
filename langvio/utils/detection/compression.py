@@ -5,7 +5,9 @@ Detection result compression utilities for LLM consumption
 from typing import Any, Dict, List
 
 
-def compress_detections_for_output(detections: List[Dict[str, Any]], is_video: bool = False) -> List[Dict[str, Any]]:
+def compress_detections_for_output(
+    detections: List[Dict[str, Any]], is_video: bool = False
+) -> List[Dict[str, Any]]:
     """
     Compress detections for GPT consumption - remove verbose fields.
 
@@ -25,7 +27,7 @@ def compress_detections_for_output(detections: List[Dict[str, Any]], is_video: b
             "type": det["label"],
             "label": det["label"],
             "confidence": round(det["confidence"], 2),
-            "bbox": det["bbox"]  # Keep bounding box for visualization
+            "bbox": det["bbox"],  # Keep bounding box for visualization
         }
 
         # Add attributes only if they exist
@@ -44,12 +46,16 @@ def compress_detections_for_output(detections: List[Dict[str, Any]], is_video: b
         # Add relationships for images (simplified)
         if not is_video and "relationships" in det and det["relationships"]:
             key_rels = []
-            for rel in det["relationships"][:2]:  # Max 2 relationships to avoid verbosity
+            for rel in det["relationships"][
+                :2
+            ]:  # Max 2 relationships to avoid verbosity
                 if rel.get("relations"):
-                    key_rels.append({
-                        "to": rel["object"],
-                        "relation": rel["relations"][0]  # Primary relation only
-                    })
+                    key_rels.append(
+                        {
+                            "to": rel["object"],
+                            "relation": rel["relations"][0],  # Primary relation only
+                        }
+                    )
             if key_rels:
                 obj["key_relationships"] = key_rels
 
@@ -58,7 +64,9 @@ def compress_detections_for_output(detections: List[Dict[str, Any]], is_video: b
     return compressed
 
 
-def identify_object_clusters(detections: List[Dict[str, Any]], distance_threshold: int = 150) -> List[List[int]]:
+def identify_object_clusters(
+    detections: List[Dict[str, Any]], distance_threshold: int = 150
+) -> List[List[int]]:
     """
     Identify clusters of objects in an image.
 
@@ -87,7 +95,9 @@ def identify_object_clusters(detections: List[Dict[str, Any]], distance_threshol
                 continue
 
             center2 = det2["center"]
-            distance = ((center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2) ** 0.5
+            distance = (
+                (center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2
+            ) ** 0.5
 
             if distance < distance_threshold:
                 cluster.append(j)

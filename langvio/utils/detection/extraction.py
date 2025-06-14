@@ -1,9 +1,11 @@
 """
 Core detection extraction and enhancement utilities
 """
+
 import gc
 import os
 from typing import Any, Dict, List, Optional, Tuple
+
 import cv2
 import numpy as np
 import torch
@@ -14,14 +16,16 @@ from langvio.llm.factory import logger
 def optimize_for_memory():
     try:
         # Set environment variables for memory optimization
-        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:128"
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = (
+            "expandable_segments:True,max_split_size_mb:128"
+        )
 
         # Check if CUDA is available and working
         cuda_available = torch.cuda.is_available()
         if cuda_available:
             try:
                 # Test CUDA functionality
-                test_tensor = torch.zeros(1, device='cuda')
+                test_tensor = torch.zeros(1, device="cuda")
                 del test_tensor
 
                 # Clear cache
@@ -53,17 +57,18 @@ def optimize_for_memory():
         gc.collect()
 
     except Exception as e:
-            logger.error(f"Memory optimization failed: {e}")
+        logger.error(f"Memory optimization failed: {e}")
 
 
 def force_cpu_mode():
     """Force CPU mode when CUDA fails"""
     try:
-        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
         torch.cuda.empty_cache() if torch.cuda.is_available() else None
         logger.info("Forced CPU mode")
     except Exception as e:
         logger.warning(f"Error forcing CPU mode: {e}")
+
 
 def extract_detections(results) -> List[Dict[str, Any]]:
     """Extract detections from YOLO results with basic attributes"""
@@ -79,25 +84,27 @@ def extract_detections(results) -> List[Dict[str, Any]]:
             label = result.names[cls_id]
 
             # Basic detection object
-            detections.append({
-                "label": label,
-                "confidence": conf,
-                "bbox": [x1, y1, x2, y2],
-                "class_id": cls_id,
-            })
+            detections.append(
+                {
+                    "label": label,
+                    "confidence": conf,
+                    "bbox": [x1, y1, x2, y2],
+                    "class_id": cls_id,
+                }
+            )
 
     return detections
 
 
 def add_unified_attributes(
-        detections: List[Dict[str, Any]],
-        width: int,
-        height: int,
-        input_data: Any,  # image_path (str) or frame (np.ndarray)
-        needs_color: bool,
-        needs_spatial: bool,
-        needs_size: bool,
-        is_video_frame: bool
+    detections: List[Dict[str, Any]],
+    width: int,
+    height: int,
+    input_data: Any,  # image_path (str) or frame (np.ndarray)
+    needs_color: bool,
+    needs_spatial: bool,
+    needs_size: bool,
+    is_video_frame: bool,
 ) -> List[Dict[str, Any]]:
     """
     Unified method to add attributes to detections.
@@ -108,7 +115,7 @@ def add_unified_attributes(
 
     # Get image data for color detection if needed
 
-    needs_color = not is_video_frame # setting color detection false
+    needs_color = not is_video_frame  # setting color detection false
     image_data = None
     if needs_color:
         if is_video_frame:
@@ -145,7 +152,11 @@ def add_unified_attributes(
         if needs_size:
             area = (x2 - x1) * (y2 - y1)
             relative_size = area / (width * height)
-            attributes["size"] = "small" if relative_size < 0.05 else "medium" if relative_size < 0.25 else "large"
+            attributes["size"] = (
+                "small"
+                if relative_size < 0.05
+                else "medium" if relative_size < 0.25 else "large"
+            )
             attributes["relative_size"] = relative_size
 
         # Add position attributes if needed (for spatial queries)
@@ -161,9 +172,10 @@ def add_unified_attributes(
         # Add color attributes if needed (expensive)
         if needs_color and image_data is not None:
             try:
-                obj_region = image_data[int(y1):int(y2), int(x1):int(x2)]
+                obj_region = image_data[int(y1) : int(y2), int(x1) : int(x2)]
                 if obj_region.size > 0:
                     from langvio.vision.color_detection import ColorDetector
+
                     color_info = ColorDetector.get_color_profile(obj_region)
                     attributes["color"] = color_info["dominant_color"]
                     attributes["is_multicolored"] = color_info["is_multicolored"]
@@ -175,13 +187,17 @@ def add_unified_attributes(
 
     # Add spatial relationships if needed (expensive)
     if needs_spatial and len(enhanced_detections) > 1:
-        from langvio.utils.spatial.relationships import add_spatial_relationships
+        from langvio.utils.spatial.relationships import \
+            add_spatial_relationships
+
         enhanced_detections = add_spatial_relationships(enhanced_detections)
 
     return enhanced_detections
 
 
-def add_tracking_info(detections: List[Dict[str, Any]], frame_idx: int) -> List[Dict[str, Any]]:
+def add_tracking_info(
+    detections: List[Dict[str, Any]], frame_idx: int
+) -> List[Dict[str, Any]]:
     """Add tracking information to detections"""
     for i, det in enumerate(detections):
         if "track_id" not in det:
@@ -191,7 +207,9 @@ def add_tracking_info(detections: List[Dict[str, Any]], frame_idx: int) -> List[
     return detections
 
 
-def add_color_attributes(detections: List[Dict[str, Any]], frame: np.ndarray, needs_color: bool) -> List[Dict[str, Any]]:
+def add_color_attributes(
+    detections: List[Dict[str, Any]], frame: np.ndarray, needs_color: bool
+) -> List[Dict[str, Any]]:
     """Add color attributes to detections (optimized for video)"""
     if not needs_color or frame is None:
         return detections
@@ -211,7 +229,9 @@ def add_color_attributes(detections: List[Dict[str, Any]], frame: np.ndarray, ne
             obj_region = frame[y1:y2, x1:x2]
             if obj_region.size > 0:
                 # Get dominant color only (faster than full profile)
-                dominant_color = ColorDetector.detect_color(obj_region, return_all=False)
+                dominant_color = ColorDetector.detect_color(
+                    obj_region, return_all=False
+                )
 
                 if "attributes" not in det:
                     det["attributes"] = {}
@@ -222,7 +242,9 @@ def add_color_attributes(detections: List[Dict[str, Any]], frame: np.ndarray, ne
     return detections
 
 
-def add_size_and_position_attributes(detections: List[Dict[str, Any]], width: int, height: int) -> List[Dict[str, Any]]:
+def add_size_and_position_attributes(
+    detections: List[Dict[str, Any]], width: int, height: int
+) -> List[Dict[str, Any]]:
     """Add size and position attributes (fast computation)"""
     image_area = width * height
 
@@ -244,7 +266,11 @@ def add_size_and_position_attributes(detections: List[Dict[str, Any]], width: in
         if "attributes" not in det:
             det["attributes"] = {}
 
-        det["attributes"]["size"] = "small" if relative_size < 0.05 else "medium" if relative_size < 0.25 else "large"
+        det["attributes"]["size"] = (
+            "small"
+            if relative_size < 0.05
+            else "medium" if relative_size < 0.25 else "large"
+        )
 
         # Position attribute
         rx, ry = center_x / width, center_y / height

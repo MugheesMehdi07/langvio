@@ -3,7 +3,8 @@ Video visualization module
 """
 
 import logging
-from typing import Any, Dict, List, Union, Tuple
+from typing import Any, Dict, List, Tuple, Union
+
 import cv2
 import numpy as np
 
@@ -16,17 +17,17 @@ class VideoVisualizer:
         self.logger = logging.getLogger(__name__)
 
     def visualize_with_highlights(
-            self,
-            video_path: str,
-            output_path: str,
-            all_frame_detections: Dict[str, List[Dict[str, Any]]],
-            highlighted_objects: List[Dict[str, Any]],
-            original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
-            highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
-            text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
-            line_thickness: int = 2,
-            show_attributes: bool = True,
-            show_confidence: bool = True,
+        self,
+        video_path: str,
+        output_path: str,
+        all_frame_detections: Dict[str, List[Dict[str, Any]]],
+        highlighted_objects: List[Dict[str, Any]],
+        original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
+        highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
+        text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
+        line_thickness: int = 2,
+        show_attributes: bool = True,
+        show_confidence: bool = True,
     ) -> None:
         """Visualize all detections on a video with highlighted objects in a different color"""
         self.logger.info(f"Visualizing all detections on video: {video_path}")
@@ -85,7 +86,11 @@ class VideoVisualizer:
                         if "bbox" in det and "label" in det:
                             signature = (
                                 det["label"],
-                                tuple(det["bbox"]) if isinstance(det["bbox"], list) else det["bbox"]
+                                (
+                                    tuple(det["bbox"])
+                                    if isinstance(det["bbox"], list)
+                                    else det["bbox"]
+                                ),
                             )
                             highlighted_signatures.add(signature)
 
@@ -133,20 +138,34 @@ class VideoVisualizer:
                         if "bbox" in det and "label" in det:
                             signature = (
                                 det["label"],
-                                tuple(det["bbox"]) if isinstance(det["bbox"], list) else det["bbox"]
+                                (
+                                    tuple(det["bbox"])
+                                    if isinstance(det["bbox"], list)
+                                    else det["bbox"]
+                                ),
                             )
                             is_highlighted = signature in highlighted_signatures
 
                         # Choose color based on whether the detection is highlighted
-                        box_color = highlight_color if is_highlighted else original_box_color
+                        box_color = (
+                            highlight_color if is_highlighted else original_box_color
+                        )
 
                         # Use thicker lines for highlighted objects
-                        thickness = line_thickness + 1 if is_highlighted else line_thickness
+                        thickness = (
+                            line_thickness + 1 if is_highlighted else line_thickness
+                        )
 
                         # Draw the detection with the chosen color and thickness
                         frame = self._draw_single_detection(
-                            frame, det, box_color, text_color, thickness,
-                            show_attributes, show_confidence, is_highlighted
+                            frame,
+                            det,
+                            box_color,
+                            text_color,
+                            thickness,
+                            show_attributes,
+                            show_confidence,
+                            is_highlighted,
                         )
 
                 # Write frame
@@ -169,21 +188,22 @@ class VideoVisualizer:
 
         # Convert HSV to RGB then to BGR
         import colorsys
+
         r, g, b = colorsys.hsv_to_rgb(hue, sat, val)
         r, g, b = int(r * 255), int(g * 255), int(b * 255)
 
         return (b, g, r)  # Return BGR for OpenCV
 
     def _draw_single_detection(
-            self,
-            image: np.ndarray,
-            det: Dict[str, Any],
-            box_color: Union[Tuple[int, int, int], List[int]],
-            text_color: Union[Tuple[int, int, int], List[int]],
-            line_thickness: int,
-            show_attributes: bool,
-            show_confidence: bool,
-            is_highlighted: bool = False,
+        self,
+        image: np.ndarray,
+        det: Dict[str, Any],
+        box_color: Union[Tuple[int, int, int], List[int]],
+        text_color: Union[Tuple[int, int, int], List[int]],
+        line_thickness: int,
+        show_attributes: bool,
+        show_confidence: bool,
+        is_highlighted: bool = False,
     ) -> np.ndarray:
         """Draw a single detection on a video frame"""
         if "bbox" not in det:
@@ -256,8 +276,6 @@ class VideoVisualizer:
         cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0, image)
 
         # Draw text
-        cv2.putText(
-            image, label, (x1, y1 - 5), font, font_scale, text_color, 1
-        )
+        cv2.putText(image, label, (x1, y1 - 5), font, font_scale, text_color, 1)
 
         return image

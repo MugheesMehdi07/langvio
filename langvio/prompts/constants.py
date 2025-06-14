@@ -28,5 +28,5 @@ YOLO11_CONFIG = {
     "model_path": "yolo11n.pt",
     "confidence": 0.3,
     "show": False,
-    "verbose": False
+    "verbose": False,
 }

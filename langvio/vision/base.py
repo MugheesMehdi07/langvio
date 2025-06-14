@@ -12,7 +12,6 @@ from langvio.prompts.constants import DEFAULT_VIDEO_SAMPLE_RATE
 from langvio.vision.color_detection import ColorDetector
 
 
-
 class BaseVisionProcessor(Processor):
     """Enhanced base class for all vision processors"""
 
@@ -60,7 +59,6 @@ class BaseVisionProcessor(Processor):
         Returns:
             Dictionary with detection results
         """
-
 
     def _get_image_dimensions(self, image_path: str) -> Optional[Tuple[int, int]]:
         """

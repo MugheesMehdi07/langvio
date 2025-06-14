@@ -3,7 +3,8 @@ Image visualization module
 """
 
 import logging
-from typing import Any, Dict, List, Union, Tuple
+from typing import Any, Dict, List, Tuple, Union
+
 import cv2
 import numpy as np
 
@@ -16,20 +17,22 @@ class ImageVisualizer:
         self.logger = logging.getLogger(__name__)
 
     def visualize_with_highlights(
-            self,
-            image_path: str,
-            output_path: str,
-            all_detections: List[Dict[str, Any]],
-            highlighted_detections: List[Dict[str, Any]],
-            original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
-            highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
-            text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
-            line_thickness: int = 2,
-            show_attributes: bool = True,
-            show_confidence: bool = True,
+        self,
+        image_path: str,
+        output_path: str,
+        all_detections: List[Dict[str, Any]],
+        highlighted_detections: List[Dict[str, Any]],
+        original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
+        highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
+        text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
+        line_thickness: int = 2,
+        show_attributes: bool = True,
+        show_confidence: bool = True,
     ) -> None:
         """Visualize all detections on an image with highlighted objects in a different color"""
-        self.logger.info(f"Visualizing {len(all_detections)} detections on image: {image_path}")
+        self.logger.info(
+            f"Visualizing {len(all_detections)} detections on image: {image_path}"
+        )
 
         try:
             # Load image
@@ -43,7 +46,11 @@ class ImageVisualizer:
                 if "bbox" in det and "label" in det:
                     signature = (
                         det["label"],
-                        tuple(det["bbox"]) if isinstance(det["bbox"], list) else det["bbox"]
+                        (
+                            tuple(det["bbox"])
+                            if isinstance(det["bbox"], list)
+                            else det["bbox"]
+                        ),
                     )
                     highlighted_signatures.add(signature)
 
@@ -54,7 +61,11 @@ class ImageVisualizer:
                 if "bbox" in det and "label" in det:
                     signature = (
                         det["label"],
-                        tuple(det["bbox"]) if isinstance(det["bbox"], list) else det["bbox"]
+                        (
+                            tuple(det["bbox"])
+                            if isinstance(det["bbox"], list)
+                            else det["bbox"]
+                        ),
                     )
                     is_highlighted = signature in highlighted_signatures
 
@@ -66,8 +77,14 @@ class ImageVisualizer:
 
                 # Draw the detection with the chosen color and thickness
                 image = self._draw_single_detection(
-                    image, det, box_color, text_color, thickness,
-                    show_attributes, show_confidence, is_highlighted
+                    image,
+                    det,
+                    box_color,
+                    text_color,
+                    thickness,
+                    show_attributes,
+                    show_confidence,
+                    is_highlighted,
                 )
 
             # Save output
@@ -77,15 +94,15 @@ class ImageVisualizer:
             self.logger.error(f"Error visualizing image: {e}")
 
     def _draw_single_detection(
-            self,
-            image: np.ndarray,
-            det: Dict[str, Any],
-            box_color: Union[Tuple[int, int, int], List[int]],
-            text_color: Union[Tuple[int, int, int], List[int]],
-            line_thickness: int,
-            show_attributes: bool,
-            show_confidence: bool,
-            is_highlighted: bool = False,
+        self,
+        image: np.ndarray,
+        det: Dict[str, Any],
+        box_color: Union[Tuple[int, int, int], List[int]],
+        text_color: Union[Tuple[int, int, int], List[int]],
+        line_thickness: int,
+        show_attributes: bool,
+        show_confidence: bool,
+        is_highlighted: bool = False,
     ) -> np.ndarray:
         """Draw a single detection on an image"""
         if "bbox" not in det:
@@ -158,8 +175,6 @@ class ImageVisualizer:
         cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0, image)
 
         # Draw text
-        cv2.putText(
-            image, label, (x1, y1 - 5), font, font_scale, text_color, 1
-        )
+        cv2.putText(image, label, (x1, y1 - 5), font, font_scale, text_color, 1)
 
         return image

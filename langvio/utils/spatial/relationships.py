@@ -34,7 +34,9 @@ def add_spatial_relationships(detections: List[Dict[str, Any]]) -> List[Dict[str
             relations.append("above" if center1_y < center2_y else "below")
 
             # Distance relationship
-            distance = ((center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2) ** 0.5
+            distance = (
+                (center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2
+            ) ** 0.5
             relations.append("near" if distance < 100 else "far")
 
             # Check containment if bboxes available
@@ -47,11 +49,13 @@ def add_spatial_relationships(detections: List[Dict[str, Any]]) -> List[Dict[str
                 elif x1_2 > x1_1 and y1_2 > y1_1 and x2_2 < x2_1 and y2_2 < y2_1:
                     relations.append("contains")
 
-            det1["relationships"].append({
-                "object": det2["label"],
-                "object_id": det2.get("object_id", f"obj_{j}"),
-                "relations": relations
-            })
+            det1["relationships"].append(
+                {
+                    "object": det2["label"],
+                    "object_id": det2.get("object_id", f"obj_{j}"),
+                    "relations": relations,
+                }
+            )
 
     return detections
 
@@ -157,7 +161,8 @@ def detect_spatial_relationships(
                 (center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2
             ) ** 0.5
             if distance < distance_threshold * (
-                det1.get("dimensions", [100, 100])[0] + det2.get("dimensions", [100, 100])[0]
+                det1.get("dimensions", [100, 100])[0]
+                + det2.get("dimensions", [100, 100])[0]
             ):
                 relationship["relations"].append("near")
             else:
