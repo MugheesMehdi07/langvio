@@ -1,0 +1,20 @@
+# MANIFEST.in - Include additional files in the package
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include .env.template
+recursive-include langvio *.yaml *.yml *.json
+recursive-include examples *.py *.yaml *.md
+recursive-include docs *.md
+recursive-include webapp *.py *.html *.css *.js
+prune tests
+prune .git
+prune .github
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.orig
+global-exclude *.rej
+global-exclude *~
+global-exclude __pycache__
+global-exclude .DS_Store

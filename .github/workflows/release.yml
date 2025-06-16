@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.3.1)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Validate version format
+      run: |
+        if [[ ! "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9\-\.]*)$ ]]; then
+          echo "Invalid version format. Use semantic versioning (e.g., 1.0.0, 1.0.0-beta.1)"
+          exit 1
+        fi
+
+    - name: Update version in pyproject.toml
+      run: |
+        sed -i 's/version = "[^"]*"/version = "${{ github.event.inputs.version }}"/' pyproject.toml
+
+    - name: Update version in __init__.py
+      run: |
+        sed -i 's/__version__ = "[^"]*"/__version__ = "${{ github.event.inputs.version }}"/' langvio/__init__.py
+
+    - name: Generate changelog entry
+      id: changelog
+      run: |
+        # Create a basic changelog entry
+        echo "## Version ${{ github.event.inputs.version }}" > release_notes.md
+        echo "" >> release_notes.md
+        echo "### Changes" >> release_notes.md
+        
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          echo "Changes since $LAST_TAG:" >> release_notes.md
+          git log --oneline $LAST_TAG..HEAD --grep="^feat\|^fix\|^docs\|^style\|^refactor\|^test\|^chore" >> release_notes.md
+        else
+          echo "Initial release" >> release_notes.md
+        fi
+        
+        # Output for GitHub release
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat release_notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Commit version bump
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add pyproject.toml langvio/__init__.py
+        git commit -m "Bump version to ${{ github.event.inputs.version }}" || exit 0
+        git tag v${{ github.event.inputs.version }}
+
+    - name: Push changes and tags
+      run: |
+        git push origin main
+        git push origin v${{ github.event.inputs.version }}
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.event.inputs.version }}
+        release_name: Release v${{ github.event.inputs.version }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease }}
