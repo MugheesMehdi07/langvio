@@ -4,7 +4,7 @@ Core detection extraction and enhancement utilities
 
 import gc
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import cv2
 import numpy as np
@@ -97,14 +97,14 @@ def extract_detections(results) -> List[Dict[str, Any]]:
 
 
 def add_unified_attributes(
-    detections: List[Dict[str, Any]],
-    width: int,
-    height: int,
-    input_data: Any,  # image_path (str) or frame (np.ndarray)
-    needs_color: bool,
-    needs_spatial: bool,
-    needs_size: bool,
-    is_video_frame: bool,
+        detections: List[Dict[str, Any]],
+        width: int,
+        height: int,
+        input_data: Any,  # image_path (str) or frame (np.ndarray)
+        needs_color: bool,
+        needs_spatial: bool,
+        needs_size: bool,
+        is_video_frame: bool,
 ) -> List[Dict[str, Any]]:
     """
     Unified method to add attributes to detections.
@@ -172,7 +172,7 @@ def add_unified_attributes(
         # Add color attributes if needed (expensive)
         if needs_color and image_data is not None:
             try:
-                obj_region = image_data[int(y1) : int(y2), int(x1) : int(x2)]
+                obj_region = image_data[int(y1): int(y2), int(x1): int(x2)]
                 if obj_region.size > 0:
                     from langvio.vision.color_detection import ColorDetector
 
@@ -196,7 +196,7 @@ def add_unified_attributes(
 
 
 def add_tracking_info(
-    detections: List[Dict[str, Any]], frame_idx: int
+        detections: List[Dict[str, Any]], frame_idx: int
 ) -> List[Dict[str, Any]]:
     """Add tracking information to detections"""
     for i, det in enumerate(detections):
@@ -208,7 +208,7 @@ def add_tracking_info(
 
 
 def add_color_attributes(
-    detections: List[Dict[str, Any]], frame: np.ndarray, needs_color: bool
+        detections: List[Dict[str, Any]], frame: np.ndarray, needs_color: bool
 ) -> List[Dict[str, Any]]:
     """Add color attributes to detections (optimized for video)"""
     if not needs_color or frame is None:
@@ -243,7 +243,7 @@ def add_color_attributes(
 
 
 def add_size_and_position_attributes(
-    detections: List[Dict[str, Any]], width: int, height: int
+        detections: List[Dict[str, Any]], width: int, height: int
 ) -> List[Dict[str, Any]]:
     """Add size and position attributes (fast computation)"""
     image_area = width * height

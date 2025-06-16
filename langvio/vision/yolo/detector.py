@@ -20,11 +20,11 @@ class YOLOProcessor(BaseVisionProcessor):
     """Main YOLO processor - coordinates image and video processing"""
 
     def __init__(
-        self,
-        name: str,
-        model_path: str,
-        confidence: float = DEFAULT_CONFIDENCE_THRESHOLD,
-        **kwargs,
+            self,
+            name: str,
+            model_path: str,
+            confidence: float = DEFAULT_CONFIDENCE_THRESHOLD,
+            **kwargs,
     ):
         """Initialize YOLO processor"""
         config = {
@@ -94,8 +94,8 @@ class YOLOProcessor(BaseVisionProcessor):
             if torch.cuda.is_available():
                 dummy_input = dummy_input.cuda()
                 if (
-                    hasattr(self.model, "model")
-                    and next(self.model.model.parameters()).dtype == torch.float16
+                        hasattr(self.model, "model")
+                        and next(self.model.model.parameters()).dtype == torch.float16
                 ):
                     dummy_input = dummy_input.half()
 
@@ -107,7 +107,7 @@ class YOLOProcessor(BaseVisionProcessor):
             self.logger.warning(f"Warmup failed: {e}")
 
     def process_image(
-        self, image_path: str, query_params: Dict[str, Any]
+            self, image_path: str, query_params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Process an image - delegate to image processor"""
         if not self.model:
@@ -117,10 +117,10 @@ class YOLOProcessor(BaseVisionProcessor):
         return processor.process(image_path, query_params)
 
     def process_video(
-        self,
-        video_path: str,
-        query_params: Dict[str, Any],
-        sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
+            self,
+            video_path: str,
+            query_params: Dict[str, Any],
+            sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
     ) -> Dict[str, Any]:
         """Process a video - delegate to video processor"""
         if not self.model:

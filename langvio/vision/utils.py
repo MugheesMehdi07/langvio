@@ -6,20 +6,9 @@ from collections import defaultdict, deque
 # Keep the complex temporal analysis classes here as they're vision-specific
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 
 # Import core detection utilities
-from langvio.utils.detection import (add_color_attributes,
-                                     add_size_and_position_attributes,
-                                     add_tracking_info, add_unified_attributes,
-                                     compress_detections_for_output,
-                                     extract_detections,
-                                     identify_object_clusters,
-                                     optimize_for_memory)
 # Import spatial utilities
-from langvio.utils.spatial import (add_spatial_relationships,
-                                   calculate_relative_positions,
-                                   detect_spatial_relationships)
 
 
 class TemporalObjectTracker:
@@ -39,7 +28,7 @@ class TemporalObjectTracker:
         )
 
     def update_frame(
-        self, frame_idx: int, detections: List[Dict[str, Any]], fps: float
+            self, frame_idx: int, detections: List[Dict[str, Any]], fps: float
     ):
         """Update tracking with new frame detections."""
         timestamp = frame_idx / fps
@@ -121,7 +110,7 @@ class TemporalObjectTracker:
 
         obj_keys = list(self.object_histories.keys())
         for i, obj1_key in enumerate(obj_keys):
-            for obj2_key in obj_keys[i + 1 :]:
+            for obj2_key in obj_keys[i + 1:]:
                 obj1_hist = self.object_histories[obj1_key]
                 obj2_hist = self.object_histories[obj2_key]
 
@@ -152,12 +141,12 @@ class TemporalObjectTracker:
         for i in range(1, len(positions)):
             dx = positions[i][0] - positions[i - 1][0]
             dy = positions[i][1] - positions[i - 1][1]
-            total_distance += (dx**2 + dy**2) ** 0.5
+            total_distance += (dx ** 2 + dy ** 2) ** 0.5
 
         return total_distance
 
     def _calculate_average_speed(
-        self, positions: List[Tuple], timestamps: List[float]
+            self, positions: List[Tuple], timestamps: List[float]
     ) -> float:
         """Calculate average speed in pixels per second."""
         if len(positions) < 2 or len(timestamps) < 2:
@@ -190,10 +179,10 @@ class TemporalObjectTracker:
     def _calculate_temporal_overlap(self, hist1: Dict, hist2: Dict) -> float:
         """Calculate temporal overlap ratio between two objects."""
         if not (
-            hist1["first_seen"]
-            and hist1["last_seen"]
-            and hist2["first_seen"]
-            and hist2["last_seen"]
+                hist1["first_seen"]
+                and hist1["last_seen"]
+                and hist2["first_seen"]
+                and hist2["last_seen"]
         ):
             return 0
 
@@ -227,7 +216,7 @@ class SpatialRelationshipAnalyzer:
         frame_relationships = []
 
         for i, det1 in enumerate(detections):
-            for j, det2 in enumerate(detections[i + 1 :], i + 1):
+            for j, det2 in enumerate(detections[i + 1:], i + 1):
                 relationship = self._analyze_object_pair(det1, det2)
                 if relationship:
                     frame_relationships.append(relationship)
@@ -279,7 +268,7 @@ class SpatialRelationshipAnalyzer:
         }
 
     def _analyze_object_pair(
-        self, det1: Dict[str, Any], det2: Dict[str, Any]
+            self, det1: Dict[str, Any], det2: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """Analyze spatial relationship between two objects."""
         if not (det1.get("center") and det2.get("center")):
@@ -291,7 +280,7 @@ class SpatialRelationshipAnalyzer:
         # Calculate relative positions
         dx = center2[0] - center1[0]
         dy = center2[1] - center1[1]
-        distance = (dx**2 + dy**2) ** 0.5
+        distance = (dx ** 2 + dy ** 2) ** 0.5
 
         # Determine primary relationship
         if distance < 100:  # Close proximity

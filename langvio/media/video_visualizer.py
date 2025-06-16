@@ -17,17 +17,17 @@ class VideoVisualizer:
         self.logger = logging.getLogger(__name__)
 
     def visualize_with_highlights(
-        self,
-        video_path: str,
-        output_path: str,
-        all_frame_detections: Dict[str, List[Dict[str, Any]]],
-        highlighted_objects: List[Dict[str, Any]],
-        original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
-        highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
-        text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
-        line_thickness: int = 2,
-        show_attributes: bool = True,
-        show_confidence: bool = True,
+            self,
+            video_path: str,
+            output_path: str,
+            all_frame_detections: Dict[str, List[Dict[str, Any]]],
+            highlighted_objects: List[Dict[str, Any]],
+            original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
+            highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
+            text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
+            line_thickness: int = 2,
+            show_attributes: bool = True,
+            show_confidence: bool = True,
     ) -> None:
         """Visualize all detections on a video with highlighted objects in a different color"""
         self.logger.info(f"Visualizing all detections on video: {video_path}")
@@ -195,15 +195,15 @@ class VideoVisualizer:
         return (b, g, r)  # Return BGR for OpenCV
 
     def _draw_single_detection(
-        self,
-        image: np.ndarray,
-        det: Dict[str, Any],
-        box_color: Union[Tuple[int, int, int], List[int]],
-        text_color: Union[Tuple[int, int, int], List[int]],
-        line_thickness: int,
-        show_attributes: bool,
-        show_confidence: bool,
-        is_highlighted: bool = False,
+            self,
+            image: np.ndarray,
+            det: Dict[str, Any],
+            box_color: Union[Tuple[int, int, int], List[int]],
+            text_color: Union[Tuple[int, int, int], List[int]],
+            line_thickness: int,
+            show_attributes: bool,
+            show_confidence: bool,
+            is_highlighted: bool = False,
     ) -> np.ndarray:
         """Draw a single detection on a video frame"""
         if "bbox" not in det:

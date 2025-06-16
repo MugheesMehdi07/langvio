@@ -110,7 +110,8 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
             # If we can't set a default LLM, check if any LLMs are available
             if len(registry.list_llm_processors()) == 0:
                 error_msg = (
-                    "ERROR: No LLM providers are installed. Please install at least one provider:\n"
+                    "ERROR: No LLM providers are installed. "
+                    "Please install at least one provider:\n"
                     "- For OpenAI: pip install langvio[openai]\n"
                     "- For Google Gemini: pip install langvio[google]\n"
                     "- For all providers: pip install langvio[all-llm]"

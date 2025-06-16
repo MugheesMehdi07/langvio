@@ -125,10 +125,10 @@ class BaseLLMProcessor(Processor):
         return parsed
 
     def generate_explanation(
-        self,
-        query: str,
-        detections: Dict[str, List[Dict[str, Any]]],
-        is_video: bool = False,
+            self,
+            query: str,
+            detections: Dict[str, List[Dict[str, Any]]],
+            is_video: bool = False,
     ) -> str:
         """Generate an explanation based on detection results."""
         self.logger.info("Generating explanation for detection results")

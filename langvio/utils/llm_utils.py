@@ -8,7 +8,7 @@ from typing import Any, Counter, Dict, List, Tuple
 
 
 def process_image_detections_and_format_summary(
-    detections: Dict[str, Any], query_params: Dict[str, Any]
+        detections: Dict[str, Any], query_params: Dict[str, Any]
 ) -> Tuple[str, Dict[str, Dict[str, Any]]]:
     """
     Process image detections in the new format and create both summary and detection map.
@@ -63,7 +63,7 @@ def process_image_detections_and_format_summary(
     if by_type:
         summary_parts.append("\n## Object Counts by Type")
         for obj_type, count in sorted(
-            by_type.items(), key=lambda x: x[1], reverse=True
+                by_type.items(), key=lambda x: x[1], reverse=True
         ):
             summary_parts.append(f"- {obj_type}: {count} instances")
 
@@ -124,7 +124,7 @@ def process_image_detections_and_format_summary(
 
 
 def format_video_summary(
-    video_results: Dict[str, Any], parsed_query: Dict[str, Any]
+        video_results: Dict[str, Any], parsed_query: Dict[str, Any]
 ) -> str:
     """
     Enhanced format for comprehensive video results with better frame data handling.
@@ -244,7 +244,7 @@ def format_video_summary(
                 count = moment["count"]
                 types = moment["types"]
                 time_sec = (
-                    frame_num * video_info.get("fps", 30) / 30
+                        frame_num * video_info.get("fps", 30) / 30
                 )  # Approximate time
                 summary_parts.append(
                     f"  • Frame {frame_num} (t={time_sec:.1f}s): {count} objects - {types}"
@@ -405,7 +405,7 @@ def format_video_summary(
 
 
 def analyze_frame_activity(
-    frame_detections: Dict[str, List[Dict[str, Any]]],
+        frame_detections: Dict[str, List[Dict[str, Any]]],
 ) -> Dict[str, Any]:
     """
     Analyze frame-by-frame activity to extract key insights.
@@ -470,7 +470,7 @@ def analyze_frame_activity(
 
 
 def create_frame_summary_for_llm(
-    frame_detections: Dict[str, List[Dict[str, Any]]], max_frames: int = 20
+        frame_detections: Dict[str, List[Dict[str, Any]]], max_frames: int = 20
 ) -> str:
     """
     Create a concise frame summary for LLM when full frame data is needed.
@@ -611,7 +611,7 @@ def extract_object_ids(highlight_text: str) -> List[str]:
 
 
 def get_objects_by_ids(
-    object_ids: List[str], detection_map: Dict[str, Dict[str, Any]]
+        object_ids: List[str], detection_map: Dict[str, Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
     """
     Get the actual detection objects by their IDs.
@@ -640,7 +640,7 @@ def get_objects_by_ids(
 
 
 def parse_explanation_response(
-    response_content: str, detection_map: Dict[str, Dict[str, Any]]
+        response_content: str, detection_map: Dict[str, Dict[str, Any]]
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Parse the LLM response to extract explanation and highlighted objects.
@@ -684,7 +684,7 @@ def parse_explanation_response(
 
 
 def format_enhanced_video_summary(
-    video_results: Dict[str, Any], parsed_query: Dict[str, Any]
+        video_results: Dict[str, Any], parsed_query: Dict[str, Any]
 ) -> str:
     """
     Format enhanced video results for LLM explanation with focus on YOLO11 metrics.
@@ -884,7 +884,7 @@ def format_enhanced_video_summary(
 
 
 def create_video_detection_map_for_highlighting(
-    video_results: Dict[str, Any],
+        video_results: Dict[str, Any],
 ) -> Dict[str, Dict[str, Any]]:
     """
     Create detection map for video highlighting (simplified for video).

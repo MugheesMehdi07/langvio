@@ -3,7 +3,7 @@ YOLO11 utilities for object counting, speed estimation, and more
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from langvio.prompts.constants import YOLO11_CONFIG
 
@@ -18,7 +18,7 @@ def check_yolo11_solutions_available() -> bool:
         True if available, False otherwise
     """
     try:
-        from ultralytics import solutions
+        pass
 
         return True
     except (ImportError, AttributeError):
@@ -70,7 +70,7 @@ def initialize_yolo11_tools(width: int, height: int) -> Tuple[Any, Any]:
 
 
 def create_object_counter(
-    model_path: str, confidence: float, region: Optional[list] = None
+        model_path: str, confidence: float, region: Optional[list] = None
 ):
     """
     Create a YOLO11 ObjectCounter.
@@ -102,7 +102,7 @@ def create_object_counter(
 
 
 def create_speed_estimator(
-    model_path: str, confidence: float, region_width: Optional[int] = None
+        model_path: str, confidence: float, region_width: Optional[int] = None
 ):
     """
     Create a YOLO11 SpeedEstimator.

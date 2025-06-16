@@ -14,7 +14,7 @@ class ModelRegistry:
         self._vision_processors = {}
 
     def register_llm_processor(
-        self, name: str, processor_class: Type, **kwargs
+            self, name: str, processor_class: Type, **kwargs
     ) -> None:
         """
         Register an LLM processor.
@@ -27,7 +27,7 @@ class ModelRegistry:
         self._llm_processors[name] = (processor_class, kwargs)
 
     def register_vision_processor(
-        self, name: str, processor_class: Type, **kwargs
+            self, name: str, processor_class: Type, **kwargs
     ) -> None:
         """
         Register a vision processor.

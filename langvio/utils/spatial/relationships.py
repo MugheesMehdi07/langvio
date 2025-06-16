@@ -35,8 +35,9 @@ def add_spatial_relationships(detections: List[Dict[str, Any]]) -> List[Dict[str
 
             # Distance relationship
             distance = (
-                (center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2
-            ) ** 0.5
+                               (center1_x - center2_x) ** 2 + (
+                               center1_y - center2_y) ** 2
+                       ) ** 0.5
             relations.append("near" if distance < 100 else "far")
 
             # Check containment if bboxes available
@@ -61,7 +62,7 @@ def add_spatial_relationships(detections: List[Dict[str, Any]]) -> List[Dict[str
 
 
 def calculate_relative_positions(
-    detections: List[Dict[str, Any]], image_width: int, image_height: int
+        detections: List[Dict[str, Any]], image_width: int, image_height: int
 ) -> List[Dict[str, Any]]:
     """
     Calculate relative positions and sizes of detections.
@@ -115,7 +116,7 @@ def calculate_relative_positions(
 
 
 def detect_spatial_relationships(
-    detections: List[Dict[str, Any]], distance_threshold: float = 0.2
+        detections: List[Dict[str, Any]], distance_threshold: float = 0.2
 ) -> List[Dict[str, Any]]:
     """
     Detect spatial relationships between objects.
@@ -158,11 +159,12 @@ def detect_spatial_relationships(
 
             # Check near
             distance = (
-                (center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2
-            ) ** 0.5
+                               (center1_x - center2_x) ** 2 + (
+                               center1_y - center2_y) ** 2
+                       ) ** 0.5
             if distance < distance_threshold * (
-                det1.get("dimensions", [100, 100])[0]
-                + det2.get("dimensions", [100, 100])[0]
+                    det1.get("dimensions", [100, 100])[0]
+                    + det2.get("dimensions", [100, 100])[0]
             ):
                 relationship["relations"].append("near")
             else:

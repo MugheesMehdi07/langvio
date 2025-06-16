@@ -3,7 +3,6 @@ YOLO video processing module
 """
 
 import logging
-from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 
 import cv2
@@ -28,7 +27,7 @@ class YOLOVideoProcessor:
         self.logger = logging.getLogger(__name__)
 
     def process(
-        self, video_path: str, query_params: Dict[str, Any], sample_rate: int
+            self, video_path: str, query_params: Dict[str, Any], sample_rate: int
     ) -> Dict[str, Any]:
         """Process video with enhanced analysis strategy"""
         self.logger.info(f"Processing video: {video_path}")
@@ -117,7 +116,7 @@ class YOLOVideoProcessor:
                 cap.release()
 
     def _initialize_video_capture(
-        self, video_path: str
+            self, video_path: str
     ) -> Tuple[cv2.VideoCapture, Tuple[int, int, float, int]]:
         """Initialize video capture and extract video properties"""
         cap = cv2.VideoCapture(video_path)
@@ -162,14 +161,14 @@ class YOLOVideoProcessor:
         }
 
     def _process_frame_with_strategy(
-        self,
-        frame,
-        frame_idx: int,
-        width: int,
-        height: int,
-        analysis_config: Dict[str, Any],
-        counter: Any = None,
-        speed_estimator: Any = None,
+            self,
+            frame,
+            frame_idx: int,
+            width: int,
+            height: int,
+            analysis_config: Dict[str, Any],
+            counter: Any = None,
+            speed_estimator: Any = None,
     ) -> Dict[str, Any]:
         """Process frame with optimized strategy based on analysis needs"""
         result = {"detections": [], "counter_result": None, "speed_result": None}
@@ -229,14 +228,14 @@ class YOLOVideoProcessor:
             return []
 
     def _create_enhanced_video_results(
-        self,
-        frame_detections: Dict[str, List[Dict[str, Any]]],
-        temporal_tracker: TemporalObjectTracker,
-        spatial_analyzer: SpatialRelationshipAnalyzer,
-        counter_results: Any,
-        speed_results: Any,
-        video_props: Tuple,
-        query_params: Dict[str, Any],
+            self,
+            frame_detections: Dict[str, List[Dict[str, Any]]],
+            temporal_tracker: TemporalObjectTracker,
+            spatial_analyzer: SpatialRelationshipAnalyzer,
+            counter_results: Any,
+            speed_results: Any,
+            video_props: Tuple,
+            query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Create comprehensive video results with temporal, spatial, and YOLO11 analysis"""
         from langvio.vision.yolo.result_formatter import YOLOResultFormatter

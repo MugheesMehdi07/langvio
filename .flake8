@@ -1,4 +1,5 @@
 [flake8]
 max-line-length = 88
 exclude = .git,__pycache__,build,dist,venv,env,.venv,.eggs,*.egg
-ignore = E203,W503  # Black compatibility
+# Black compatibility
+ignore = E203,W503
