@@ -2,19 +2,19 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   release:
-    types: [published]
+    types: [ published ]
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
         exclude:
           # Reduce matrix size for faster builds
           - os: windows-latest
@@ -23,51 +23,51 @@ jobs:
             python-version: "3.8"
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
 
-    - name: Lint with flake8
-      run: |
-        flake8 langvio --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 langvio --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+      - name: Lint with flake8
+        run: |
+          flake8 langvio --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 langvio --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
 
-    - name: Format check with black
-      run: |
-        black --check langvio
+      - name: Format check with black
+        run: |
+          black --check langvio
 
-    - name: Import sort check with isort
-      run: |
-        isort --check-only langvio
+      - name: Import sort check with isort
+        run: |
+          isort --check-only langvio
 
-    - name: Type check with mypy (optional)
-      continue-on-error: true
-      run: |
-        mypy langvio --ignore-missing-imports
+      - name: Type check with mypy (optional)
+        continue-on-error: true
+        run: |
+          mypy langvio --ignore-missing-imports
 
-    - name: Test package import
-      run: |
-        python -c "import langvio; print(f'Langvio version: {langvio.__version__}')"
+      - name: Test package import
+        run: |
+          python -c "import langvio; print(f'Langvio version: {langvio.__version__}')"
 
-    - name: Test CLI
-      run: |
-        langvio --help
+      - name: Test CLI
+        run: |
+          langvio --help
 
   build:
     needs: test
@@ -75,31 +75,31 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'release'
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
 
-    - name: Build package
-      run: |
-        python -m build
+      - name: Build package
+        run: |
+          python -m build
 
-    - name: Check package
-      run: |
-        twine check dist/*
+      - name: Check package
+        run: |
+          twine check dist/*
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist
-        path: dist/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
 
   deploy-test:
     needs: build
@@ -108,21 +108,21 @@ jobs:
     environment: test-deployment
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: dist
-        path: dist/
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist/
 
-    - name: Publish to Test PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        repository-url: https://test.pypi.org/legacy/
-        skip-existing: true
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
 
   deploy-prod:
     needs: build
@@ -131,16 +131,16 @@ jobs:
     environment: production
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: dist
-        path: dist/
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist/
 
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}

@@ -55,12 +55,12 @@ def main():
 
     # Check if media file exists
     if not os.path.exists(args.media):
-        logger.error(f"Media file not found: {args.media}")
+        logger.error("Media file not found: %s", args.media)
         return 1
 
     # Check if media file is supported
     if not is_image_file(args.media) and not is_video_file(args.media):
-        logger.error(f"Unsupported media file format: {args.media}")
+        logger.error("Unsupported media file format: %s", args.media)
         return 1
 
     try:
@@ -79,10 +79,10 @@ def main():
 
         # Print results
         print("\n===== langvio Results =====")
-        print(f"Query: {result['query']}")
-        print(f"Media: {result['media_path']} ({result['media_type']})")
-        print(f"Output: {result['output_path']}")
-        print(f"\nExplanation: {result['explanation']}")
+        print("Query: {}".format(result['query']))
+        print("Media: {} ({})".format(result['media_path'], result['media_type']))
+        print("Output: {}".format(result['output_path']))
+        print("\nExplanation: {}".format(result['explanation']))
         print("\nDetection summary:")
 
         # Count detections by label
@@ -93,13 +93,13 @@ def main():
                 counts[label] = counts.get(label, 0) + 1
 
         for label, count in counts.items():
-            print(f"- {label}: {count}")
+            print("- {}: {}".format(label, count))
 
         print("\nProcessing complete!")
         return 0
 
     except Exception as e:
-        logger.error(f"Error processing query: {e}", exc_info=True)
+        logger.error("Error processing query: %s", e, exc_info=True)
         return 1
 
 
@@ -109,11 +109,11 @@ def list_available_models():
 
     print("\n===== Available LLM Processors =====")
     for name, cls in registry.list_llm_processors().items():
-        print(f"- {name}")
+        print("- {}".format(name))
 
     print("\n===== Available Vision Processors =====")
     for name, cls in registry.list_vision_processors().items():
-        print(f"- {name}")
+        print("- {}".format(name))
 
 
 if __name__ == "__main__":

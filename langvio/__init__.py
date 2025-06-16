@@ -4,13 +4,16 @@ langvio: Connect language models to vision models for natural language visual an
 
 __version__ = "0.3.0"
 
-# Try to load environment variables from .env file
-from dotenv import load_dotenv
+# Standard library imports first
+import sys
 
-load_dotenv()
-
+# Third-party imports
 import cv2
 import torch
+from dotenv import load_dotenv
+
+# Try to load environment variables from .env file
+load_dotenv()
 
 # OpenCV optimizations
 cv2.setNumThreads(4)  # Adjust based on your CPU
@@ -81,8 +84,6 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
     Returns:
         A configured Pipeline instance
     """
-    import sys
-
     # Create the pipeline
     pipeline = Pipeline(config_path)
 
@@ -93,7 +94,7 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
         # Default to YOLOe for best performance
         try:
             pipeline.set_vision_processor("yoloe_large")
-        except:
+        except Exception:
             # Fall back to YOLO if YOLOe is not available
             pipeline.set_vision_processor("yolo")
 

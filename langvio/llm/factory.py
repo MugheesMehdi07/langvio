@@ -77,7 +77,8 @@ def register_llm_processors(registry: ModelRegistry) -> None:
     # If no LLM providers are available, log an error but DO NOT register a fallback
     if not llm_providers_found:
         error_msg = (
-            "ERROR: No LLM providers are installed. Please install at least one provider:\n"
+            "ERROR: No LLM providers are installed. "
+            "Please install at least one provider:\n"
             "- For OpenAI: pip install langvio[openai]\n"
             "- For Google Gemini: pip install langvio[google]\n"
             "- For all providers: pip install langvio[all-llm]"

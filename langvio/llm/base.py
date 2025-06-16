@@ -118,7 +118,8 @@ class BaseLLMProcessor(Processor):
         # Ensure task_type is valid
         if parsed["task_type"] not in TASK_TYPES:
             self.logger.warning(
-                f"Invalid task type: {parsed['task_type']}. Using 'identification' instead."
+                f"Invalid task type: {parsed['task_type']}. "
+                f"Using 'identification' instead."
             )
             parsed["task_type"] = "identification"
 

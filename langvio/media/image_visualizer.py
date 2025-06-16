@@ -29,7 +29,8 @@ class ImageVisualizer:
             show_attributes: bool = True,
             show_confidence: bool = True,
     ) -> None:
-        """Visualize all detections on an image with highlighted objects in a different color"""
+        """Visualize all detections on an image
+        with highlighted objects in a different color"""
         self.logger.info(
             f"Visualizing {len(all_detections)} detections on image: {image_path}"
         )

@@ -109,7 +109,7 @@ class Pipeline:
                 "highlighted_objects": highlighted_objects,
             }
 
-            self.logger.info(f"Processed query successfully")
+            self.logger.info("Processed query successfully")
             return result
 
         except Exception as e:
