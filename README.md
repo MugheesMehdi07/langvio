@@ -1,6 +1,6 @@
 # 🧠 Langvio: Natural Language Computer Vision
 
-<div align="center">
+<dlangvioiv align="center">
 
 ![Langvio Logo](https://img.shields.io/badge/Langvio-Vision%20%2B%20Language-blue?style=for-the-badge&logo=python)
 
@@ -13,7 +13,7 @@
 
 [🚀 Quick Start](#-quick-start) • [📖 Documentation](https://langvio.readthedocs.io/) • [🎯 Examples](#-examples) • [🔧 Installation](#-installation) • [🤝 Contributing](#-contributing)
 
-</div>
+</dlangvioiv>
 
 ---
 
