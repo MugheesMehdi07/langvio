@@ -237,7 +237,11 @@ class YOLOVideoProcessor:
             video_props: Tuple,
             query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Create comprehensive video results with temporal, spatial, and YOLO11 analysis"""
+        """
+    Create comprehensive video results with temporal, spatial,
+    and YOLO11 analysis.
+        """
+
         from langvio.vision.yolo.result_formatter import YOLOResultFormatter
 
         formatter = YOLOResultFormatter()

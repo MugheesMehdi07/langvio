@@ -4,43 +4,46 @@ langvio: Connect language models to vision models for natural language visual an
 
 __version__ = "0.3.0"
 
-# Standard library imports first
+# === Imports ===
+
+# Standard library
 import sys
 
-# Third-party imports
+# Third-party
 import cv2
 import torch
 from dotenv import load_dotenv
 
-# Try to load environment variables from .env file
+# langvio modules
+from langvio.core.registry import ModelRegistry
+from langvio.core.pipeline import Pipeline
+from langvio.llm.base import BaseLLMProcessor
+from langvio.vision.base import BaseVisionProcessor
+from langvio.vision.yolo.detector import YOLOProcessor
+from langvio.llm.factory import register_llm_processors
+
+
+# === Initialization ===
+
+# Load environment variables
 load_dotenv()
 
 # OpenCV optimizations
-cv2.setNumThreads(4)  # Adjust based on your CPU
+cv2.setNumThreads(4)
 cv2.setUseOptimized(True)
 
 # PyTorch optimizations
 if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
 
-# Initialize the global model registry
-from langvio.core.registry import ModelRegistry
-
+# Initialize model registry
 registry = ModelRegistry()
 
-# Import main components for easier access
-from langvio.core.pipeline import Pipeline
-from langvio.llm.base import BaseLLMProcessor
-from langvio.vision.base import BaseVisionProcessor
-# Register YOLOe and YOLO processors
-from langvio.vision.yolo.detector import YOLOProcessor
-
-# Register the YOLO processor with different configurations
+# Register YOLO and YOLOe vision processors
 registry.register_vision_processor(
     "yolo", YOLOProcessor, model_path="yolo11n.pt", confidence=0.5
 )
 
-# Register the YOLOe processor with different sizes
 registry.register_vision_processor(
     "yoloe",
     YOLOProcessor,
@@ -65,13 +68,12 @@ registry.register_vision_processor(
     model_type="yoloe",
 )
 
-# Register LLM processors using the factory
-from langvio.llm.factory import register_llm_processors
-
+# Register LLM processors
 register_llm_processors(registry)
 
 
-# Default pipeline creator with better defaults
+# === Pipeline Creator ===
+
 def create_pipeline(config_path=None, llm_name=None, vision_name=None):
     """
     Create a pipeline with optional configuration.
@@ -84,31 +86,23 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
     Returns:
         A configured Pipeline instance
     """
-    # Create the pipeline
     pipeline = Pipeline(config_path)
 
-    # Set the vision processor (use YOLOe by default)
     if vision_name:
         pipeline.set_vision_processor(vision_name)
     else:
-        # Default to YOLOe for best performance
         try:
             pipeline.set_vision_processor("yoloe_large")
         except Exception:
-            # Fall back to YOLO if YOLOe is not available
             pipeline.set_vision_processor("yolo")
 
-    # Set the LLM processor
     if llm_name:
-        # This will exit if the processor is not available
         pipeline.set_llm_processor(llm_name)
     else:
-        # If no specific LLM is requested, try to use the default from config
         try:
             default_llm = pipeline.config.config["llm"]["default"]
             pipeline.set_llm_processor(default_llm)
         except Exception:
-            # If we can't set a default LLM, check if any LLMs are available
             if len(registry.list_llm_processors()) == 0:
                 error_msg = (
                     "ERROR: No LLM providers are installed. "
@@ -120,14 +114,14 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
                 print(error_msg, file=sys.stderr)
                 sys.exit(1)
             else:
-                # Use the first available LLM
                 available_llm = next(iter(registry.list_llm_processors()))
                 pipeline.set_llm_processor(available_llm)
 
     return pipeline
 
 
-# Version info and exports
+# === Public Exports ===
+
 __all__ = [
     "Pipeline",
     "create_pipeline",

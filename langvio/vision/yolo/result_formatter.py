@@ -23,7 +23,10 @@ class YOLOResultFormatter:
             video_props: Tuple,
             query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Create comprehensive video results with temporal, spatial, and YOLO11 analysis"""
+        """
+        Create comprehensive video results with temporal, spatial,
+        and YOLO11 analysis
+        """
         width, height, fps, total_frames = video_props
         duration = total_frames / fps
 
@@ -85,9 +88,7 @@ class YOLOResultFormatter:
                         ),
                     },
                     "co_occurrence_events": len(temporal_relationships),
-                    "interaction_summary": temporal_relationships[
-                                           :5
-                                           ],  # Top 5 interactions
+                    "interaction_summary": temporal_relationships[:5],
                 },
                 # Spatial analysis
                 "spatial_relationships": {
@@ -291,9 +292,9 @@ class YOLOResultFormatter:
         if task_type == "counting" and "counting" in yolo11_metrics:
             counting = yolo11_metrics["counting"]
             insights.append(
-                f"YOLO11 counted {counting.get('total_crossings', 0)} total object crossings"
+                f"YOLO11 counted {counting.get('total_crossings', 0)} "
+                f"total object crossings"
             )
-
             if counting.get("net_flow", 0) != 0:
                 flow_type = "net inward" if counting["net_flow"] > 0 else "net outward"
                 insights.append(
@@ -310,9 +311,9 @@ class YOLOResultFormatter:
             speed = yolo11_metrics["speed"]
             if speed.get("average_speed_kmh"):
                 insights.append(
-                    f"Average speed: {speed['average_speed_kmh']} km/h ({speed.get('speed_category', 'unknown')} pace)"
+                    f"Average speed: {speed['average_speed_kmh']} km/h "
+                    f"({speed.get('speed_category', 'unknown')} pace)"
                 )
-
             if speed.get("fastest_type"):
                 insights.append(f"Fastest object type: {speed['fastest_type']}")
 

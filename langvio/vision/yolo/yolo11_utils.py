@@ -23,8 +23,10 @@ def check_yolo11_solutions_available() -> bool:
         return True
     except (ImportError, AttributeError):
         logger.warning(
-            "YOLO11 Solutions not available. Install with: pip install ultralytics>=8.0.0"
+            "YOLO11 Solutions not available. Install with: "
+            "pip install ultralytics>=8.0.0"
         )
+
         return False
 
 
@@ -78,7 +80,8 @@ def create_object_counter(
     Args:
         model_path: Path to the YOLO model
         confidence: Confidence threshold
-        region: Optional counting region coordinates [(x1,y1), (x2,y2), (x3,y3), (x4,y4)]
+        region: Optional counting region coordinates
+        [(x1,y1), (x2,y2), (x3,y3), (x4,y4)]
 
     Returns:
         ObjectCounter object or None if not available

@@ -25,8 +25,8 @@ def optimize_for_memory():
         if cuda_available:
             try:
                 # Test CUDA functionality
-                test_tensor = torch.zeros(1, device="cuda")
-                del test_tensor
+                # test_tensor = torch.zeros(1, device="cuda")
+                # del test_tensor
 
                 # Clear cache
                 torch.cuda.empty_cache()

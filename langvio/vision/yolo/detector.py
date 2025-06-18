@@ -76,7 +76,7 @@ class YOLOProcessor(BaseVisionProcessor):
                 try:
                     self.model.half()  # Enable FP16 for 2x speed boost
                     self.logger.info("✅ Half precision (FP16) enabled")
-                except:
+                except Exception:
                     self.logger.info("⚠️ Half precision not available, using FP32")
 
             # Warm up the model

@@ -44,7 +44,7 @@ class GeminiProcessor(BaseLLMProcessor):
 
             if not self.is_package_installed("langchain_google_genai"):
                 raise ImportError(
-                    "The 'langchain-google-genai' package is required to use Gemini models. "
+                    "Gemini models uses 'langchain-google-genai' package. "
                     "Please install it with 'pip install langvio[google]'"
                 )
 

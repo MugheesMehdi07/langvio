@@ -13,7 +13,8 @@ class ColorDetector:
     Advanced color detection utility class for image processing.
     Provides precise color detection with support for a wide range of color shades.
 
-    This class can be integrated with any object detection system to add color attribute detection.
+    This class can be integrated with any object detection system
+    to add color attribute detection.
     """
 
     # Define comprehensive color ranges in HSV
@@ -96,10 +97,12 @@ class ColorDetector:
         Args:
             image_region: Image region as numpy array (BGR format)
             return_all: If True, returns all detected colors with percentages
-            threshold: Minimum percentage for a color to be considered (when return_all=False)
+            threshold: Minimum percentage for a color to be considered
+            (when return_all=False)
 
         Returns:
-            Dominant color name if return_all=False, or dictionary of {color_name: percentage} if return_all=True
+            Dominant color name if return_all=False, or dictionary
+            of {color_name: percentage} if return_all=True
         """
         # Check if region is valid
         if (
@@ -167,7 +170,8 @@ class ColorDetector:
             cls, image_region: np.ndarray, max_colors: int = 3
     ) -> List[str]:
         """
-        Detect up to max_colors different colors in the image region in order of dominance.
+        Detect up to max_colors different colors in the image region
+        in order of dominance.
 
         Args:
             image_region: Image region as numpy array (BGR format)
@@ -193,8 +197,10 @@ class ColorDetector:
         Returns:
             Dictionary with color information:
                 - dominant_color: Main color name
-                - color_percentages: Dictionary of all detected colors and their percentages
-                - is_multicolored: Boolean indicating if the object has multiple significant colors
+                - color_percentages: Dictionary of all detected colors
+                and their percentages
+                - is_multicolored: Boolean indicating if the object
+                 has multiple significant colors
                 - brightness: Average brightness value
                 - saturation: Average saturation value
         """
@@ -225,7 +231,7 @@ class ColorDetector:
             hsv_region = cv2.cvtColor(image_region, cv2.COLOR_BGR2HSV)
             avg_saturation = np.mean(hsv_region[:, :, 1])
             avg_brightness = np.mean(hsv_region[:, :, 2])
-        except:
+        except (cv2.error, IndexError):
             avg_saturation = 0
             avg_brightness = 0
 
@@ -349,7 +355,7 @@ class ColorDetector:
                 else:
                     # Default color if no match found
                     bgr_color = (0, 0, 0)
-            except:
+            except (KeyError, ValueError, TypeError):
                 # Fallback color
                 bgr_color = (0, 0, 0)
 

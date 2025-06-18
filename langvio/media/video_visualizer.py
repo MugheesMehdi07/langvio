@@ -29,7 +29,8 @@ class VideoVisualizer:
             show_attributes: bool = True,
             show_confidence: bool = True,
     ) -> None:
-        """Visualize all detections on a video with highlighted objects in a different color"""
+        """Visualize all detections on a video
+        with highlighted objects in a different color"""
         self.logger.info(f"Visualizing all detections on video: {video_path}")
 
         try:
