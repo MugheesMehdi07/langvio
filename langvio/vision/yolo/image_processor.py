@@ -12,6 +12,7 @@ from langvio.utils.detection import (
     compress_detections_for_output,
     extract_detections,
     identify_object_clusters,
+    add_unified_attributes,
 )
 
 
