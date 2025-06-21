@@ -8,14 +8,16 @@ from typing import Any, Dict, List, Tuple
 import cv2
 import torch
 
+from langvio.utils.detection import (
+    optimize_for_memory,
+    add_tracking_info,
+    add_color_attributes,
+    add_size_and_position_attributes,
+    extract_detections,
+)
 from langvio.vision.utils import (
     SpatialRelationshipAnalyzer,
     TemporalObjectTracker,
-    add_color_attributes,
-    add_size_and_position_attributes,
-    add_tracking_info,
-    extract_detections,
-    optimize_for_memory,
 )
 from langvio.vision.yolo.yolo11_utils import (
     initialize_yolo11_tools,

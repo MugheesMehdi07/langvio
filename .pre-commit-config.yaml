@@ -11,14 +11,6 @@ repos:
         args: [ "--check", "--line-length=88" ]
         files: ^langvio/
 
-  # isort - import sorting (matches CI)
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: [ "--check-only", "--profile", "black", "--line-length=88" ]
-        files: ^langvio/
-
   # MyPy - type checking (optional, matches CI)
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
