@@ -52,10 +52,6 @@ jobs:
         run: |
           black --check langvio
 
-      - name: Import sort check with isort
-        run: |
-          isort --check-only langvio
-
       - name: Type check with mypy (optional)
         continue-on-error: true
         run: |

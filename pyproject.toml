@@ -7,13 +7,11 @@ name = "langvio"
 version = "0.3.0"
 description = "Connect language models to vision models for natural language visual analysis"
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    { name = "Mughees Mehdi", email = "mugheesmehdi@gmail.com" }
 ]
-maintainers = [
-    {name = "Your Name", email = "your.email@example.com"}
-]
+
 keywords = ["computer-vision", "llm", "ai", "yolo", "langchain", "object-detection"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -86,3 +84,5 @@ exclude = ["tests*", "examples*", "webapp*", "docs*"]
 
 [tool.setuptools.package-data]
 langvio = ["*.yaml", "*.yml", "*.json"]
+
+
