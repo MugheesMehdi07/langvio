@@ -14,14 +14,14 @@ class YOLOResultFormatter:
         self.logger = logging.getLogger(__name__)
 
     def create_enhanced_video_results(
-            self,
-            frame_detections: Dict[str, List[Dict[str, Any]]],
-            temporal_tracker: Any,
-            spatial_analyzer: Any,
-            counter_results: Any,
-            speed_results: Any,
-            video_props: Tuple,
-            query_params: Dict[str, Any],
+        self,
+        frame_detections: Dict[str, List[Dict[str, Any]]],
+        temporal_tracker: Any,
+        spatial_analyzer: Any,
+        counter_results: Any,
+        speed_results: Any,
+        video_props: Tuple,
+        query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
         Create comprehensive video results with temporal, spatial,
@@ -115,7 +115,7 @@ class YOLOResultFormatter:
         }
 
     def _parse_enhanced_yolo11_results(
-            self, counter_results: Any, speed_results: Any
+        self, counter_results: Any, speed_results: Any
     ) -> Dict[str, Any]:
         """Enhanced parsing of YOLO11 results with better structure"""
         metrics = {}
@@ -208,10 +208,10 @@ class YOLOResultFormatter:
         return metrics
 
     def _create_comprehensive_object_analysis(
-            self,
-            temporal_tracker: Any,
-            movement_patterns: Dict[str, Any],
-            spatial_summary: Dict[str, Any],
+        self,
+        temporal_tracker: Any,
+        movement_patterns: Dict[str, Any],
+        spatial_summary: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Create comprehensive object analysis from temporal and spatial data"""
         object_characteristics = defaultdict(
@@ -278,11 +278,11 @@ class YOLOResultFormatter:
         }
 
     def _extract_primary_insights(
-            self,
-            query_params: Dict[str, Any],
-            yolo11_metrics: Dict[str, Any],
-            movement_patterns: Dict[str, Any],
-            spatial_summary: Dict[str, Any],
+        self,
+        query_params: Dict[str, Any],
+        yolo11_metrics: Dict[str, Any],
+        movement_patterns: Dict[str, Any],
+        spatial_summary: Dict[str, Any],
     ) -> List[str]:
         """Extract key insights based on query type and analysis results"""
         insights = []
@@ -350,7 +350,7 @@ class YOLOResultFormatter:
             return "very_fast"
 
     def _assess_activity_level(
-            self, movement_patterns: Dict[str, Any], duration: float
+        self, movement_patterns: Dict[str, Any], duration: float
     ) -> str:
         """Assess overall activity level of the video"""
         total_moving = len(movement_patterns.get("moving_objects", [])) + len(

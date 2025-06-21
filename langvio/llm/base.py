@@ -14,11 +14,16 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from langvio.core.base import Processor
 from langvio.prompts.constants import TASK_TYPES
-from langvio.prompts.templates import (EXPLANATION_TEMPLATE,
-                                       QUERY_PARSING_TEMPLATE, SYSTEM_PROMPT)
+from langvio.prompts.templates import (
+    EXPLANATION_TEMPLATE,
+    QUERY_PARSING_TEMPLATE,
+    SYSTEM_PROMPT,
+)
 from langvio.utils.llm_utils import (
-    format_video_summary, parse_explanation_response,
-    process_image_detections_and_format_summary)
+    format_video_summary,
+    parse_explanation_response,
+    process_image_detections_and_format_summary,
+)
 
 
 class BaseLLMProcessor(Processor):
@@ -126,10 +131,10 @@ class BaseLLMProcessor(Processor):
         return parsed
 
     def generate_explanation(
-            self,
-            query: str,
-            detections: Dict[str, List[Dict[str, Any]]],
-            is_video: bool = False,
+        self,
+        query: str,
+        detections: Dict[str, List[Dict[str, Any]]],
+        is_video: bool = False,
     ) -> str:
         """Generate an explanation based on detection results."""
         self.logger.info("Generating explanation for detection results")

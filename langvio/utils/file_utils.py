@@ -92,7 +92,7 @@ def create_temp_copy(file_path: str, delete: bool = True) -> str:
 
 
 def get_files_in_directory(
-        directory: str, extensions: Optional[List[str]] = None
+    directory: str, extensions: Optional[List[str]] = None
 ) -> List[str]:
     """
     Get files in a directory with optional extension filtering.

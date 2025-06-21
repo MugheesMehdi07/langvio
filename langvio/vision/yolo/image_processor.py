@@ -7,10 +7,13 @@ from typing import Any, Dict, List
 
 import torch
 
-from langvio.vision.utils import (add_unified_attributes,
-                                  compress_detections_for_output,
-                                  extract_detections, identify_object_clusters,
-                                  optimize_for_memory)
+from langvio.vision.utils import (
+    add_unified_attributes,
+    compress_detections_for_output,
+    extract_detections,
+    identify_object_clusters,
+    optimize_for_memory,
+)
 
 
 class YOLOImageProcessor:
@@ -69,7 +72,7 @@ class YOLOImageProcessor:
         return None
 
     def _run_detection_with_attributes(
-            self, image_path: str, width: int, height: int, query_params: Dict[str, Any]
+        self, image_path: str, width: int, height: int, query_params: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Run YOLO detection with attributes for images"""
         # 1. Run YOLO detection
@@ -94,11 +97,11 @@ class YOLOImageProcessor:
         return detections
 
     def _create_image_summary(
-            self,
-            detections: List[Dict[str, Any]],
-            width: int,
-            height: int,
-            query_params: Dict[str, Any],
+        self,
+        detections: List[Dict[str, Any]],
+        width: int,
+        height: int,
+        query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Create optimized image summary"""
         if not detections:

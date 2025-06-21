@@ -88,8 +88,7 @@ class ColorDetector:
 
     @classmethod
     def detect_color(
-            cls, image_region: np.ndarray, return_all: bool = False,
-            threshold: float = 0.15
+        cls, image_region: np.ndarray, return_all: bool = False, threshold: float = 0.15
     ) -> Union[str, Dict[str, float]]:
         """
         Detect the dominant color(s) in an image region using HSV color space.
@@ -106,10 +105,10 @@ class ColorDetector:
         """
         # Check if region is valid
         if (
-                image_region is None
-                or image_region.size == 0
-                or image_region.shape[0] == 0
-                or image_region.shape[1] == 0
+            image_region is None
+            or image_region.size == 0
+            or image_region.shape[0] == 0
+            or image_region.shape[1] == 0
         ):
             return "unknown" if not return_all else {}
 
@@ -141,7 +140,7 @@ class ColorDetector:
 
             # Add to color counts if percentage is significant
             if (
-                    percentage > 0.05
+                percentage > 0.05
             ):  # Only count colors covering at least 5% of the region
                 if color_name in color_counts:
                     color_counts[color_name] += percentage
@@ -167,7 +166,7 @@ class ColorDetector:
 
     @classmethod
     def detect_colors_layered(
-            cls, image_region: np.ndarray, max_colors: int = 3
+        cls, image_region: np.ndarray, max_colors: int = 3
     ) -> List[str]:
         """
         Detect up to max_colors different colors in the image region

@@ -72,7 +72,7 @@ def initialize_yolo11_tools(width: int, height: int) -> Tuple[Any, Any]:
 
 
 def create_object_counter(
-        model_path: str, confidence: float, region: Optional[list] = None
+    model_path: str, confidence: float, region: Optional[list] = None
 ):
     """
     Create a YOLO11 ObjectCounter.
@@ -105,7 +105,7 @@ def create_object_counter(
 
 
 def create_speed_estimator(
-        model_path: str, confidence: float, region_width: Optional[int] = None
+    model_path: str, confidence: float, region_width: Optional[int] = None
 ):
     """
     Create a YOLO11 SpeedEstimator.

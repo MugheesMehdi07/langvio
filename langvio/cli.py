@@ -79,10 +79,10 @@ def main():
 
         # Print results
         print("\n===== langvio Results =====")
-        print("Query: {}".format(result['query']))
-        print("Media: {} ({})".format(result['media_path'], result['media_type']))
-        print("Output: {}".format(result['output_path']))
-        print("\nExplanation: {}".format(result['explanation']))
+        print("Query: {}".format(result["query"]))
+        print("Media: {} ({})".format(result["media_path"], result["media_type"]))
+        print("Output: {}".format(result["output_path"]))
+        print("\nExplanation: {}".format(result["explanation"]))
         print("\nDetection summary:")
 
         # Count detections by label

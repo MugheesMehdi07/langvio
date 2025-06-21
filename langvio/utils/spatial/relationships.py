@@ -35,8 +35,7 @@ def add_spatial_relationships(detections: List[Dict[str, Any]]) -> List[Dict[str
 
             # Distance relationship
             distance = (
-                (center1_x - center2_x) ** 2
-                + (center1_y - center2_y) ** 2
+                (center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2
             ) ** 0.5
             relations.append("near" if distance < 100 else "far")
 
@@ -154,8 +153,7 @@ def detect_spatial_relationships(
                 relationship["relations"].append("below")
 
             distance = (
-                (center1_x - center2_x) ** 2
-                + (center1_y - center2_y) ** 2
+                (center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2
             ) ** 0.5
 
             if distance < distance_threshold * (

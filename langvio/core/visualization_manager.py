@@ -20,11 +20,11 @@ class VisualizationManager:
         self.logger = logging.getLogger(__name__)
 
     def create_visualization(
-            self,
-            media_path: str,
-            detections: Dict[str, Any],
-            highlighted_objects: List[Dict[str, Any]],
-            query_params: Dict[str, Any],
+        self,
+        media_path: str,
+        detections: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        query_params: Dict[str, Any],
     ) -> str:
         """Create visualization with highlighted objects"""
         # Generate output path
@@ -86,12 +86,12 @@ class VisualizationManager:
         return viz_config
 
     def _create_image_visualization(
-            self,
-            image_path: str,
-            output_path: str,
-            detections: Dict[str, Any],
-            highlighted_objects: List[Dict[str, Any]],
-            viz_config: Dict[str, Any],
+        self,
+        image_path: str,
+        output_path: str,
+        detections: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        viz_config: Dict[str, Any],
     ) -> None:
         """Create image visualization"""
         original_box_color = viz_config["box_color"]
@@ -114,12 +114,12 @@ class VisualizationManager:
         )
 
     def _create_video_visualization(
-            self,
-            video_path: str,
-            output_path: str,
-            video_results: Dict[str, Any],
-            highlighted_objects: List[Dict[str, Any]],
-            viz_config: Dict[str, Any],
+        self,
+        video_path: str,
+        output_path: str,
+        video_results: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        viz_config: Dict[str, Any],
     ) -> None:
         """Create enhanced video visualization"""
         import cv2
@@ -247,11 +247,11 @@ class VisualizationManager:
         return overlay_info
 
     def _draw_detections_on_frame(
-            self,
-            frame,
-            detections: List[Dict[str, Any]],
-            highlighted_lookup: set,
-            viz_config: Dict[str, Any],
+        self,
+        frame,
+        detections: List[Dict[str, Any]],
+        highlighted_lookup: set,
+        viz_config: Dict[str, Any],
     ):
         """Draw detections on frame with highlighting support"""
         default_color = viz_config.get("box_color", [0, 255, 0])
@@ -319,7 +319,7 @@ class VisualizationManager:
         return frame
 
     def _add_comprehensive_overlay(
-            self, frame, overlay_info: Dict[str, Any], frame_idx: int, fps: float
+        self, frame, overlay_info: Dict[str, Any], frame_idx: int, fps: float
     ):
         """Add comprehensive overlay with stats and insights"""
         height, width = frame.shape[:2]

@@ -100,14 +100,14 @@ class Config:
             raise ValueError(f"Error loading configuration from {config_path}: {e}")
 
     def _update_config(
-            self, base_config: Dict[str, Any], new_config: Dict[str, Any]
+        self, base_config: Dict[str, Any], new_config: Dict[str, Any]
     ) -> None:
         """Recursively update base config with new config."""
         for key, value in new_config.items():
             if (
-                    isinstance(value, dict)
-                    and key in base_config
-                    and isinstance(base_config[key], dict)
+                isinstance(value, dict)
+                and key in base_config
+                and isinstance(base_config[key], dict)
             ):
                 self._update_config(base_config[key], value)
             else:

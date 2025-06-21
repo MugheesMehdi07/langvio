@@ -48,10 +48,12 @@ def compress_detections_for_output(
             key_rels = []
             for rel in det["relationships"][:2]:  # Max 2 relations to avoid verbosity
                 if rel.get("relations"):
-                    key_rels.append({
-                        "to": rel["object"],
-                        "relation": rel["relations"][0],  # Primary relation only
-                    })
+                    key_rels.append(
+                        {
+                            "to": rel["object"],
+                            "relation": rel["relations"][0],  # Primary relation only
+                        }
+                    )
             if key_rels:
                 obj["key_relationships"] = key_rels
 
@@ -92,8 +94,7 @@ def identify_object_clusters(
 
             center2 = det2["center"]
             distance = (
-                (center1[0] - center2[0]) ** 2
-                + (center1[1] - center2[1]) ** 2
+                (center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2
             ) ** 0.5
 
             if distance < distance_threshold:

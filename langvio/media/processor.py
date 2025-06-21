@@ -64,12 +64,12 @@ class MediaProcessor:
         return os.path.join(self.config["output_dir"], output_filename)
 
     def visualize_image_with_highlights(
-            self,
-            image_path: str,
-            output_path: str,
-            all_detections: List[Dict[str, Any]],
-            highlighted_detections: List[Dict[str, Any]],
-            **kwargs,
+        self,
+        image_path: str,
+        output_path: str,
+        all_detections: List[Dict[str, Any]],
+        highlighted_detections: List[Dict[str, Any]],
+        **kwargs,
     ) -> None:
         """Delegate image visualization to ImageVisualizer"""
         return self.image_visualizer.visualize_with_highlights(
@@ -77,12 +77,12 @@ class MediaProcessor:
         )
 
     def visualize_video_with_highlights(
-            self,
-            video_path: str,
-            output_path: str,
-            all_frame_detections: Dict[str, List[Dict[str, Any]]],
-            highlighted_objects: List[Dict[str, Any]],
-            **kwargs,
+        self,
+        video_path: str,
+        output_path: str,
+        all_frame_detections: Dict[str, List[Dict[str, Any]]],
+        highlighted_objects: List[Dict[str, Any]],
+        **kwargs,
     ) -> None:
         """Delegate video visualization to VideoVisualizer"""
         return self.video_visualizer.visualize_with_highlights(

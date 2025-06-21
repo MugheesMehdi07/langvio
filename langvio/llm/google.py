@@ -12,11 +12,11 @@ class GeminiProcessor(BaseLLMProcessor):
     """LLM processor using Google Gemini models via LangChain"""
 
     def __init__(
-            self,
-            name: str = "gemini",
-            model_name: str = "gemini-pro",
-            model_kwargs: Optional[Dict[str, Any]] = None,
-            **kwargs,
+        self,
+        name: str = "gemini",
+        model_name: str = "gemini-pro",
+        model_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ):
         """
         Initialize Gemini processor.

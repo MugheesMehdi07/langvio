@@ -94,7 +94,7 @@ class ProcessorManager:
         return self.llm_processor.parse_query(query)
 
     def process_media(
-            self, media_path: str, query_params: Dict[str, Any]
+        self, media_path: str, query_params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Process media file with vision processor"""
         if not self.vision_processor:

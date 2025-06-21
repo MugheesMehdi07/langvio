@@ -28,7 +28,7 @@ class BaseVisionProcessor(Processor):
 
     @abstractmethod
     def process_image(
-            self, image_path: str, query_params: Dict[str, Any]
+        self, image_path: str, query_params: Dict[str, Any]
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Process an image with the vision model.
@@ -43,10 +43,10 @@ class BaseVisionProcessor(Processor):
 
     @abstractmethod
     def process_video(
-            self,
-            video_path: str,
-            query_params: Dict[str, Any],
-            sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
+        self,
+        video_path: str,
+        query_params: Dict[str, Any],
+        sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Process a video with the vision model.
@@ -80,7 +80,7 @@ class BaseVisionProcessor(Processor):
         return None
 
     def _enhance_detections_with_attributes(
-            self, detections: List[Dict[str, Any]], image_path: str
+        self, detections: List[Dict[str, Any]], image_path: str
     ) -> List[Dict[str, Any]]:
         """
         Enhance detections with attribute information.
@@ -107,12 +107,12 @@ class BaseVisionProcessor(Processor):
 
                 # Skip invalid boxes
                 if (
-                        x1 >= x2
-                        or y1 >= y2
-                        or x1 < 0
-                        or y1 < 0
-                        or x2 > image_width
-                        or y2 > image_height
+                    x1 >= x2
+                    or y1 >= y2
+                    or x1 < 0
+                    or y1 < 0
+                    or x2 > image_width
+                    or y2 > image_height
                 ):
                     continue
 
