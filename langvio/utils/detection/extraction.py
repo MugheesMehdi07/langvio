@@ -187,8 +187,7 @@ def add_unified_attributes(
 
     # Add spatial relationships if needed (expensive)
     if needs_spatial and len(enhanced_detections) > 1:
-        from langvio.utils.spatial.relationships import \
-            add_spatial_relationships
+        from langvio.utils.spatial.relationships import add_spatial_relationships
 
         enhanced_detections = add_spatial_relationships(enhanced_detections)
 

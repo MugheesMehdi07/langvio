@@ -3,6 +3,7 @@ Enhanced utilities for vision processing - imports from reorganized modules
 """
 
 from collections import defaultdict, deque
+
 # Keep the complex temporal analysis classes here as they're vision-specific
 from typing import Any, Dict, List, Optional, Tuple
 

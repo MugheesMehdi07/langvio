@@ -8,13 +8,19 @@ from typing import Any, Dict, List, Tuple
 import cv2
 import torch
 
-from langvio.vision.utils import (SpatialRelationshipAnalyzer,
-                                  TemporalObjectTracker, add_color_attributes,
-                                  add_size_and_position_attributes,
-                                  add_tracking_info, extract_detections,
-                                  optimize_for_memory)
-from langvio.vision.yolo.yolo11_utils import (initialize_yolo11_tools,
-                                              process_frame_with_yolo11)
+from langvio.vision.utils import (
+    SpatialRelationshipAnalyzer,
+    TemporalObjectTracker,
+    add_color_attributes,
+    add_size_and_position_attributes,
+    add_tracking_info,
+    extract_detections,
+    optimize_for_memory,
+)
+from langvio.vision.yolo.yolo11_utils import (
+    initialize_yolo11_tools,
+    process_frame_with_yolo11,
+)
 
 
 class YOLOVideoProcessor:

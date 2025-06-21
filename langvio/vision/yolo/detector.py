@@ -8,8 +8,10 @@ from typing import Any, Dict
 import torch
 from ultralytics import YOLO, YOLOE
 
-from langvio.prompts.constants import (DEFAULT_CONFIDENCE_THRESHOLD,
-                                       DEFAULT_VIDEO_SAMPLE_RATE)
+from langvio.prompts.constants import (
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    DEFAULT_VIDEO_SAMPLE_RATE,
+)
 from langvio.vision.base import BaseVisionProcessor
 from langvio.vision.yolo.image_processor import YOLOImageProcessor
 from langvio.vision.yolo.video_processor import YOLOVideoProcessor
