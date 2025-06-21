@@ -7,13 +7,10 @@ from typing import Any, Dict, List
 
 import torch
 
-from langvio.vision.utils import (
-    add_unified_attributes,
-    compress_detections_for_output,
-    extract_detections,
-    identify_object_clusters,
-    optimize_for_memory,
-)
+from langvio.vision.utils import (add_unified_attributes,
+                                  compress_detections_for_output,
+                                  extract_detections, identify_object_clusters,
+                                  optimize_for_memory)
 
 
 class YOLOImageProcessor:

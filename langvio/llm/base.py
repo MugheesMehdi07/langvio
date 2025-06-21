@@ -14,16 +14,11 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from langvio.core.base import Processor
 from langvio.prompts.constants import TASK_TYPES
-from langvio.prompts.templates import (
-    EXPLANATION_TEMPLATE,
-    QUERY_PARSING_TEMPLATE,
-    SYSTEM_PROMPT,
-)
+from langvio.prompts.templates import (EXPLANATION_TEMPLATE,
+                                       QUERY_PARSING_TEMPLATE, SYSTEM_PROMPT)
 from langvio.utils.llm_utils import (
-    format_video_summary,
-    parse_explanation_response,
-    process_image_detections_and_format_summary,
-)
+    format_video_summary, parse_explanation_response,
+    process_image_detections_and_format_summary)
 
 
 class BaseLLMProcessor(Processor):
