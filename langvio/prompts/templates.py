@@ -14,9 +14,9 @@ Respond with VALID JSON ONLY containing these fields:
   (e.g., ["person", "car", "dog"])
 - count_objects: true if user wants to count something, false otherwise
 - task_type: One of "identification", "counting", "verification", "analysis"
-- attributes: List of attribute filters like [{"attribute": "color", "value": "red"}]
+- attributes: List of attribute filters like [{{"attribute": "color", "value": "red"}}]
 - spatial_relations: List of spatial requirements like
-  [{"relation": "on", "object": "table"}]
+  [{{"relation": "on", "object": "table"}}]
 - custom_instructions: Any special instructions not covered above
 
 Focus on what the user actually wants to know or find.
