@@ -55,13 +55,19 @@ class YOLOProcessor(BaseVisionProcessor):
                 f"Loading {self.model_type} model: {self.config['model_path']}"
             )
 
-            # ADD THESE OPTIMIZATIONS:
-            # Enable GPU optimizations
+            # Enable aggressive GPU optimizations
             if torch.cuda.is_available():
                 torch.backends.cudnn.benchmark = True
                 torch.backends.cuda.matmul.allow_tf32 = True
                 torch.backends.cudnn.allow_tf32 = True
                 torch.cuda.empty_cache()
+                
+                # Set memory fraction for faster processing
+                torch.cuda.set_per_process_memory_fraction(0.8)
+                
+                # Enable memory efficient attention
+                torch.backends.cuda.enable_flash_sdp(True)
+                torch.backends.cuda.enable_mem_efficient_sdp(True)
 
             # Disable gradients globally
             torch.set_grad_enabled(False)
@@ -71,7 +77,6 @@ class YOLOProcessor(BaseVisionProcessor):
             else:
                 self.model = YOLO(self.config["model_path"])
 
-            # ADD THESE MODEL OPTIMIZATIONS:
             # Move to GPU and enable half precision if available
             if torch.cuda.is_available():
                 self.model.to("cuda")
@@ -90,7 +95,7 @@ class YOLOProcessor(BaseVisionProcessor):
             return False
 
     def _warmup_model(self):
-        """ADD THIS NEW METHOD - Warm up model for consistent performance"""
+        """Warm up model for consistent performance"""
         try:
             dummy_input = torch.randn(1, 3, 640, 640)
             if torch.cuda.is_available():
