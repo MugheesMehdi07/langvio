@@ -84,6 +84,9 @@ class Pipeline:
                 media_path, query_params
             )
 
+            # Log detection results to JSON
+            self._log_detections_to_json(all_detections, query, media_path)
+
             # 3. Generate explanation using all detected objects and metrics
             explanation = self.processor_manager.generate_explanation(
                 query, all_detections
@@ -115,3 +118,35 @@ class Pipeline:
         except Exception as e:
             self.logger.error(f"Error processing query: {e}")
             raise
+
+    def _log_detections_to_json(self, all_detections: Dict[str, Any], query: str, media_path: str):
+        """Log detection results to JSON file"""
+        import json
+        import os
+        from datetime import datetime
+        
+        # Create logs directory if it doesn't exist
+        logs_dir = "logs"
+        os.makedirs(logs_dir, exist_ok=True)
+        
+        # Create filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        media_name = os.path.splitext(os.path.basename(media_path))[0]
+        filename = f"detections_{media_name}_{timestamp}.json"
+        filepath = os.path.join(logs_dir, filename)
+        
+        # Prepare detection log data
+        detection_log = {
+            "query": query,
+            "media_path": media_path,
+            "timestamp": datetime.now().isoformat(),
+            "detections": all_detections
+        }
+        
+        # Write to JSON file
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(detection_log, f, indent=2, ensure_ascii=False)
+            self.logger.info(f"Detection results logged to: {filepath}")
+        except Exception as e:
+            self.logger.error(f"Failed to log detection results to file: {e}")
