@@ -89,3 +89,9 @@ jobs:
         body: ${{ steps.changelog.outputs.changelog }}
         draft: false
         prerelease: ${{ github.event.inputs.prerelease }}
+        id: create_release
+
+    - name: Trigger PyPI publish workflow
+      if: github.event.inputs.prerelease != 'true'
+      run: |
+        gh workflow run publish.yml --ref main
