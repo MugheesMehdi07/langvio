@@ -43,6 +43,7 @@ class YOLOVideoProcessor:
 
         # Performance monitoring
         import time
+
         start_time = time.time()
         frame_count = 0
         processed_frames = 0
@@ -65,27 +66,29 @@ class YOLOVideoProcessor:
             # Initialize video and YOLO11 tools
             cap, video_props = self._initialize_video_capture(video_path)
             width, height, fps, total_frames = video_props
-            
+
             # Get optimal processing resolution
             target_width, target_height = self._get_optimal_resolution(width, height)
             self.logger.info(f"Original resolution: {width}x{height}")
             self.logger.info(f"Processing resolution: {target_width}x{target_height}")
-            
+
             # Initialize YOLO11 tools with processing resolution
-            counter, speed_estimator = initialize_yolo11_tools(target_width, target_height)
+            counter, speed_estimator = initialize_yolo11_tools(
+                target_width, target_height
+            )
 
             frame_idx = 0
             processed_frames = 0
-            
+
             # Memory management
             memory_cleanup_interval = 50  # Clean memory every 50 frames
-            
+
             with torch.no_grad():
                 optimize_for_memory()
 
                 while cap.isOpened():
                     frame_start_time = time.time()
-                    
+
                     # Log progress less frequently
                     if frame_idx % 10 == 0:
                         self.logger.info(f"Processing frame {frame_idx}/{total_frames}")
@@ -113,7 +116,7 @@ class YOLOVideoProcessor:
                     frame_result = self._process_frame_with_strategy(
                         resized_frame,  # Use resized frame
                         frame_idx,
-                        target_width,   # Use target dimensions
+                        target_width,  # Use target dimensions
                         target_height,
                         analysis_config,
                         counter,
@@ -159,8 +162,12 @@ class YOLOVideoProcessor:
             self.logger.info(f"Total frames processed: {processed_frames}")
             self.logger.info(f"Total processing time: {total_time:.2f} seconds")
             self.logger.info(f"Processing FPS: {processed_frames/total_time:.2f}")
-            self.logger.info(f"Average frame time: {(total_time/processed_frames)*1000:.2f} ms")
-            self.logger.info(f"Resolution scaling: {width}x{height} → {target_width}x{target_height}")
+            self.logger.info(
+                f"Average frame time: {(total_time/processed_frames)*1000:.2f} ms"
+            )
+            self.logger.info(
+                f"Resolution scaling: {width}x{height} → {target_width}x{target_height}"
+            )
 
             # Generate comprehensive results
             return self._create_enhanced_video_results(
@@ -199,42 +206,48 @@ class YOLOVideoProcessor:
 
         return cap, (width, height, fps, total_frames)
 
-    def _get_optimal_resolution(self, original_width: int, original_height: int) -> Tuple[int, int]:
+    def _get_optimal_resolution(
+        self, original_width: int, original_height: int
+    ) -> Tuple[int, int]:
         """Get optimal resolution for processing while maintaining aspect ratio"""
         # More aggressive target resolutions for maximum speed
         target_resolutions = [
-            (640, 360),   # 360p - fastest (4x speedup for 1080p)
-            (854, 480),   # 480p - fast
+            (640, 360),  # 360p - fastest (4x speedup for 1080p)
+            (854, 480),  # 480p - fast
             (1280, 720),  # 720p - balanced
         ]
-        
+
         # Find the best resolution that's smaller than original
         for target_w, target_h in target_resolutions:
             if target_w <= original_width and target_h <= original_height:
                 return target_w, target_h
-        
+
         # If original is smaller than our targets, keep original
         return original_width, original_height
 
-    def _resize_frame_if_needed(self, frame, target_width: int, target_height: int) -> Tuple[np.ndarray, float]:
+    def _resize_frame_if_needed(
+        self, frame, target_width: int, target_height: int
+    ) -> Tuple[np.ndarray, float]:
         """Resize frame if needed and return scale factor"""
         original_height, original_width = frame.shape[:2]
-        
+
         if original_width == target_width and original_height == target_height:
             return frame, 1.0
-        
+
         # Calculate scale factor
         scale_x = target_width / original_width
         scale_y = target_height / original_height
         scale_factor = min(scale_x, scale_y)  # Maintain aspect ratio
-        
+
         # Calculate new dimensions
         new_width = int(original_width * scale_factor)
         new_height = int(original_height * scale_factor)
-        
+
         # Resize frame
-        resized_frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
-        
+        resized_frame = cv2.resize(
+            frame, (new_width, new_height), interpolation=cv2.INTER_LINEAR
+        )
+
         return resized_frame, scale_factor
 
     def _determine_analysis_needs(self, query_params: Dict[str, Any]) -> Dict[str, Any]:
@@ -261,7 +274,9 @@ class YOLOVideoProcessor:
         # Ultra-fast mode: skip some frames for YOLO11 (trade accuracy for speed)
         ultra_fast_mode = query_params.get("ultra_fast", False)
         if ultra_fast_mode:
-            self.logger.warning("⚠️ Ultra-fast mode enabled - may reduce counting accuracy")
+            self.logger.warning(
+                "⚠️ Ultra-fast mode enabled - may reduce counting accuracy"
+            )
             frame_processing_interval = 2  # Process every 2nd frame
         else:
             frame_processing_interval = 1  # Process every frame for accuracy
@@ -349,17 +364,20 @@ class YOLOVideoProcessor:
             return []
 
     def _scale_detections_to_original(
-        self, detections: List[Dict[str, Any]], scale_factor: float, 
-        original_width: int, original_height: int
+        self,
+        detections: List[Dict[str, Any]],
+        scale_factor: float,
+        original_width: int,
+        original_height: int,
     ) -> List[Dict[str, Any]]:
         """Scale detections back to original resolution for visualization"""
         if scale_factor == 1.0:
             return detections
-        
+
         scaled_detections = []
         for det in detections:
             scaled_det = det.copy()
-            
+
             # Scale bounding box coordinates
             if "bbox" in scaled_det:
                 x1, y1, x2, y2 = scaled_det["bbox"]
@@ -367,24 +385,24 @@ class YOLOVideoProcessor:
                     int(x1 / scale_factor),
                     int(y1 / scale_factor),
                     int(x2 / scale_factor),
-                    int(y2 / scale_factor)
+                    int(y2 / scale_factor),
                 ]
-            
+
             # Scale center coordinates if present
             if "center" in scaled_det:
                 cx, cy = scaled_det["center"]
-                scaled_det["center"] = (
-                    int(cx / scale_factor),
-                    int(cy / scale_factor)
-                )
-            
+                scaled_det["center"] = (int(cx / scale_factor), int(cy / scale_factor))
+
             # Scale relative position if present
             if "relative_position" in scaled_det:
                 rx, ry = scaled_det["relative_position"]
-                scaled_det["relative_position"] = (rx, ry)  # Relative positions don't change
-            
+                scaled_det["relative_position"] = (
+                    rx,
+                    ry,
+                )  # Relative positions don't change
+
             scaled_detections.append(scaled_det)
-        
+
         return scaled_detections
 
     def _create_enhanced_video_results(
@@ -420,15 +438,15 @@ class YOLOVideoProcessor:
         try:
             import gc
             import torch
-            
+
             # Clear PyTorch cache
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
-            
+
             # Python garbage collection
             gc.collect()
-            
+
         except Exception as e:
             # Silent cleanup failure
             pass

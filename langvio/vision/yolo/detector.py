@@ -61,10 +61,10 @@ class YOLOProcessor(BaseVisionProcessor):
                 torch.backends.cuda.matmul.allow_tf32 = True
                 torch.backends.cudnn.allow_tf32 = True
                 torch.cuda.empty_cache()
-                
+
                 # Set memory fraction for faster processing
                 torch.cuda.set_per_process_memory_fraction(0.8)
-                
+
                 # Enable memory efficient attention
                 torch.backends.cuda.enable_flash_sdp(True)
                 torch.backends.cuda.enable_mem_efficient_sdp(True)
