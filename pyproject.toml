@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "langvio"
-version = "0.3.0"
+version = "0.0.1"
 description = "Connect language models to vision models for natural language visual analysis"
 readme = "README.md"
 license = { text = "MIT" }
