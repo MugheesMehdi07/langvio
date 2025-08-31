@@ -101,13 +101,31 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        echo "Git status before commit:"
+        git status
+        echo "Adding files..."
         git add pyproject.toml langvio/__init__.py
+        echo "Git status after add:"
+        git status
+        echo "Committing changes..."
         git commit -m "Bump version to ${{ github.event.inputs.version }}" || exit 0
+        echo "Creating tag..."
         git tag v${{ github.event.inputs.version }}
+        echo "Git status after commit and tag:"
+        git status
 
     - name: Push changes and tags
       run: |
-        git push origin main
+        echo "Current branch: $(git branch --show-current)"
+        echo "Available branches:"
+        git branch -a
+        echo "Remote configuration:"
+        git remote -v
+        echo "Current git status:"
+        git status
+        echo "Pushing to master branch..."
+        git push origin master
+        echo "Pushing tag v${{ github.event.inputs.version }}..."
         git push origin v${{ github.event.inputs.version }}
 
     - name: Create GitHub Release

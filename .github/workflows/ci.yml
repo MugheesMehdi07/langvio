@@ -10,25 +10,15 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-        python-version: [ "3.12" ]
-        exclude:
-          # Reduce matrix size for faster builds
-          - os: windows-latest
-            python-version: "3.8"
-          - os: macos-latest
-            python-version: "3.8"
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Cache pip packages
         uses: actions/cache@v4
