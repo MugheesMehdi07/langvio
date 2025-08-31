@@ -1,4 +1,4 @@
-name: Release
+name: Release and Deploy
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
         description: 'Version to release (e.g., 0.3.1)'
         required: true
         type: string
+      test_deployment:
+        description: 'Deploy to TestPyPI (uncheck for production PyPI)'
+        required: false
+        type: boolean
+        default: true
       prerelease:
         description: 'Is this a pre-release?'
         required: false
@@ -14,10 +19,11 @@ on:
         default: false
 
 jobs:
-  create-release:
+  release-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
 
     steps:
     - uses: actions/checkout@v4
@@ -91,7 +97,36 @@ jobs:
         prerelease: ${{ github.event.inputs.prerelease }}
         id: create_release
 
-    - name: Trigger PyPI publish workflow
-      if: github.event.inputs.prerelease != 'true'
+    - name: Install build dependencies
       run: |
-        gh workflow run publish.yml --ref main
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Publish to TestPyPI
+      if: github.event.inputs.test_deployment == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository-url: https://test.pypi.org/legacy/
+        skip-existing: true
+
+    - name: Publish to Production PyPI
+      if: github.event.inputs.test_deployment != 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        skip-existing: true
+
+    - name: Deployment Summary
+      run: |
+        if [ "${{ github.event.inputs.test_deployment }}" = "true" ]; then
+          echo "✅ Package deployed to TestPyPI: https://test.pypi.org/project/langvio/"
+          echo "🔗 TestPyPI download: pip install --index-url https://test.pypi.org/simple/ langvio"
+        else
+          echo "🚀 Package deployed to Production PyPI: https://pypi.org/project/langvio/"
+          echo "🔗 Production download: pip install langvio"
+        fi
