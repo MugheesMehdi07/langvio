@@ -37,8 +37,33 @@ jobs:
 
     - name: Validate version format
       run: |
-        if [[ ! "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9\-\.]*)$ ]]; then
-          echo "Invalid version format. Use semantic versioning (e.g., 1.0.0, 1.0.0-beta.1)"
+        VERSION="${{ github.event.inputs.version }}"
+        echo "Received version: '$VERSION'"
+        echo "Version length: ${#VERSION}"
+        echo "Version type: $(type -t "$VERSION" 2>/dev/null || echo 'unknown')"
+        
+        # Check for empty or null version
+        if [[ -z "$VERSION" ]]; then
+          echo "❌ Version is empty or null"
+          exit 1
+        fi
+        
+        # Check for whitespace issues
+        VERSION_TRIMMED=$(echo "$VERSION" | xargs)
+        if [[ "$VERSION" != "$VERSION_TRIMMED" ]]; then
+          echo "⚠️  Version has leading/trailing whitespace, trimming..."
+          VERSION="$VERSION_TRIMMED"
+          echo "Trimmed version: '$VERSION'"
+        fi
+        
+        # Simple validation first
+        if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "✅ Basic semantic version format is valid: $VERSION"
+        elif [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9\-\.]*$ ]]; then
+          echo "✅ Extended semantic version format is valid: $VERSION"
+        else
+          echo "❌ Invalid version format: '$VERSION'"
+          echo "Expected format: X.Y.Z or X.Y.Z-prerelease (e.g., 1.0.0, 0.0.1, 1.0.0-beta.1)"
           exit 1
         fi
 
