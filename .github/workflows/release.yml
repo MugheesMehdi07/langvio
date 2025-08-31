@@ -86,16 +86,14 @@ jobs:
         git push origin v${{ github.event.inputs.version }}
 
     - name: Create GitHub Release
-      uses: actions/create-release@v2
+      run: |
+        gh release create v${{ github.event.inputs.version }} \
+          --title "Release v${{ github.event.inputs.version }}" \
+          --notes "${{ steps.changelog.outputs.changelog }}" \
+          --draft=${{ github.event.inputs.prerelease }} \
+          --prerelease=${{ github.event.inputs.prerelease }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ github.event.inputs.version }}
-        release_name: Release v${{ github.event.inputs.version }}
-        body: ${{ steps.changelog.outputs.changelog }}
-        draft: false
-        prerelease: ${{ github.event.inputs.prerelease }}
-        id: create_release
 
     - name: Install build dependencies
       run: |
