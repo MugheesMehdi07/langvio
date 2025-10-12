@@ -1,59 +1,44 @@
 """
-Clean YOLO-based vision processor - main coordinator
+YOLO-World vision processor - main coordinator
 """
 
 import logging
 from typing import Any, Dict
 
 import torch
-from ultralytics import YOLO, YOLOE
+import cv2
 
-from langvio.prompts.constants import (
-    DEFAULT_CONFIDENCE_THRESHOLD,
-    DEFAULT_VIDEO_SAMPLE_RATE,
-)
+from langvio.prompts.constants import DEFAULT_CONFIDENCE_THRESHOLD, DEFAULT_VIDEO_SAMPLE_RATE
 from langvio.vision.base import BaseVisionProcessor
-from langvio.vision.yolo.image_processor import YOLOImageProcessor
-from langvio.vision.yolo.video_processor import YOLOVideoProcessor
-from langvio.vision.yolo.yolo11_utils import check_yolo11_solutions_available
+from langvio.vision.yolo_world.video_processor import YOLOWorldVideoProcessor
+from langvio.vision.yolo_world.image_processor import YOLOWorldImageProcessor
 
 
-class YOLOProcessor(BaseVisionProcessor):
-    """Main YOLO processor - coordinates image and video processing"""
+class YOLOWorldProcessor(BaseVisionProcessor):
+    """Main YOLO-World processor - coordinates image and video processing"""
 
     def __init__(
         self,
         name: str,
-        model_path: str,
+        model_name: str = "yolo_world_v2m",
         confidence: float = DEFAULT_CONFIDENCE_THRESHOLD,
         **kwargs,
     ):
-        """Initialize YOLO processor"""
+        """Initialize YOLO-World processor"""
         config = {
-            "model_path": model_path,
+            "model_name": model_name,
             "confidence": confidence,
             **kwargs,
         }
         super().__init__(name, config)
         self.logger = logging.getLogger(__name__)
         self.model = None
-        self.model_type = kwargs.get("model_type", "yolo")
-
-        # Check YOLO11 Solutions availability
-        self.has_yolo11_solutions = check_yolo11_solutions_available()
-        if self.has_yolo11_solutions:
-            self.logger.info("YOLO11 Solutions is available for metrics")
-        else:
-            self.logger.info(
-                "YOLO11 Solutions not available - using basic detection only"
-            )
+        self.model_name = model_name
 
     def initialize(self) -> bool:
-        """Initialize the YOLO model with optimizations"""
+        """Initialize the YOLO-World model with optimizations"""
         try:
-            self.logger.info(
-                f"Loading {self.model_type} model: {self.config['model_path']}"
-            )
+            self.logger.info(f"Loading YOLO-World model: {self.model_name}")
 
             # Enable aggressive GPU optimizations
             if torch.cuda.is_available():
@@ -72,10 +57,13 @@ class YOLOProcessor(BaseVisionProcessor):
             # Disable gradients globally
             torch.set_grad_enabled(False)
 
-            if self.model_type == "yoloe":
-                self.model = YOLOE(self.config["model_path"])
-            else:
-                self.model = YOLO(self.config["model_path"])
+            # Load YOLO-World model
+            try:
+                from ultralytics import YOLOWorld
+                self.model = YOLOWorld(self.model_name)
+            except ImportError:
+                self.logger.error("YOLO-World not available. Install with: pip install ultralytics>=8.0.0")
+                return False
 
             # Move to GPU and enable half precision if available
             if torch.cuda.is_available():
@@ -91,7 +79,7 @@ class YOLOProcessor(BaseVisionProcessor):
 
             return True
         except Exception as e:
-            self.logger.error(f"Error loading YOLO model: {e}")
+            self.logger.error(f"Error loading YOLO-World model: {e}")
             return False
 
     def _warmup_model(self):
@@ -120,7 +108,7 @@ class YOLOProcessor(BaseVisionProcessor):
         if not self.model:
             self.initialize()
 
-        processor = YOLOImageProcessor(self.model, self.config)
+        processor = YOLOWorldImageProcessor(self.model, self.config)
         return processor.process(image_path, query_params)
 
     def process_video(
@@ -133,7 +121,16 @@ class YOLOProcessor(BaseVisionProcessor):
         if not self.model:
             self.initialize()
 
-        processor = YOLOVideoProcessor(
-            self.model, self.config, self.has_yolo11_solutions
+        processor = YOLOWorldVideoProcessor(
+            self.model, self.config, self.model_name
         )
         return processor.process(video_path, query_params, sample_rate)
+
+    def set_classes(self, classes: list):
+        """Set classes for YOLO-World to detect"""
+        if self.model:
+            try:
+                self.model.set_classes(classes)
+                self.logger.info(f"Set classes: {classes}")
+            except Exception as e:
+                self.logger.error(f"Error setting classes: {e}")

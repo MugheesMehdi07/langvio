@@ -205,10 +205,10 @@
                             <td>{{ video_stats.frames_analyzed }} / {{ video_stats.total_frames }}</td>
                         </tr>
                         {% endif %}
-                        {% if video_stats.yolo11_enabled is defined %}
+                        {% if video_stats.yolo_world_enabled is defined %}
                         <tr>
                             <td><strong>Enhanced Analysis</strong></td>
-                            <td>{{ "✅ YOLO11" if video_stats.yolo11_enabled else "❌ Basic" }}</td>
+                            <td>{{ "✅ YOLO-World" if video_stats.yolo_world_enabled else "❌ Basic" }}</td>
                         </tr>
                         {% endif %}
                     </tbody>
@@ -231,7 +231,7 @@
         {% if video_stats.counting %}
         <div class="card mb-4 stats-card">
             <div class="card-header">
-                <i class="fas fa-calculator"></i> YOLO11 Counting Analysis
+                <i class="fas fa-calculator"></i> YOLO-World Counting Analysis
             </div>
             <div class="card-body">
                 <table class="stats-table">
@@ -544,8 +544,8 @@
                                 <li><strong>Media Type:</strong> {{ "Video" if is_video else "Image" }}</li>
                                 <li><strong>Processing Time:</strong> {{ processing_time }}s</li>
                                 <li><strong>Objects Highlighted:</strong> {{ highlighted_objects_count }}</li>
-                                {% if is_video and video_stats.yolo11_enabled is defined %}
-                                <li><strong>YOLO11 Enhanced:</strong> {{ "Yes" if video_stats.yolo11_enabled else "No" }}</li>
+                                {% if is_video and video_stats.yolo_world_enabled is defined %}
+                                <li><strong>YOLO-World Enhanced:</strong> {{ "Yes" if video_stats.yolo_world_enabled else "No" }}</li>
                                 {% endif %}
                             </ul>
                         </div>

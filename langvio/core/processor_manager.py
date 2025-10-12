@@ -110,12 +110,12 @@ class ProcessorManager:
                 # Use a more frequent sampling for tracking and activity detection
                 sample_rate = 2
 
-            # Get all detections with YOLO11 metrics integrated
+            # Get all detections with YOLO-World + ByteTracker integration
             return self.vision_processor.process_video(
                 media_path, query_params, sample_rate
             )
         else:
-            # Get all detections with YOLO11 metrics integrated for image
+            # Get all detections with YOLO-World for image
             return self.vision_processor.process_image(media_path, query_params)
 
     def generate_explanation(self, query: str, detections: Dict[str, Any]) -> str:

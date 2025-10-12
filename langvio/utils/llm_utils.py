@@ -1,5 +1,5 @@
 """
-Enhanced utility functions for LLM processing with better YOLO11 metrics handling
+Enhanced utility functions for LLM processing with YOLO-World + ByteTracker integration
 """
 
 import json
@@ -161,10 +161,10 @@ def format_video_summary(
                 f"Primary Objects: {', '.join(video_info['primary_objects'][:5])}"
             )
 
-    # === YOLO11 COUNTING RESULTS (PRIORITY SECTION) ===
+    # === YOLO-WORLD + BYTETRACKER COUNTING RESULTS (PRIORITY SECTION) ===
     counting = summary.get("counting_analysis", {})
     if counting:
-        summary_parts.append("\n## 🎯 YOLO11 OBJECT COUNTING ANALYSIS")
+        summary_parts.append("\n## 🎯 YOLO-WORLD OBJECT COUNTING ANALYSIS")
         summary_parts.append(
             f"**BOUNDARY CROSSINGS:** {counting.get('total_crossings', 0)} total events"
         )
@@ -206,7 +206,7 @@ def format_video_summary(
     # === SPEED ANALYSIS (if available) ===
     speed = summary.get("speed_analysis", {})
     if speed and speed.get("speed_available"):
-        summary_parts.append("\n## 🚀 YOLO11 SPEED ANALYSIS")
+        summary_parts.append("\n## 🚀 YOLO-WORLD SPEED ANALYSIS")
         summary_parts.append(
             f"**Objects with Speed Data:** {speed.get('objects_with_speed', 0)}"
         )
@@ -391,7 +391,7 @@ def format_video_summary(
 
     if parsed_query.get("count_objects"):
         summary_parts.append(
-            "**Counting Analysis:** ✅ COMPLETED (YOLO11 results above)"
+            "**Counting Analysis:** ✅ COMPLETED (YOLO-World results above)"
         )
 
     if parsed_query.get("attributes"):
@@ -408,8 +408,8 @@ def format_video_summary(
         f"{processing_info.get('total_frames', 0)} frames"
     )
     summary_parts.append(
-        f"**YOLO11 Enhanced:** "
-        f"{'✅ YES' if processing_info.get('yolo11_enabled') else '❌ NO'}"
+        f"**YOLO-World Enhanced:** "
+        f"{'✅ YES' if processing_info.get('yolo_world_enabled') else '❌ NO'}"
     )
     summary_parts.append(
         f"**Analysis Type:** {processing_info.get('analysis_type', 'unknown').upper()}"
@@ -732,10 +732,10 @@ def format_enhanced_video_summary(
                 f"Primary Objects: {', '.join(video_info['primary_objects'])}"
             )
 
-    # YOLO11 Counting Analysis (PRIMARY SOURCE)
+    # YOLO-World Counting Analysis (PRIMARY SOURCE)
     counting = summary.get("counting_analysis", {})
     if counting:
-        summary_parts.append("\n## YOLO11 Object Counting Results")
+        summary_parts.append("\n## YOLO-World Object Counting Results")
         summary_parts.append(
             f"Objects Entered Zone: {counting.get('objects_entered', 0)}"
         )
@@ -765,10 +765,10 @@ def format_enhanced_video_summary(
                 f"Most Active Object Type: {counting['most_active_type']}"
             )
 
-    # YOLO11 Speed Analysis
+    # YOLO-World Speed Analysis
     speed = summary.get("speed_analysis", {})
     if speed and speed.get("speed_available"):
-        summary_parts.append("\n## YOLO11 Speed Analysis Results")
+        summary_parts.append("\n## YOLO-World Speed Analysis Results")
         summary_parts.append(
             f"Objects with Speed Data: {speed.get('objects_with_speed', 0)}"
         )
@@ -886,7 +886,7 @@ def format_enhanced_video_summary(
         )
 
     if parsed_query.get("count_objects"):
-        summary_parts.append("Counting Analysis: Requested (results from YOLO11 above)")
+        summary_parts.append("Counting Analysis: Requested (results from YOLO-World above)")
 
     # Processing metadata
     processing_info = video_results.get("processing_info", {})

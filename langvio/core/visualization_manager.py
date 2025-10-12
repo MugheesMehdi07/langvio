@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 import cv2
 
 from langvio.media.processor import MediaProcessor
+from langvio.media.yolo_world_video_visualizer import YOLOWorldVideoVisualizer
 from langvio.utils.file_utils import is_video_file
 
 
@@ -17,6 +18,7 @@ class VisualizationManager:
     def __init__(self, config):
         self.config = config
         self.media_processor = MediaProcessor(config.get_media_config())
+        self.yolo_world_visualizer = YOLOWorldVideoVisualizer(config.config)
         self.logger = logging.getLogger(__name__)
 
     def create_visualization(
@@ -37,14 +39,25 @@ class VisualizationManager:
         is_video = is_video_file(media_path)
 
         if is_video:
-            # For videos, create visualization with comprehensive data
-            self._create_video_visualization(
-                media_path,
-                output_path,
-                detections,
-                highlighted_objects,
-                visualization_config,
-            )
+            # Check if this is YOLO-World tracker data
+            if "tracker_file_path" in detections:
+                # Use YOLO-World visualizer for tracker data
+                self._create_yolo_world_video_visualization(
+                    media_path,
+                    output_path,
+                    detections,
+                    highlighted_objects,
+                    visualization_config,
+                )
+            else:
+                # Use legacy video visualization
+                self._create_video_visualization(
+                    media_path,
+                    output_path,
+                    detections,
+                    highlighted_objects,
+                    visualization_config,
+                )
         else:
             # For images, we have object-level data
             self._create_image_visualization(
@@ -84,6 +97,45 @@ class VisualizationManager:
             viz_config["line_thickness"] += 1
 
         return viz_config
+
+    def _create_yolo_world_video_visualization(
+        self,
+        video_path: str,
+        output_path: str,
+        detections: Dict[str, Any],
+        highlighted_objects: List[Dict[str, Any]],
+        viz_config: Dict[str, Any],
+    ) -> None:
+        """Create video visualization using YOLO-World tracker data"""
+        try:
+            # Load tracker data
+            tracker_file_path = detections.get("tracker_file_path")
+            if not tracker_file_path:
+                self.logger.error("No tracker file path found in detections")
+                return
+
+            # Use YOLO-World visualizer
+            self.yolo_world_visualizer.visualize_from_tracker_file(
+                video_path=video_path,
+                tracker_file_path=tracker_file_path,
+                output_path=output_path,
+                highlighted_objects=highlighted_objects,
+                original_box_color=tuple(viz_config["box_color"]),
+                highlight_color=(0, 0, 255),  # Red for highlighted objects
+                text_color=tuple(viz_config["text_color"]),
+                line_thickness=viz_config["line_thickness"],
+                show_attributes=viz_config.get("show_attributes", True),
+                show_confidence=viz_config.get("show_confidence", True),
+                show_tracking=True,  # Enable tracking visualization
+            )
+
+            self.logger.info(f"Created YOLO-World video visualization: {output_path}")
+
+        except Exception as e:
+            self.logger.error(f"Error creating YOLO-World video visualization: {e}")
+            # Fallback to copying original video
+            import shutil
+            shutil.copy2(video_path, output_path)
 
     def _create_image_visualization(
         self,
@@ -208,7 +260,7 @@ class VisualizationManager:
                 f"Objects: {', '.join(video_info['primary_objects'][:3])}"
             )
 
-        # YOLO11 counting results (PRIORITY)
+        # YOLO-World counting results (PRIORITY)
         counting = summary.get("counting_analysis", {})
         if counting:
             if "total_crossings" in counting:

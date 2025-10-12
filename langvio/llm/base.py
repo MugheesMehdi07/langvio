@@ -213,7 +213,7 @@ class BaseLLMProcessor(Processor):
 
     def parse_solution_results(solution_results):
         """
-        Convert YOLO11 SolutionResults objects to well-structured dictionaries.
+        Convert YOLO-World + ByteTracker results to well-structured dictionaries.
 
         Args:
             solution_results: Either object counting or speed estimation results

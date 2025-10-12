@@ -154,7 +154,7 @@ def extract_video_stats(detections):
         stats["activity_level"] = video_info.get("activity_level", "unknown")
         stats["primary_objects"] = video_info.get("primary_objects", [])
 
-    # YOLO11 counting analysis
+    # YOLO-World counting analysis
     counting = summary.get("counting_analysis", {})
     if counting:
         stats["counting"] = {
@@ -216,7 +216,7 @@ def extract_video_stats(detections):
     if processing_info:
         stats["frames_analyzed"] = processing_info.get("frames_analyzed", 0)
         stats["total_frames"] = processing_info.get("total_frames", 0)
-        stats["yolo11_enabled"] = processing_info.get("yolo11_enabled", False)
+        stats["yolo_world_enabled"] = processing_info.get("yolo_world_enabled", False)
 
     return stats
 

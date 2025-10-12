@@ -23,43 +23,39 @@ llm:
         max_tokens: 2048
 
 vision:
-  default: "yolo11n"  # Changed to fastest nano model
+  default: "yolo_world_v2m"  # YOLO-World medium model
   models:
-    yolo11n:  # Fastest YOLO11 model
-      type: "yolo"
-      model_path: "yolo11n.pt"
-      confidence: 0.8
-      model_type: "yolo"
+    yolo_world_v2s:  # YOLO-World small - fastest
+      type: "yolo_world"
+      model_name: "yolo_world_v2s"
+      confidence: 0.5
+      track_thresh: 0.5
+      track_buffer: 30
+      match_thresh: 0.8
       
-    yoloe:
-      type: "yolo"
-      model_path: "yoloe-11s-seg-pf.pt"  # YOLOe nano - fastest
-      confidence: 0.8
-      model_type: "yoloe"
-
-    yoloe_medium:
-        type: "yolo"
-        model_path: "yoloe-11m-seg-pf.pt"  # YOLOe medium - balanced
-        confidence: 0.5
-        model_type: "yoloe"
-
-    yoloe_large:
-        type: "yolo"
-        model_path: "yoloe-11l-seg-pf.pt"  # YOLOe extra large - most accurate
-        confidence: 0.5
-        model_type: "yoloe"
-    yolo:
-      type: "yolo"
-      model_path: "yolo11n.pt"  # Default: smallest/fastest model
-      confidence: 0.7
-    yolo_medium:
-      type: "yolo"
-      model_path: "yolo11m.pt"  # Medium model - balanced
+    yolo_world_v2m:  # YOLO-World medium - balanced (default)
+      type: "yolo_world"
+      model_name: "yolo_world_v2m"
       confidence: 0.5
-    yolo_large:
-      type: "yolo"
-      model_path: "yolo11x.pt"  # Large model - most accurate
+      track_thresh: 0.5
+      track_buffer: 30
+      match_thresh: 0.8
+
+    yolo_world_v2l:  # YOLO-World large - most accurate
+      type: "yolo_world"
+      model_name: "yolo_world_v2l"
       confidence: 0.5
+      track_thresh: 0.5
+      track_buffer: 30
+      match_thresh: 0.8
+
+    yolo_world_v2x:  # YOLO-World extra large - highest accuracy
+      type: "yolo_world"
+      model_name: "yolo_world_v2x"
+      confidence: 0.5
+      track_thresh: 0.5
+      track_buffer: 30
+      match_thresh: 0.8
 
 media:
   output_dir: "./output"

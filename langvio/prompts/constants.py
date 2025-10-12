@@ -23,10 +23,11 @@ DEFAULT_VIDEO_SAMPLE_RATE = 2  # Process every 2nd frame for speed
 DEFAULT_COLOR_ANALYSIS_INTERVAL = 3  # Color analysis every 3rd frame
 DEFAULT_SPATIAL_UPDATE_INTERVAL = 2  # Spatial analysis every 2nd frame
 
-# YOLO11 optimized configuration
-YOLO11_CONFIG = {
-    "model_path": "yolo11n.pt",
-    "confidence": 0.3,
-    "show": False,
-    "verbose": False,
+# YOLO-World optimized configuration
+YOLO_WORLD_CONFIG = {
+    "model_name": "yolo_world_v2m",
+    "confidence": 0.5,
+    "track_thresh": 0.5,
+    "track_buffer": 30,
+    "match_thresh": 0.8,
 }

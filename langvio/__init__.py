@@ -21,7 +21,7 @@ from langvio.core.registry import ModelRegistry
 from langvio.llm.base import BaseLLMProcessor
 from langvio.llm.factory import register_llm_processors
 from langvio.vision.base import BaseVisionProcessor
-from langvio.vision.yolo.detector import YOLOProcessor
+from langvio.vision.yolo_world.detector import YOLOWorldProcessor
 
 # === Initialization ===
 
@@ -39,33 +39,21 @@ if torch.cuda.is_available():
 # Initialize model registry
 registry = ModelRegistry()
 
-# Register YOLO and YOLOe vision processors
+# Register YOLO-World vision processors
 registry.register_vision_processor(
-    "yolo", YOLOProcessor, model_path="yolo11n.pt", confidence=0.5
+    "yolo_world_v2s", YOLOWorldProcessor, model_name="yolo_world_v2s", confidence=0.5
 )
 
 registry.register_vision_processor(
-    "yoloe",
-    YOLOProcessor,
-    model_path="yoloe-11s-seg-pf.pt",
-    confidence=0.5,
-    model_type="yoloe",
+    "yolo_world_v2m", YOLOWorldProcessor, model_name="yolo_world_v2m", confidence=0.5
 )
 
 registry.register_vision_processor(
-    "yoloe_medium",
-    YOLOProcessor,
-    model_path="yoloe-11m-seg-pf.pt",
-    confidence=0.5,
-    model_type="yoloe",
+    "yolo_world_v2l", YOLOWorldProcessor, model_name="yolo_world_v2l", confidence=0.5
 )
 
 registry.register_vision_processor(
-    "yoloe_large",
-    YOLOProcessor,
-    model_path="yoloe-11l-seg-pf.pt",
-    confidence=0.5,
-    model_type="yoloe",
+    "yolo_world_v2x", YOLOWorldProcessor, model_name="yolo_world_v2x", confidence=0.5
 )
 
 # Register LLM processors
