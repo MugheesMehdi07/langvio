@@ -28,6 +28,7 @@ from langvio.vision.yolo_world.detector import YOLOWorldProcessor
 # Load environment variables
 load_dotenv()
 
+
 # OpenCV optimizations
 cv2.setNumThreads(4)
 cv2.setUseOptimized(True)
@@ -81,7 +82,7 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
         pipeline.set_vision_processor(vision_name)
     else:
         try:
-            pipeline.set_vision_processor("yoloe_large")
+            pipeline.set_vision_processor("yolo_world_v2m")
         except Exception:
             pipeline.set_vision_processor("yolo")
 

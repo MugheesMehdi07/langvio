@@ -57,15 +57,35 @@ class Config:
                             },
                         },
                     },
-                    "vision": {
-                        "default": "yolo",
-                        "models": {
-                            "yolo": {
-                                "type": "yolo",
-                                "model_path": "yolov11n.pt",
-                                "confidence": 0.25,
-                            }
-                        },
+                "vision":
+                  {
+                        "default": "yolo_world_v2m",  # YOLO-World medium as default
+                   "models": {
+                    "yolo_world_v2s": {  # small model - fastest
+                        "type": "yolo_world",
+                        "model_name": "yolo_world_v2s",
+                        "confidence": 0.5,
+                        "track_thresh": 0.5,
+                        "track_buffer": 30,
+                        "match_thresh": 0.8,
+                    },
+                    "yolo_world_v2m": {  # medium model - balanced
+                        "type": "yolo_world",
+                        "model_name": "yolo_world_v2m",
+                        "confidence": 0.5,
+                        "track_thresh": 0.5,
+                        "track_buffer": 30,
+                        "match_thresh": 0.8,
+                    },
+                    "yolo_world_v2l": {  # large model - most accurate
+                        "type": "yolo_world",
+                        "model_name": "yolo_world_v2l",
+                        "confidence": 0.5,
+                        "track_thresh": 0.5,
+                        "track_buffer": 30,
+                        "match_thresh": 0.8,
+                      },
+                     }
                     },
                     "media": {
                         "output_dir": "./output",
