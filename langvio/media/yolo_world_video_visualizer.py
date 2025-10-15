@@ -2,12 +2,15 @@
 YOLO-World video visualization module with tracker file support
 """
 
+from collections import defaultdict, deque
 import logging
 from typing import Any, Dict, List, Tuple, Union
 
 import cv2
+
 import numpy as np
 import json
+
 
 
 class YOLOWorldVideoVisualizer:
@@ -16,6 +19,7 @@ class YOLOWorldVideoVisualizer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = logging.getLogger(__name__)
+        self.previous_boxes = {}  
 
     def visualize_with_tracker_data(
         self,
@@ -107,6 +111,7 @@ class YOLOWorldVideoVisualizer:
                     else:
                         box_color = original_box_color
 
+                
                     # Draw bounding box
                     self._draw_detection_box(
                         frame, detection, box_color, text_color, line_thickness,
@@ -131,6 +136,8 @@ class YOLOWorldVideoVisualizer:
             self.logger.error(f"Error visualizing video: {e}")
             raise
 
+    
+    
     def _draw_tracking_trajectories(
         self, 
         frame: np.ndarray, 
@@ -189,6 +196,9 @@ class YOLOWorldVideoVisualizer:
     ):
         """Draw detection bounding box with labels"""
         bbox = detection.get("bbox", [0, 0, 0, 0])
+        track_id = detection.get("track_id")
+
+        
         x1, y1, x2, y2 = map(int, bbox)
         
         # Draw bounding box

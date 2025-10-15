@@ -7,7 +7,7 @@ import logging
 import os
 import time
 import uuid
-
+import subprocess
 from flask import (
     Flask,
     flash,
@@ -18,6 +18,11 @@ from flask import (
     url_for,
 )
 from werkzeug.utils import secure_filename
+# for video re-encoding import imageio_ffmpeg
+import imageio_ffmpeg
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+import imageio_ffmpeg
+print(imageio_ffmpeg.get_ffmpeg_exe())
 
 # Import langvio
 from langvio import create_pipeline
@@ -55,10 +60,11 @@ def create_langvio_pipeline():
         config = Config()
 
         # Higher confidence for better visualization
-        if "yoloe_large" in config.config["vision"]["models"]:
-            config.config["vision"]["models"]["yoloe_large"]["confidence"] = 0.5
-        elif "yolo" in config.config["vision"]["models"]:
-            config.config["vision"]["models"]["yolo"]["confidence"] = 0.5
+        # Automatically set confidence for any YOLO-based model
+        for model_key in config.config["vision"]["models"]:
+            if model_key.startswith(("yolo_world", "yoloe", "yolo")):
+                config.config["vision"]["models"][model_key]["confidence"] = 0.5
+
 
         # Set visualization options
         config.config["media"]["output_dir"] = app.config["RESULTS_FOLDER"]
@@ -71,7 +77,7 @@ def create_langvio_pipeline():
         }
 
         # Try to use the best available model
-        for model in ["yoloe_large", "yoloe", "yolo"]:
+        for model in ["yolo_world_v2_m", "yolo_world_v2_s", "yolo_world_v2_l", "yolo_world_v2_x","yoloe_large", "yoloe", "yolo"]:
             if model in config.config["vision"]["models"]:
                 pipeline = create_pipeline(vision_name=model)
                 logger.info(f"Created pipeline with model: {model}")
@@ -89,7 +95,17 @@ def create_langvio_pipeline():
 # Initialize pipeline
 pipeline = create_langvio_pipeline()
 
-
+def ensure_browser_safe_video(input_path):
+    output_path = input_path.replace(".mp4", "_browser.mp4")
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    cmd = [ffmpeg_path, "-i", input_path, "-vcodec", "libx264", "-acodec", "aac", output_path]
+    try:
+        subprocess.run(cmd, check=True)
+        return output_path
+    except Exception as e:
+        print(f"[Warning] Video re-encoding failed: {e}")
+        return input_path
+    
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -309,8 +325,16 @@ def process_media():
             processing_time = time.time() - start_time
 
             # Get the output path and copy to static directory for serving
+            # Get the output path and explanation from pipeline
             output_path = result.get("output_path", "")
             explanation = result.get("explanation", "No explanation provided.")
+
+            # Ensure the video is browser-friendly
+            if is_video(filename) and output_path:
+                safe_output_path = ensure_browser_safe_video(output_path)
+                if os.path.exists(safe_output_path):
+                    output_path = safe_output_path
+
 
             if not output_path or not os.path.exists(output_path):
                 flash("Error processing the file. No output was generated.")

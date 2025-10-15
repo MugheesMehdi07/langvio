@@ -30,14 +30,23 @@
             </div>
             <div class="card-body">
                 <div class="result-container text-center">
-                    {% if is_video %}
-                    <video controls autoplay loop muted class="img-fluid">
-                        <source src="{{ result_url }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    {% else %}
-                    <img src="{{ result_url }}" alt="Processed image" class="img-fluid">
-                    {% endif %}
+                {% if is_video %}
+                <video id="resultVideo" class="img-fluid" autoplay muted playsinline loop controls>
+                    <source src="{{ result_url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+
+                <script>
+                    const vid = document.getElementById('resultVideo');
+                    // Try to force play in browsers that block autoplay
+                    vid.play().catch(() => {
+                    console.log("Autoplay was blocked — waiting for user interaction");
+                    });
+                </script>
+                {% else %}
+                <img src="{{ result_url }}" alt="Processed image" class="img-fluid">
+                {% endif %}
+
                 </div>
 
                 <div class="mt-3">

@@ -14,6 +14,8 @@ from langvio.utils.tracking import TrackerFileManager, ByteTrackerManager
 from langvio.utils.detection import optimize_for_memory
 
 
+
+
 class YOLOWorldVideoProcessor:
     """Handles video processing with YOLO-World models and ByteTracker"""
 
@@ -26,10 +28,11 @@ class YOLOWorldVideoProcessor:
         # Initialize tracker components
         self.tracker_file_manager = TrackerFileManager()
         self.byte_tracker = ByteTrackerManager(
-            track_thresh=config.get("track_thresh", 0.5),
-            track_buffer=config.get("track_buffer", 30),
-            match_thresh=config.get("match_thresh", 0.8)
+            track_thresh=config.get("track_thresh", 0.3),
+            track_buffer=config.get("track_buffer", 70),
+            match_thresh=config.get("match_thresh", 0.6),
         )
+        
 
     def process(
         self, video_path: str, query_params: Dict[str, Any], sample_rate: int
@@ -44,7 +47,7 @@ class YOLOWorldVideoProcessor:
             return self._load_and_convert_tracker_file(existing_tracker_file)
 
         # Process video with YOLO-World + ByteTracker
-        return self._process_video_with_tracking(video_path, query_params, sample_rate)
+        return self._process_video_with_tracking(video_path, query_params, 2)
 
     def _process_video_with_tracking(
         self, video_path: str, query_params: Dict[str, Any], sample_rate: int
@@ -71,7 +74,7 @@ class YOLOWorldVideoProcessor:
                         break
                     
                     # Sample frames based on sample_rate
-                    if frame_count % sample_rate != 0:
+                    if sample_rate > 1 and frame_count % sample_rate != 0:
                         frame_count += 1
                         continue
                     

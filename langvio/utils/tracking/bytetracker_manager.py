@@ -4,6 +4,7 @@ ByteTracker integration for multi-object tracking
 
 import logging
 from typing import Any, Dict, List, Optional, Tuple
+import cv2
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -14,9 +15,9 @@ class ByteTrackerManager:
 
     def __init__(
         self,
-        track_thresh: float = 0.5,
-        track_buffer: int = 30,
-        match_thresh: float = 0.8,
+        track_thresh: float = 0.3,
+        track_buffer: int = 70,
+        match_thresh: float = 0.6,
         frame_rate: int = 30
     ):
         """
@@ -69,7 +70,6 @@ class ByteTrackerManager:
         det_boxes = []
         det_confidences = []
         det_classes = []
-        
         for det in valid_detections:
             bbox = det.get("bbox", [0, 0, 0, 0])
             # Convert to [x, y, w, h] format
@@ -106,6 +106,14 @@ class ByteTrackerManager:
             # First frame or no existing tracks, create new tracks
             return self._create_new_tracks(original_detections)
         
+        for track_id, track_data in self.tracks.items():
+            if "prev_bbox" in track_data:
+                old = np.array(track_data["prev_bbox"])
+                new = np.array(track_data["bbox"])
+                smoothed = 0.7 * old + 0.3 * new
+                track_data["bbox"] = smoothed.tolist()
+            track_data["prev_bbox"] = track_data["bbox"]
+
         # Calculate IoU between detections and existing tracks
         track_boxes = []
         track_ids = []
@@ -167,6 +175,7 @@ class ByteTrackerManager:
         """Create new tracks for all detections"""
         tracked_detections = []
         
+
         for det in detections:
             det_copy = det.copy()
             track_id = self._create_new_track(det)
@@ -177,6 +186,7 @@ class ByteTrackerManager:
 
     def _create_new_track(self, detection: Dict[str, Any]) -> int:
         """Create a new track for a detection"""
+        
         self.track_id_count += 1
         track_id = self.track_id_count
         

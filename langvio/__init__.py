@@ -42,19 +42,19 @@ registry = ModelRegistry()
 
 # Register YOLO-World vision processors
 registry.register_vision_processor(
-    "yolo_world_v2s", YOLOWorldProcessor, model_name="yolo_world_v2s", confidence=0.5
+    "yolo_world_v2_s", YOLOWorldProcessor, model_name="yolov8s-worldv2", confidence=0.5
 )
 
 registry.register_vision_processor(
-    "yolo_world_v2m", YOLOWorldProcessor, model_name="yolo_world_v2m", confidence=0.5
+    "yolo_world_v2_m", YOLOWorldProcessor, model_name="yolov8m-worldv2", confidence=0.45
 )
 
 registry.register_vision_processor(
-    "yolo_world_v2l", YOLOWorldProcessor, model_name="yolo_world_v2l", confidence=0.5
+    "yolo_world_v2_l", YOLOWorldProcessor, model_name="yolov8l-worldv2", confidence=0.5
 )
 
 registry.register_vision_processor(
-    "yolo_world_v2x", YOLOWorldProcessor, model_name="yolo_world_v2x", confidence=0.5
+    "yolo_world_v2x", YOLOWorldProcessor, model_name="yolov8x-worldv2", confidence=0.5
 )
 
 # Register LLM processors
@@ -82,7 +82,7 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
         pipeline.set_vision_processor(vision_name)
     else:
         try:
-            pipeline.set_vision_processor("yolo_world_v2m")
+            pipeline.set_vision_processor("yolo_world_v2_m")
         except Exception:
             pipeline.set_vision_processor("yolo")
 

@@ -20,7 +20,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
     def __init__(
         self,
         name: str,
-        model_name: str = "yolo_world_v2m",
+        model_name: str = "yolov8m-worldv2",
         confidence: float = DEFAULT_CONFIDENCE_THRESHOLD,
         **kwargs,
     ):
@@ -97,7 +97,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
             with torch.no_grad():
                 for _ in range(3):  # 3 warmup runs
                     self.model(dummy_input, verbose=False)
-            self.logger.info("✅ Model warmed up")
+            self.logger.info("✅ Model warmed up",self.model_name)
         except Exception as e:
             self.logger.warning(f"Warmup failed: {e}")
 
@@ -115,7 +115,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
         self,
         video_path: str,
         query_params: Dict[str, Any],
-        sample_rate: int = DEFAULT_VIDEO_SAMPLE_RATE,
+        sample_rate: int = 3,
     ) -> Dict[str, Any]:
         """Process a video - delegate to video processor"""
         if not self.model:

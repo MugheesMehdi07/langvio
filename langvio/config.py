@@ -59,32 +59,40 @@ class Config:
                     },
                 "vision":
                   {
-                        "default": "yolo_world_v2m",  # YOLO-World medium as default
+                    "default": "yolo_world_v2_m",  # YOLO-World medium as default
                    "models": {
-                    "yolo_world_v2s": {  # small model - fastest
+                     "yolo_world_v2_s": {  # small model – fastest
                         "type": "yolo_world",
-                        "model_name": "yolo_world_v2s",
+                        "model_name": "yolov8s-worldv2",
                         "confidence": 0.5,
                         "track_thresh": 0.5,
                         "track_buffer": 30,
                         "match_thresh": 0.8,
                     },
-                    "yolo_world_v2m": {  # medium model - balanced
+                    "yolo_world_v2_m": {  # medium model – balanced
                         "type": "yolo_world",
-                        "model_name": "yolo_world_v2m",
+                        "model_name": "yolov8m-worldv2",
+                        "confidence": 0.45,
+                        "track_thresh": 0.3,
+                        "track_buffer": 70,
+                        "match_thresh": 0.6,
+                    },
+                    "yolo_world_v2_l": {  # large model – most accurate
+                        "type": "yolo_world",
+                        "model_name": "yolov8l-worldv2",
                         "confidence": 0.5,
                         "track_thresh": 0.5,
                         "track_buffer": 30,
                         "match_thresh": 0.8,
                     },
-                    "yolo_world_v2l": {  # large model - most accurate
+                    "yolo_world_v2_x": {  # extra-large model – highest accuracy
                         "type": "yolo_world",
-                        "model_name": "yolo_world_v2l",
+                        "model_name": "yolov8x-worldv2",
                         "confidence": 0.5,
                         "track_thresh": 0.5,
                         "track_buffer": 30,
                         "match_thresh": 0.8,
-                      },
+                     },
                      }
                     },
                     "media": {
