@@ -23,7 +23,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Example for video counting
-    video_path = "input2_processed.mp4"  # Replace with your video path
+    video_path = "./data.mp4"  # Replace with your video path
 
     if os.path.exists(video_path):
         print(f"\n--- Processing video: {video_path} ---")
