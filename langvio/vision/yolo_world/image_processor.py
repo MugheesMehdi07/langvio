@@ -76,10 +76,10 @@ class YOLOWorldImageProcessor:
         try:
             # Run YOLO-World detection
             results = self.model(image_path, conf=self.config["confidence"], verbose=False)
-            
+
             # Extract detections
             detections = self._extract_detections(results[0])
-            
+
             # Determine what attributes are needed
             needs_color = any(
                 attr.get("attribute") == "color"

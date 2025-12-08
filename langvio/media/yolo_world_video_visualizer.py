@@ -12,7 +12,6 @@ import numpy as np
 import json
 
 
-
 class YOLOWorldVideoVisualizer:
     """Handles video visualization with YOLO-World + ByteTracker data"""
 
@@ -43,10 +42,10 @@ class YOLOWorldVideoVisualizer:
             detections = tracker_data.get("detections", [])
             tracks = tracker_data.get("tracks", [])
             metadata = tracker_data.get("metadata", {})
-            
+
             # Create track lookup for visualization
             track_lookup = {track["track_id"]: track for track in tracks}
-            
+
             # Create highlighted objects lookup
             highlighted_track_ids = set()
             if highlighted_objects:
@@ -93,7 +92,7 @@ class YOLOWorldVideoVisualizer:
 
                 # Get detections for this frame
                 current_detections = frame_detections.get(frame_count, [])
-                
+
                 # Draw tracking trajectories
                 if show_tracking:
                     self._draw_tracking_trajectories(
@@ -103,19 +102,26 @@ class YOLOWorldVideoVisualizer:
                 # Draw detections
                 for detection in current_detections:
                     track_id = detection.get("track_id")
-                    is_highlighted = track_id in highlighted_track_ids if highlighted_track_ids else False
-                    
+                    is_highlighted = (
+                        track_id in highlighted_track_ids if highlighted_track_ids else False
+                    )
+
                     # Choose color
                     if is_highlighted:
                         box_color = highlight_color
                     else:
                         box_color = original_box_color
 
-                
                     # Draw bounding box
                     self._draw_detection_box(
-                        frame, detection, box_color, text_color, line_thickness,
-                        show_attributes, show_confidence, show_tracking
+                        frame,
+                        detection,
+                        box_color,
+                        text_color,
+                        line_thickness,
+                        show_attributes,
+                        show_confidence,
+                        show_tracking,
                     )
 
                 # Write frame
@@ -136,8 +142,6 @@ class YOLOWorldVideoVisualizer:
             self.logger.error(f"Error visualizing video: {e}")
             raise
 
-    
-    
     def _draw_tracking_trajectories(
         self, 
         frame: np.ndarray, 
@@ -150,27 +154,27 @@ class YOLOWorldVideoVisualizer:
             track_id = detection.get("track_id")
             if not track_id:
                 continue
-                
+
             # Get center point
             bbox = detection.get("bbox", [0, 0, 0, 0])
             center = (
                 int((bbox[0] + bbox[2]) / 2),
                 int((bbox[1] + bbox[3]) / 2)
             )
-            
+
             # Initialize track trajectory if needed
             if track_id not in track_trajectories:
                 track_trajectories[track_id] = []
                 # Generate unique color for this track
                 track_colors[track_id] = self._get_color_for_track_id(track_id)
-            
+
             # Add current position
             track_trajectories[track_id].append(center)
-            
+
             # Keep only last 30 positions
             if len(track_trajectories[track_id]) > 30:
                 track_trajectories[track_id] = track_trajectories[track_id][-30:]
-            
+
             # Draw trajectory
             if len(track_trajectories[track_id]) > 1:
                 color = track_colors[track_id]
@@ -198,34 +202,33 @@ class YOLOWorldVideoVisualizer:
         bbox = detection.get("bbox", [0, 0, 0, 0])
         track_id = detection.get("track_id")
 
-        
         x1, y1, x2, y2 = map(int, bbox)
-        
+
         # Draw bounding box
         cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, line_thickness)
-        
+
         # Prepare label text
         label_parts = [detection.get("label", "object")]
-        
+
         if show_confidence:
             confidence = detection.get("confidence", 0)
             label_parts.append(f"{confidence:.2f}")
-        
+
         if show_tracking and "track_id" in detection:
             track_id = detection.get("track_id")
             label_parts.append(f"ID:{track_id}")
-        
+
         if show_attributes and "attributes" in detection:
             attrs = detection["attributes"]
             if "size" in attrs:
                 label_parts.append(attrs["size"])
             if "position" in attrs:
                 label_parts.append(attrs["position"])
-        
+
         # Draw label
         label = " ".join(label_parts)
         label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-        
+
         # Draw label background
         cv2.rectangle(
             frame,
@@ -234,7 +237,7 @@ class YOLOWorldVideoVisualizer:
             box_color,
             -1
         )
-        
+
         # Draw label text
         cv2.putText(
             frame,

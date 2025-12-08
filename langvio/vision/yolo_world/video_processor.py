@@ -14,8 +14,6 @@ from langvio.utils.tracking import TrackerFileManager, ByteTrackerManager
 from langvio.utils.detection import optimize_for_memory
 
 
-
-
 class YOLOWorldVideoProcessor:
     """Handles video processing with YOLO-World models and ByteTracker"""
 
