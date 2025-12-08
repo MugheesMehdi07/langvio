@@ -526,7 +526,7 @@ def create_frame_summary_for_llm(
     selected_frames = sorted(list(set(selected_frames)))[:max_frames]
 
     summary_parts.append(
-        f"Showing {len(selected_frames)} "
+        f"Showing {len(selected_frames)}"
         f"most relevant frames out of {len(frame_detections)} total:"
     )
 
@@ -561,7 +561,7 @@ def create_frame_summary_for_llm(
             )
 
             summary_parts.append(
-                f"Frame {frame_num}: {len(detections)} "
+                f"Frame {frame_num}: {len(detections)}"
                 f"objects ({objects_summary}){attr_note}"
             )
 
