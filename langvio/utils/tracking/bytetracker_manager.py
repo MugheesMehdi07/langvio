@@ -174,7 +174,6 @@ class ByteTrackerManager:
     def _create_new_tracks(self, detections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Create new tracks for all detections"""
         tracked_detections = []
-        
 
         for det in detections:
             det_copy = det.copy()

@@ -18,7 +18,7 @@ class YOLOWorldVideoVisualizer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = logging.getLogger(__name__)
-        self.previous_boxes = {}  
+        self.previous_boxes = {}
 
     def visualize_with_tracker_data(
         self,
@@ -143,9 +143,9 @@ class YOLOWorldVideoVisualizer:
             raise
 
     def _draw_tracking_trajectories(
-        self, 
-        frame: np.ndarray, 
-        detections: List[Dict[str, Any]], 
+        self,
+        frame: np.ndarray,
+        detections: List[Dict[str, Any]],
         track_trajectories: Dict[int, List[Tuple[int, int]]],
         track_colors: Dict[int, Tuple[int, int, int]]
     ):

@@ -94,17 +94,17 @@ class Config:
                         },
                     }
                 },
-                    "media": {
-                        "output_dir": "./output",
-                        "temp_dir": "./temp",
-                        "visualization": {
-                            "box_color": [0, 255, 0],
-                            "text_color": [255, 255, 255],
-                            "line_thickness": 2,
-                        },
+                "media": {
+                    "output_dir": "./output",
+                    "temp_dir": "./temp",
+                    "visualization": {
+                        "box_color": [0, 255, 0],
+                        "text_color": [255, 255, 255],
+                        "line_thickness": 2,
                     },
-                    "logging": {"level": "INFO", "file": None},
-                }
+                },
+                "logging": {"level": "INFO", "file": None},
+            }
         except Exception as e:
             raise ValueError(f"Error loading default configuration: {e}")
 
