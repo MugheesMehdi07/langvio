@@ -12,7 +12,6 @@ import numpy as np
 import json
 
 
-
 class YOLOWorldVideoVisualizer:
     """Handles video visualization with YOLO-World + ByteTracker data"""
 
@@ -103,19 +102,26 @@ class YOLOWorldVideoVisualizer:
                 # Draw detections
                 for detection in current_detections:
                     track_id = detection.get("track_id")
-                    is_highlighted = track_id in highlighted_track_ids if highlighted_track_ids else False
-                    
+                    is_highlighted = (
+                        track_id in highlighted_track_ids if highlighted_track_ids else False
+                    )
+
                     # Choose color
                     if is_highlighted:
                         box_color = highlight_color
                     else:
                         box_color = original_box_color
 
-                
                     # Draw bounding box
                     self._draw_detection_box(
-                        frame, detection, box_color, text_color, line_thickness,
-                        show_attributes, show_confidence, show_tracking
+                            frame,
+                        detection,
+                        box_color,
+                        text_color,
+                        line_thickness,
+                        show_attributes,
+                        show_confidence,
+                        show_tracking,
                     )
 
                 # Write frame
@@ -136,8 +142,6 @@ class YOLOWorldVideoVisualizer:
             self.logger.error(f"Error visualizing video: {e}")
             raise
 
-    
-    
     def _draw_tracking_trajectories(
         self, 
         frame: np.ndarray, 
@@ -198,7 +202,6 @@ class YOLOWorldVideoVisualizer:
         bbox = detection.get("bbox", [0, 0, 0, 0])
         track_id = detection.get("track_id")
 
-        
         x1, y1, x2, y2 = map(int, bbox)
         
         # Draw bounding box

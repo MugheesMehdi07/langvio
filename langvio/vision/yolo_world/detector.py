@@ -97,7 +97,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
             with torch.no_grad():
                 for _ in range(3):  # 3 warmup runs
                     self.model(dummy_input, verbose=False)
-            self.logger.info("✅ Model warmed up",self.model_name)
+            self.logger.info("✅ Model warmed up", self.model_name)
         except Exception as e:
             self.logger.warning(f"Warmup failed: {e}")
 

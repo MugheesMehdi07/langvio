@@ -14,8 +14,6 @@ from langvio.utils.tracking import TrackerFileManager, ByteTrackerManager
 from langvio.utils.detection import optimize_for_memory
 
 
-
-
 class YOLOWorldVideoProcessor:
     """Handles video processing with YOLO-World models and ByteTracker"""
 
@@ -32,7 +30,6 @@ class YOLOWorldVideoProcessor:
             track_buffer=config.get("track_buffer", 70),
             match_thresh=config.get("match_thresh", 0.6),
         )
-        
 
     def process(
         self, video_path: str, query_params: Dict[str, Any], sample_rate: int
@@ -189,10 +186,10 @@ class YOLOWorldVideoProcessor:
             
             # Extract detections
             detections = self._extract_detections(results[0])
-            
+
             # Add basic attributes
             detections = self._add_basic_attributes(detections, width, height)
-            
+
             return detections
             
         except Exception as e:
@@ -226,33 +223,35 @@ class YOLOWorldVideoProcessor:
         for det in detections:
             if "bbox" not in det:
                 continue
-                
+
             x1, y1, x2, y2 = det["bbox"]
-            
+
             # Add center coordinates
             center_x = (x1 + x2) / 2
             center_y = (y1 + y2) / 2
             det["center"] = (center_x, center_y)
-            
+
             # Add size attributes
             area = (x2 - x1) * (y2 - y1)
             relative_size = area / (width * height)
-            
+
             if "attributes" not in det:
                 det["attributes"] = {}
-                
+
             det["attributes"]["size"] = (
-                "small" if relative_size < 0.05
-                else "medium" if relative_size < 0.25 
+                "small"
+                if relative_size < 0.05
+                else "medium"
+                if relative_size < 0.25
                 else "large"
             )
             det["attributes"]["relative_size"] = relative_size
-            
+
             # Add position attributes
             rx, ry = center_x / width, center_y / height
             pos_v = "top" if ry < 0.33 else "middle" if ry < 0.66 else "bottom"
             pos_h = "left" if rx < 0.33 else "center" if rx < 0.66 else "right"
             det["attributes"]["position"] = f"{pos_v}-{pos_h}"
             det["relative_position"] = (rx, ry)
-        
+
         return detections
