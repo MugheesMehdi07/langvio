@@ -8,7 +8,10 @@ from typing import Any, Dict
 import torch
 import cv2
 
-from langvio.prompts.constants import DEFAULT_CONFIDENCE_THRESHOLD, DEFAULT_VIDEO_SAMPLE_RATE
+from langvio.prompts.constants import (
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    DEFAULT_VIDEO_SAMPLE_RATE,
+)
 from langvio.vision.base import BaseVisionProcessor
 from langvio.vision.yolo_world.video_processor import YOLOWorldVideoProcessor
 from langvio.vision.yolo_world.image_processor import YOLOWorldImageProcessor
@@ -60,9 +63,12 @@ class YOLOWorldProcessor(BaseVisionProcessor):
             # Load YOLO-World model
             try:
                 from ultralytics import YOLOWorld
+
                 self.model = YOLOWorld(self.model_name)
             except ImportError:
-                self.logger.error("YOLO-World not available. Install with: pip install ultralytics>=8.0.0")
+                self.logger.error(
+                    "YOLO-World not available. Install with: pip install ultralytics>=8.0.0"
+                )
                 return False
 
             # Move to GPU and enable half precision if available
@@ -121,9 +127,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
         if not self.model:
             self.initialize()
 
-        processor = YOLOWorldVideoProcessor(
-            self.model, self.config, self.model_name
-        )
+        processor = YOLOWorldVideoProcessor(self.model, self.config, self.model_name)
         return processor.process(video_path, query_params, sample_rate)
 
     def set_classes(self, classes: list):

@@ -31,7 +31,7 @@ class TrackerFileManager:
         detections: List[Dict[str, Any]],
         tracks: List[Dict[str, Any]],
         metadata: Dict[str, Any],
-        query: str = ""
+        query: str = "",
     ) -> str:
         """
         Save tracker data to JSON file
@@ -56,10 +56,10 @@ class TrackerFileManager:
                 "timestamp": metadata.get("timestamp"),
                 "model_info": metadata.get("model_info", {}),
                 "tracker_info": metadata.get("tracker_info", {}),
-                **metadata
+                **metadata,
             },
             "detections": detections,
-            "tracks": tracks
+            "tracks": tracks,
         }
 
         try:
@@ -94,10 +94,7 @@ class TrackerFileManager:
             self.logger.error(f"Error loading tracker data: {e}")
             raise
 
-    def convert_to_legacy_format(
-        self,
-        tracker_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def convert_to_legacy_format(self, tracker_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Convert tracker file format to legacy detection format for compatibility
 
@@ -123,10 +120,10 @@ class TrackerFileManager:
             "summary": {
                 "total_frames": len(detections),
                 "video_metadata": metadata,
-                "tracking_enabled": True
+                "tracking_enabled": True,
             },
             "tracks": tracker_data.get("tracks", []),
-            "metadata": metadata
+            "metadata": metadata,
         }
 
         return legacy_result
@@ -140,6 +137,7 @@ class TrackerFileManager:
         """Clean up old tracker files"""
         try:
             import time
+
             current_time = time.time()
             max_age_seconds = max_age_days * 24 * 60 * 60
 

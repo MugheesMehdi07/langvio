@@ -18,7 +18,7 @@ class ByteTrackerManager:
         track_thresh: float = 0.3,
         track_buffer: int = 70,
         match_thresh: float = 0.6,
-        frame_rate: int = 30
+        frame_rate: int = 30,
     ):
         """
         Initialize ByteTracker
@@ -42,7 +42,9 @@ class ByteTrackerManager:
 
         self.logger = logging.getLogger(__name__)
 
-    def update(self, detections: List[Dict[str, Any]], frame_id: int) -> List[Dict[str, Any]]:
+    def update(
+        self, detections: List[Dict[str, Any]], frame_id: int
+    ) -> List[Dict[str, Any]]:
         """
         Update tracker with new detections
 
@@ -57,8 +59,7 @@ class ByteTrackerManager:
 
         # Filter detections by confidence
         valid_detections = [
-            det for det in detections
-            if det.get("confidence", 0) >= self.track_thresh
+            det for det in detections if det.get("confidence", 0) >= self.track_thresh
         ]
 
         if not valid_detections:
@@ -98,7 +99,7 @@ class ByteTrackerManager:
         det_boxes: np.ndarray,
         det_confidences: np.ndarray,
         det_classes: np.ndarray,
-        original_detections: List[Dict[str, Any]]
+        original_detections: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """Associate detections with existing tracks"""
 
@@ -159,8 +160,7 @@ class ByteTrackerManager:
 
         # Create new tracks for unmatched detections
         unmatched_det_indices = [
-            i for i in range(len(original_detections))
-            if i not in matched_det_indices
+            i for i in range(len(original_detections)) if i not in matched_det_indices
         ]
 
         for det_idx in unmatched_det_indices:
@@ -171,7 +171,9 @@ class ByteTrackerManager:
 
         return tracked_detections
 
-    def _create_new_tracks(self, detections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _create_new_tracks(
+        self, detections: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Create new tracks for all detections"""
         tracked_detections = []
 
@@ -198,22 +200,32 @@ class ByteTrackerManager:
             "state": "tracked",
             "first_seen": self.frame_count,
             "last_seen": self.frame_count,
-            "total_frames": 1
+            "total_frames": 1,
         }
 
         return track_id
 
-    def _calculate_iou_matrix(self, boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
+    def _calculate_iou_matrix(
+        self, boxes1: np.ndarray, boxes2: np.ndarray
+    ) -> np.ndarray:
         """Calculate IoU matrix between two sets of boxes"""
         # Convert to [x1, y1, x2, y2] format
-        boxes1_xyxy = np.column_stack([
-            boxes1[:, 0], boxes1[:, 1],
-            boxes1[:, 0] + boxes1[:, 2], boxes1[:, 1] + boxes1[:, 3]
-        ])
-        boxes2_xyxy = np.column_stack([
-            boxes2[:, 0], boxes2[:, 1],
-            boxes2[:, 0] + boxes2[:, 2], boxes2[:, 1] + boxes2[:, 3]
-        ])
+        boxes1_xyxy = np.column_stack(
+            [
+                boxes1[:, 0],
+                boxes1[:, 1],
+                boxes1[:, 0] + boxes1[:, 2],
+                boxes1[:, 1] + boxes1[:, 3],
+            ]
+        )
+        boxes2_xyxy = np.column_stack(
+            [
+                boxes2[:, 0],
+                boxes2[:, 1],
+                boxes2[:, 0] + boxes2[:, 2],
+                boxes2[:, 1] + boxes2[:, 3],
+            ]
+        )
 
         # Calculate IoU
         iou_matrix = np.zeros((len(boxes1), len(boxes2)))
@@ -242,10 +254,7 @@ class ByteTrackerManager:
         return intersection / union if union > 0 else 0.0
 
     def _match_detections_to_tracks(
-        self,
-        iou_matrix: np.ndarray,
-        det_confidences: np.ndarray,
-        track_ids: List[int]
+        self, iou_matrix: np.ndarray, det_confidences: np.ndarray, track_ids: List[int]
     ) -> Tuple[List[int], List[int]]:
         """Match detections to tracks using IoU and confidence"""
         matched_det_indices = []
@@ -294,7 +303,8 @@ class ByteTrackerManager:
     def get_tracks(self) -> List[Dict[str, Any]]:
         """Get all active tracks"""
         return [
-            track_data for track_data in self.tracks.values()
+            track_data
+            for track_data in self.tracks.values()
             if track_data["state"] == "tracked"
         ]
 

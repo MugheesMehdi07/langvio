@@ -149,7 +149,7 @@ class YOLOWorldVideoVisualizer:
         frame: np.ndarray,
         detections: List[Dict[str, Any]],
         track_trajectories: Dict[int, List[Tuple[int, int]]],
-        track_colors: Dict[int, Tuple[int, int, int]]
+        track_colors: Dict[int, Tuple[int, int, int]],
     ):
         """Draw tracking trajectories for objects"""
         for detection in detections:
@@ -159,10 +159,7 @@ class YOLOWorldVideoVisualizer:
 
             # Get center point
             bbox = detection.get("bbox", [0, 0, 0, 0])
-            center = (
-                int((bbox[0] + bbox[2]) / 2),
-                int((bbox[1] + bbox[3]) / 2)
-            )
+            center = (int((bbox[0] + bbox[2]) / 2), int((bbox[1] + bbox[3]) / 2))
 
             # Initialize track trajectory if needed
             if track_id not in track_trajectories:
@@ -186,7 +183,7 @@ class YOLOWorldVideoVisualizer:
                         track_trajectories[track_id][i],
                         track_trajectories[track_id][i + 1],
                         color,
-                        thickness=2
+                        thickness=2,
                     )
 
     def _draw_detection_box(
@@ -198,7 +195,7 @@ class YOLOWorldVideoVisualizer:
         line_thickness: int,
         show_attributes: bool,
         show_confidence: bool,
-        show_tracking: bool
+        show_tracking: bool,
     ):
         """Draw detection bounding box with labels"""
         bbox = detection.get("bbox", [0, 0, 0, 0])
@@ -237,18 +234,12 @@ class YOLOWorldVideoVisualizer:
             (x1, y1 - label_size[1] - 10),
             (x1 + label_size[0], y1),
             box_color,
-            -1
+            -1,
         )
 
         # Draw label text
         cv2.putText(
-            frame,
-            label,
-            (x1, y1 - 5),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            text_color,
-            1
+            frame, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1
         )
 
     def _get_color_for_track_id(self, track_id: int) -> Tuple[int, int, int]:
@@ -273,7 +264,7 @@ class YOLOWorldVideoVisualizer:
         tracker_file_path: str,
         output_path: str,
         highlighted_objects: List[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Visualize video from tracker file"""
         tracker_data = self.load_tracker_file(tracker_file_path)

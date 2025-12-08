@@ -886,7 +886,9 @@ def format_enhanced_video_summary(
         )
 
     if parsed_query.get("count_objects"):
-        summary_parts.append("Counting Analysis: Requested (results from YOLO-World above)")
+        summary_parts.append(
+            "Counting Analysis: Requested (results from YOLO-World above)"
+        )
 
     # Processing metadata
     processing_info = video_results.get("processing_info", {})

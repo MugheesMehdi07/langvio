@@ -38,8 +38,8 @@ class YOLOWorldVideoProcessor:
         self.logger.info(f"Processing video: {video_path}")
 
         # Check if tracker file already exists
-        existing_tracker_file = (
-            self.tracker_file_manager.get_tracker_file_if_exists(video_path)
+        existing_tracker_file = self.tracker_file_manager.get_tracker_file_if_exists(
+            video_path
         )
         if existing_tracker_file:
             self.logger.info(f"Using existing tracker file: {existing_tracker_file}")
@@ -81,13 +81,15 @@ class YOLOWorldVideoProcessor:
                     detections = self._run_detection(frame, width, height)
 
                     # Update ByteTracker
-                    tracked_detections = self.byte_tracker.update(detections, frame_count)
+                    tracked_detections = self.byte_tracker.update(
+                        detections, frame_count
+                    )
 
                     # Store frame data
                     frame_data = {
                         "frame_id": frame_count,
                         "timestamp": frame_count / fps,
-                        "objects": tracked_detections
+                        "objects": tracked_detections,
                     }
                     all_detections.append(frame_data)
 
@@ -96,7 +98,9 @@ class YOLOWorldVideoProcessor:
 
                     # Log progress
                     if frame_count % 50 == 0:
-                        self.logger.info(f"Processed {frame_count}/{total_frames} frames")
+                        self.logger.info(
+                            f"Processed {frame_count}/{total_frames} frames"
+                        )
 
             # Get all tracks
             all_tracks = self.byte_tracker.get_all_tracks()
@@ -110,14 +114,14 @@ class YOLOWorldVideoProcessor:
                 "processed_frames": processed_frames,
                 "model_info": {
                     "model_name": self.model_name,
-                    "confidence": self.config["confidence"]
+                    "confidence": self.config["confidence"],
                 },
                 "tracker_info": {
                     "track_thresh": self.byte_tracker.track_thresh,
                     "track_buffer": self.byte_tracker.track_buffer,
-                    "match_thresh": self.byte_tracker.match_thresh
+                    "match_thresh": self.byte_tracker.match_thresh,
                 },
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
             # Save tracker data
@@ -130,11 +134,13 @@ class YOLOWorldVideoProcessor:
             )
 
             # Convert to legacy format for compatibility
-            legacy_result = self.tracker_file_manager.convert_to_legacy_format({
-                "detections": all_detections,
-                "tracks": all_tracks,
-                "metadata": metadata
-            })
+            legacy_result = self.tracker_file_manager.convert_to_legacy_format(
+                {
+                    "detections": all_detections,
+                    "tracks": all_tracks,
+                    "metadata": metadata,
+                }
+            )
 
             # Add tracker file path to result
             legacy_result["tracker_file_path"] = tracker_file_path
@@ -221,12 +227,14 @@ class YOLOWorldVideoProcessor:
                 x1, y1, x2, y2 = map(int, box)
                 class_name = result.names[cls_id]
 
-                detections.append({
-                    "label": class_name,
-                    "confidence": float(conf),
-                    "bbox": [x1, y1, x2, y2],
-                    "class_id": int(cls_id),
-                })
+                detections.append(
+                    {
+                        "label": class_name,
+                        "confidence": float(conf),
+                        "bbox": [x1, y1, x2, y2],
+                        "class_id": int(cls_id),
+                    }
+                )
 
         return detections
 
@@ -258,9 +266,7 @@ class YOLOWorldVideoProcessor:
             det["attributes"]["size"] = (
                 "small"
                 if relative_size < 0.05
-                else "medium"
-                if relative_size < 0.25
-                else "large"
+                else "medium" if relative_size < 0.25 else "large"
             )
             det["attributes"]["relative_size"] = relative_size
 

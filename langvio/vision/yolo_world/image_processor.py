@@ -75,7 +75,9 @@ class YOLOWorldImageProcessor:
         """Run YOLO-World detection with attributes"""
         try:
             # Run YOLO-World detection
-            results = self.model(image_path, conf=self.config["confidence"], verbose=False)
+            results = self.model(
+                image_path, conf=self.config["confidence"], verbose=False
+            )
 
             # Extract detections
             detections = self._extract_detections(results[0])
@@ -119,17 +121,23 @@ class YOLOWorldImageProcessor:
                 x1, y1, x2, y2 = map(int, box)
                 class_name = result.names[cls_id]
 
-                detections.append({
-                    "label": class_name,
-                    "confidence": float(conf),
-                    "bbox": [x1, y1, x2, y2],
-                    "class_id": int(cls_id),
-                })
+                detections.append(
+                    {
+                        "label": class_name,
+                        "confidence": float(conf),
+                        "bbox": [x1, y1, x2, y2],
+                        "class_id": int(cls_id),
+                    }
+                )
 
         return detections
 
     def _create_image_summary(
-        self, detections: List[Dict[str, Any]], width: int, height: int, query_params: Dict[str, Any]
+        self,
+        detections: List[Dict[str, Any]],
+        width: int,
+        height: int,
+        query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Create summary for image analysis"""
         object_counts = {}

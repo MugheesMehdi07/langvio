@@ -57,54 +57,54 @@ class Config:
                             },
                         },
                     },
-                "vision": {
-                    "default": "yolo_world_v2_m",  # YOLO-World medium as default
-                    "models": {
-                        "yolo_world_v2_s": {  # small model – fastest
-                            "type": "yolo_world",
-                            "model_name": "yolov8s-worldv2",
-                            "confidence": 0.5,
-                            "track_thresh": 0.5,
-                            "track_buffer": 30,
-                            "match_thresh": 0.8,
-                        },
-                        "yolo_world_v2_m": {  # medium model – balanced
-                            "type": "yolo_world",
-                            "model_name": "yolov8m-worldv2",
-                            "confidence": 0.45,
-                            "track_thresh": 0.3,
-                            "track_buffer": 70,
-                            "match_thresh": 0.6,
-                        },
-                        "yolo_world_v2_l": {  # large model – most accurate
-                            "type": "yolo_world",
-                            "model_name": "yolov8l-worldv2",
-                            "confidence": 0.5,
-                            "track_thresh": 0.5,
-                            "track_buffer": 30,
-                            "match_thresh": 0.8,
-                        },
-                        "yolo_world_v2_x": {  # extra-large model – highest accuracy
-                            "type": "yolo_world",
-                            "model_name": "yolov8x-worldv2",
-                            "confidence": 0.5,
-                            "track_thresh": 0.5,
-                            "track_buffer": 30,
-                            "match_thresh": 0.8,
+                    "vision": {
+                        "default": "yolo_world_v2_m",  # YOLO-World medium as default
+                        "models": {
+                            "yolo_world_v2_s": {  # small model – fastest
+                                "type": "yolo_world",
+                                "model_name": "yolov8s-worldv2",
+                                "confidence": 0.5,
+                                "track_thresh": 0.5,
+                                "track_buffer": 30,
+                                "match_thresh": 0.8,
+                            },
+                            "yolo_world_v2_m": {  # medium model – balanced
+                                "type": "yolo_world",
+                                "model_name": "yolov8m-worldv2",
+                                "confidence": 0.45,
+                                "track_thresh": 0.3,
+                                "track_buffer": 70,
+                                "match_thresh": 0.6,
+                            },
+                            "yolo_world_v2_l": {  # large model – most accurate
+                                "type": "yolo_world",
+                                "model_name": "yolov8l-worldv2",
+                                "confidence": 0.5,
+                                "track_thresh": 0.5,
+                                "track_buffer": 30,
+                                "match_thresh": 0.8,
+                            },
+                            "yolo_world_v2_x": {  # extra-large model – highest accuracy
+                                "type": "yolo_world",
+                                "model_name": "yolov8x-worldv2",
+                                "confidence": 0.5,
+                                "track_thresh": 0.5,
+                                "track_buffer": 30,
+                                "match_thresh": 0.8,
+                            },
                         },
                     },
-                },
-                "media": {
-                    "output_dir": "./output",
-                    "temp_dir": "./temp",
-                    "visualization": {
-                        "box_color": [0, 255, 0],
-                        "text_color": [255, 255, 255],
-                        "line_thickness": 2,
+                    "media": {
+                        "output_dir": "./output",
+                        "temp_dir": "./temp",
+                        "visualization": {
+                            "box_color": [0, 255, 0],
+                            "text_color": [255, 255, 255],
+                            "line_thickness": 2,
+                        },
                     },
-                },
-                "logging": {"level": "INFO", "file": None},
-            }
+                    "logging": {"level": "INFO", "file": None},
+                }
         except Exception as e:
             raise ValueError(f"Error loading default configuration: {e}")
 
@@ -154,7 +154,7 @@ class Config:
             model_name = self.config["llm"]["default"]
 
         if model_name not in self.config["llm"]["models"]:
-            raise ValueError(f"LLM model \"{model_name}\" not found in configuration")
+            raise ValueError(f'LLM model "{model_name}" not found in configuration')
 
         return self.config["llm"]["models"][model_name]
 
@@ -172,9 +172,7 @@ class Config:
             model_name = self.config["vision"]["default"]
 
         if model_name not in self.config["vision"]["models"]:
-            raise ValueError(
-                f"Vision model \"{model_name}\" not found in configuration"
-            )
+            raise ValueError(f'Vision model "{model_name}" not found in configuration')
 
         return self.config["vision"]["models"][model_name]
 

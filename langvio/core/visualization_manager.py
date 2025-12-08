@@ -135,6 +135,7 @@ class VisualizationManager:
             self.logger.error(f"Error creating YOLO-World video visualization: {e}")
             # Fallback to copying original video
             import shutil
+
             shutil.copy2(video_path, output_path)
 
     def _create_image_visualization(
