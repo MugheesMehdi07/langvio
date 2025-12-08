@@ -38,7 +38,9 @@ class YOLOWorldVideoProcessor:
         self.logger.info(f"Processing video: {video_path}")
 
         # Check if tracker file already exists
-        existing_tracker_file = self.tracker_file_manager.get_tracker_file_if_exists(video_path)
+        existing_tracker_file = (
+            self.tracker_file_manager.get_tracker_file_if_exists(video_path)
+        )
         if existing_tracker_file:
             self.logger.info(f"Using existing tracker file: {existing_tracker_file}")
             return self._load_and_convert_tracker_file(existing_tracker_file)
@@ -120,7 +122,11 @@ class YOLOWorldVideoProcessor:
 
             # Save tracker data
             tracker_file_path = self.tracker_file_manager.save_tracker_data(
-                video_path, all_detections, all_tracks, metadata, query_params.get("query", "")
+                video_path,
+                all_detections,
+                all_tracks,
+                metadata,
+                query_params.get("query", ""),
             )
 
             # Convert to legacy format for compatibility
@@ -153,8 +159,12 @@ class YOLOWorldVideoProcessor:
     def _load_and_convert_tracker_file(self, tracker_file_path: str) -> Dict[str, Any]:
         """Load existing tracker file and convert to legacy format"""
         try:
-            tracker_data = self.tracker_file_manager.load_tracker_data(tracker_file_path)
-            legacy_result = self.tracker_file_manager.convert_to_legacy_format(tracker_data)
+            tracker_data = self.tracker_file_manager.load_tracker_data(
+                tracker_file_path
+            )
+            legacy_result = self.tracker_file_manager.convert_to_legacy_format(
+                tracker_data
+            )
             legacy_result["tracker_file_path"] = tracker_file_path
             return legacy_result
         except Exception as e:
@@ -178,7 +188,9 @@ class YOLOWorldVideoProcessor:
 
         return cap, (width, height, fps, total_frames)
 
-    def _run_detection(self, frame: np.ndarray, width: int, height: int) -> List[Dict[str, Any]]:
+    def _run_detection(
+        self, frame: np.ndarray, width: int, height: int
+    ) -> List[Dict[str, Any]]:
         """Run YOLO-World detection on frame"""
         try:
             # Run YOLO-World detection
@@ -218,7 +230,12 @@ class YOLOWorldVideoProcessor:
 
         return detections
 
-    def _add_basic_attributes(self, detections: List[Dict[str, Any]], width: int, height: int) -> List[Dict[str, Any]]:
+    def _add_basic_attributes(
+        self,
+        detections: List[Dict[str, Any]],
+        width: int,
+        height: int,
+    ) -> List[Dict[str, Any]]:
         """Add basic attributes to detections"""
         for det in detections:
             if "bbox" not in det:

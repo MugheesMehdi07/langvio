@@ -63,7 +63,7 @@ class TrackerFileManager:
         }
 
         try:
-            with open(tracker_file_path, 'w') as f:
+            with open(tracker_file_path, "w") as f:
                 json.dump(tracker_data, f, indent=2, default=str)
 
             self.logger.info(f"Tracker data saved to: {tracker_file_path}")
@@ -84,7 +84,7 @@ class TrackerFileManager:
             Loaded tracker data
         """
         try:
-            with open(tracker_file_path, 'r') as f:
+            with open(tracker_file_path, "r") as f:
                 tracker_data = json.load(f)
 
             self.logger.info(f"Tracker data loaded from: {tracker_file_path}")

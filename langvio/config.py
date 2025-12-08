@@ -92,7 +92,7 @@ class Config:
                             "track_buffer": 30,
                             "match_thresh": 0.8,
                         },
-                    }
+                    },
                 },
                 "media": {
                     "output_dir": "./output",
@@ -154,7 +154,7 @@ class Config:
             model_name = self.config["llm"]["default"]
 
         if model_name not in self.config["llm"]["models"]:
-            raise ValueError(f"LLM model '{model_name}' not found in configuration")
+            raise ValueError(f"LLM model \"{model_name}\" not found in configuration")
 
         return self.config["llm"]["models"][model_name]
 
@@ -172,7 +172,9 @@ class Config:
             model_name = self.config["vision"]["default"]
 
         if model_name not in self.config["vision"]["models"]:
-            raise ValueError(f"Vision model '{model_name}' not found in configuration")
+            raise ValueError(
+                f"Vision model \"{model_name}\" not found in configuration"
+            )
 
         return self.config["vision"]["models"][model_name]
 

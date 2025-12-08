@@ -71,7 +71,7 @@ class YOLOWorldVideoVisualizer:
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
             # Setup video writer
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             # Create frame detection lookup
@@ -103,7 +103,9 @@ class YOLOWorldVideoVisualizer:
                 for detection in current_detections:
                     track_id = detection.get("track_id")
                     is_highlighted = (
-                        track_id in highlighted_track_ids if highlighted_track_ids else False
+                        track_id in highlighted_track_ids
+                        if highlighted_track_ids
+                        else False
                     )
 
                     # Choose color
@@ -259,7 +261,7 @@ class YOLOWorldVideoVisualizer:
     def load_tracker_file(self, tracker_file_path: str) -> Dict[str, Any]:
         """Load tracker data from file"""
         try:
-            with open(tracker_file_path, 'r') as f:
+            with open(tracker_file_path, "r") as f:
                 return json.load(f)
         except Exception as e:
             self.logger.error(f"Error loading tracker file: {e}")

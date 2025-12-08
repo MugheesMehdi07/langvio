@@ -154,7 +154,7 @@ class VisualizationManager:
             image_path,
             output_path,
             image_objects,
-            [obj["detection"] for obj in highlighted_objects],  # Extract detection objects
+            [obj["detection"] for obj in highlighted_objects],  # Extract detections
             original_box_color=original_box_color,
             highlight_color=highlight_color,
             text_color=viz_config["text_color"],
