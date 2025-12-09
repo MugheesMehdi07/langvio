@@ -8,7 +8,7 @@ import logging
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 
-from langchain.output_parsers.json import SimpleJsonOutputParser
+from langchain_core.output_parsers.json import SimpleJsonOutputParser
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 

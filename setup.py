@@ -8,15 +8,16 @@ setup(
     author_email="your.email@example.com",
     packages=find_packages(),
     install_requires=[
-        "torch>=1.7.0",
-        "numpy>=1.18.0",
+        "torch>=1.9.0",
+        "numpy>=1.20.0",
         "opencv-python>=4.5.0",
-        "pyyaml>=5.4.0",
-        "langchain>=0.1.0",  # Core LangChain dependency
+        "pyyaml>=6.0",
         "langchain-core>=0.1.0",  # LangChain core components
+        "langchain-community>=0.0.10",  # LangChain community integrations
         "ultralytics>=8.0.0",
         "pillow>=8.0.0",
         "python-dotenv>=0.19.0",  # For loading .env files
+        "tqdm>=4.64.0",
     ],
     extras_require={
         # Individual providers
