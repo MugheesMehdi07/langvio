@@ -76,9 +76,9 @@ class YOLOWorldProcessor(BaseVisionProcessor):
                 self.model.to("cuda")
                 try:
                     self.model.half()  # Enable FP16 for 2x speed boost
-                    self.logger.info("✅ Half precision (FP16) enabled")
+                    self.logger.info("[OK] Half precision (FP16) enabled")
                 except Exception:
-                    self.logger.info("⚠️ Half precision not available, using FP32")
+                    self.logger.info("[WARN] Half precision not available, using FP32")
 
             # Warm up the model
             self._warmup_model()
@@ -103,7 +103,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
             with torch.no_grad():
                 for _ in range(3):  # 3 warmup runs
                     self.model(dummy_input, verbose=False)
-            self.logger.info("✅ Model warmed up", self.model_name)
+            self.logger.info(f"[OK] Model warmed up: {self.model_name}")
         except Exception as e:
             self.logger.warning(f"Warmup failed: {e}")
 

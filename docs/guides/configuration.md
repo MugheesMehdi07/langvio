@@ -22,15 +22,15 @@ pipeline = langvio.create_pipeline(config_path="my_config.yaml")
 ### Available Models
 
 **Vision Models:**
-- `yolo` - YOLO11 nano (fastest, good accuracy)
-- `yoloe` - YOLOe small (balanced speed/accuracy)
-- `yoloe_medium` - YOLOe medium (better accuracy)
-- `yoloe_large` - YOLOe large (best accuracy, slower)
+- `yolo_world_v2_s` - YOLO-World small (fastest, good accuracy)
+- `yolo_world_v2_m` - YOLO-World medium (balanced speed/accuracy, default)
+- `yolo_world_v2_l` - YOLO-World large (better accuracy)
+- `yolo_world_v2_x` - YOLO-World extra-large (best accuracy, slower)
 
 **Language Models:**
 - `gpt-3.5` - OpenAI GPT-3.5 Turbo (fast, cost-effective)
 - `gpt-4` - OpenAI GPT-4 Turbo (best reasoning)
-- `gemini` - Google Gemini Pro (free tier available)
+- `gemini` - Google Gemini Pro (free tier available, default)
 
 ## Configuration File
 
@@ -55,18 +55,23 @@ llm:
 
 # Vision Model Settings
 vision:
-  default: "yoloe_large"
+  default: "yolo_world_v2_m"
   models:
-    yoloe_large:
-      type: "yolo"
-      model_path: "yoloe-11l-seg-pf.pt"
-      confidence: 0.5
-      model_type: "yoloe"
+    yolo_world_v2_m:
+      type: "yolo_world"
+      model_name: "yolov8m-worldv2"
+      confidence: 0.45
+      track_thresh: 0.3
+      track_buffer: 70
+      match_thresh: 0.6
     
-    yolo_fast:
-      type: "yolo"
-      model_path: "yolo11n.pt"
+    yolo_world_v2_s:
+      type: "yolo_world"
+      model_name: "yolov8s-worldv2"
       confidence: 0.5
+      track_thresh: 0.5
+      track_buffer: 30
+      match_thresh: 0.8
 
 # Output Settings
 media:
@@ -90,8 +95,8 @@ logging:
 ### For Speed (Real-time Applications)
 ```python
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-3.5",      # Faster LLM
-    vision_name="yolo"       # Fastest vision model
+    llm_name="gpt-3.5",           # Faster LLM
+    vision_name="yolo_world_v2_s"  # Fastest vision model
 )
 ```
 
@@ -99,15 +104,15 @@ pipeline = langvio.create_pipeline(
 ```python
 pipeline = langvio.create_pipeline(
     llm_name="gpt-4",
-    vision_name="yoloe_large"
+    vision_name="yolo_world_v2_l"  # Large model for best accuracy
 )
 ```
 
 ### For Cost Optimization
 ```python
 pipeline = langvio.create_pipeline(
-    llm_name="gemini",       # Google's free tier
-    vision_name="yoloe"      # Good balance
+    llm_name="gemini",            # Google's free tier
+    vision_name="yolo_world_v2_m" # Good balance
 )
 ```
 
@@ -169,9 +174,9 @@ GOOGLE_API_KEY=your_google_key
 CUDA_VISIBLE_DEVICES=0          # Use specific GPU
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-# Optional: Model Settings
+# Optional: Model Settings (override defaults)
 LANGVIO_DEFAULT_LLM=gemini
-LANGVIO_DEFAULT_VISION=yoloe
+LANGVIO_DEFAULT_VISION=yolo_world_v2_m
 ```
 
 ## Command Line Usage
@@ -184,7 +189,7 @@ langvio --query "Count cars" --media parking.jpg
 langvio --query "Find red objects" --media scene.jpg --config my_config.yaml
 
 # Specify models
-langvio --query "Analyze video" --media traffic.mp4 --llm gpt-4 --vision yoloe_large
+langvio --query "Analyze video" --media traffic.mp4 --llm gpt-4 --vision yolo_world_v2_l
 
 # Set output directory
 langvio --query "Count people" --media crowd.jpg --output ./results
@@ -241,8 +246,11 @@ class MyVisionAnalyzer:
 ## Configuration Tips
 
 1. **Start with defaults** and adjust based on your needs
-2. **Use YOLOe for better accuracy**, YOLO for speed
-3. **Gemini is free** for personal use, GPT-4 for best results
-4. **Lower confidence values** detect more objects but may have false positives
-5. **Increase line thickness** for better visibility in high-resolution images
-6. **Disable attributes** for faster processing if not needed
+2. **Use YOLO-World v2 models** - they offer flexible object detection without predefined classes
+3. **Model selection**: Use `yolo_world_v2_s` for speed, `yolo_world_v2_l` for accuracy
+4. **Gemini is free** for personal use, GPT-4 for best results
+5. **Lower confidence values** detect more objects but may have false positives
+6. **Increase line thickness** for better visibility in high-resolution images
+7. **Disable attributes** for faster processing if not needed
+8. **Use environment variables** for easy configuration without code changes
+9. **Check logs** - Langvio provides detailed logging for debugging configuration issues

@@ -114,10 +114,44 @@ Each analysis returns:
 
 ## Troubleshooting
 
-**No LLM provider error**: Install an LLM provider with `pip install langvio[openai]` or `pip install langvio[google]`
+### Common Issues
 
-**CUDA/GPU issues**: Langvio automatically falls back to CPU if GPU isn't available
+**No LLM provider error**: 
+```bash
+# Install an LLM provider
+pip install langvio[openai]  # or
+pip install langvio[google]  # or
+pip install langvio[all-llm]
+```
 
-**Model download**: YOLO models download automatically on first use (may take a few minutes)
+**Missing API Key**: 
+- Set `OPENAI_API_KEY` or `GOOGLE_API_KEY` in your `.env` file
+- Or export as environment variable: `export OPENAI_API_KEY=your_key`
 
-**Memory issues**: Use smaller models by setting `vision_name="yolo"` in `create_pipeline()`
+**CUDA/GPU issues**: 
+- Langvio automatically falls back to CPU if GPU isn't available
+- To force CPU: `CUDA_VISIBLE_DEVICES=""`
+
+**Model download**: 
+- YOLO-World models download automatically on first use (may take a few minutes)
+- Ensure you have internet connection and sufficient disk space
+
+**Memory issues**: 
+- Use smaller models: `vision_name="yolo_world_v2_s"`
+- Reduce video frame sampling rate
+- Process images instead of videos for large files
+
+**Import errors**: 
+- Ensure all dependencies are installed: `pip install langvio[all-llm]`
+- Check Python version (3.8+ required)
+
+## Testing
+
+Run the test suite to verify your installation:
+
+```bash
+pip install langvio[dev]
+pytest
+```
+
+See [tests/README.md](../../tests/README.md) for more information.

@@ -61,8 +61,13 @@ class OpenAIProcessor(BaseLLMProcessor):
                 self.logger.warning(
                     "OPENAI_API_KEY environment variable not found. "
                     "Please set it using 'export OPENAI_API_KEY=your_key' "
+                    "or add it to your .env file"
                 )
-                raise
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable is required. "
+                    "Please set it using 'export OPENAI_API_KEY=your_key' "
+                    "or add it to your .env file"
+                )
             else:
                 # Create the OpenAI LLM
                 self.llm = ChatOpenAI(model_name=model_name, **model_kwargs)

@@ -5,7 +5,7 @@ llm:
   default: "gemini"
   models:
     gemini:
-      model_name: "gemini-2.0-flash"
+      model_name: "gemini-2.0-flash"  # Using gemini-2.0-flash as requested (will fallback to -exp if needed)
       model_kwargs:
         temperature: 0.2
         max_tokens: 1024

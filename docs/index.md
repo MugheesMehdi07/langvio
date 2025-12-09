@@ -2,6 +2,8 @@
 
 Welcome to **Langvio** - a powerful Python framework that connects large language models (LLMs) with computer vision models to enable natural language visual analysis.
 
+**Version:** 0.0.1 | **Python:** 3.8+ | **License:** MIT
+
 ## What is Langvio?
 
 Langvio bridges the gap between natural language understanding and computer vision by allowing you to analyze images and videos using simple, conversational queries. Instead of writing complex computer vision code, you can ask questions like:
@@ -17,7 +19,7 @@ Langvio bridges the gap between natural language understanding and computer visi
 Query visual content using everyday language - no computer vision expertise required.
 
 ### 🤖 **Multi-Modal Integration** 
-Seamlessly connects leading LLMs (OpenAI GPT, Google Gemini) with state-of-the-art vision models (YOLOv11, YOLOe).
+Seamlessly connects leading LLMs (OpenAI GPT, Google Gemini) with state-of-the-art vision models (YOLO-World v2).
 
 ### 📊 **Rich Analysis Capabilities**
 - Object detection and identification
@@ -27,11 +29,14 @@ Seamlessly connects leading LLMs (OpenAI GPT, Google Gemini) with state-of-the-a
 - Motion analysis and speed estimation
 - Activity recognition
 
-### 🎯 **YOLO11 Enhanced**
-Advanced features powered by YOLO11 Solutions:
+### 🎯 **YOLO-World v2 + ByteTracker Enhanced**
+Advanced features powered by YOLO-World v2 detection and ByteTracker multi-object tracking:
 - Precise object counting with boundary crossing detection
-- Speed estimation and movement analysis
-- Object tracking across video frames
+- Speed estimation and movement analysis based on tracked trajectories
+- Robust multi-object tracking across video frames with persistent IDs
+- Flexible object detection without predefined classes
+- Kalman filter-based motion prediction for smooth tracking
+- Track persistence through occlusions and complex scenes
 
 ### 🌐 **Flexible Deployment**
 - Python API for integration
@@ -42,8 +47,9 @@ Advanced features powered by YOLO11 Solutions:
 ### 🚀 **Production Ready**
 - Memory-optimized processing
 - Configurable confidence thresholds
-- Comprehensive error handling
+- Comprehensive error handling and logging
 - Extensible architecture for custom models
+- Comprehensive test suite
 
 ## Quick Example
 
@@ -115,8 +121,9 @@ graph LR
 ### Core Components
 
 - **LLM Processors**: Parse queries and generate explanations (OpenAI GPT, Google Gemini)
-- **Vision Processors**: Perform object detection and analysis (YOLOv11, YOLOe)
-- **Media Processors**: Handle visualization and output generation
+- **Vision Processors**: Perform object detection and analysis using YOLO-World v2
+- **ByteTracker**: Multi-object tracking system for video analysis with boundary crossing detection
+- **Media Processors**: Handle visualization and output generation with tracking trails
 - **Configuration System**: Flexible model and parameter management
 
 ## Getting Started
@@ -139,11 +146,23 @@ pip install langvio[all-llm]
 
 ### Environment Setup
 
+Create a `.env` file in your project directory:
+
 ```bash
-# Create .env file with your API keys
-echo "OPENAI_API_KEY=your_openai_key" >> .env
-echo "GOOGLE_API_KEY=your_google_key" >> .env
+# Required: LLM API Keys (at least one)
+OPENAI_API_KEY=your_openai_key
+GOOGLE_API_KEY=your_google_key
+
+# Optional: Default model selection
+LANGVIO_DEFAULT_LLM=gemini
+LANGVIO_DEFAULT_VISION=yolo_world_v2_m
+
+# Optional: Performance settings
+CUDA_VISIBLE_DEVICES=0
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ```
+
+Langvio automatically loads these environment variables using `python-dotenv`.
 
 ### First Analysis
 

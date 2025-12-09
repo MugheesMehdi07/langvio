@@ -1,8 +1,8 @@
 site_name: Langvio Documentation
 site_url: https://langvio.readthedocs.io/
 site_description: Natural Language Computer Vision - Connect LLMs with Vision Models
-repo_url: https://github.com/yourusername/langvio
-repo_name: yourusername/langvio
+repo_url: https://github.com/MugheesMehdi07/langvio
+repo_name: MugheesMehdi07/langvio
 edit_uri: edit/main/docs/
 
 theme:
@@ -76,30 +76,16 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quick-start.md
-    - Web Interface: getting-started/web-interface.md
-  - User Guide:
-    - Image Analysis: guides/image-analysis.md
-    - Video Analysis: guides/video-analysis.md
+    - Quick Start: getting-started/getting_started.md
     - Configuration: guides/configuration.md
-    - Query Types: guides/query-types.md
-  - Examples:
-    - Basic Examples: examples/basic-examples.md
-    - Advanced Queries: examples/advanced-queries.md
-    - Integration Examples: examples/integration.md
+    - Examples: guides/examples.md
+  - Advanced:
+    - Advanced Features: advanced/features.md
   - API Reference:
-    - Pipeline: api/pipeline.md
-    - Processors: api/processors.md
-    - Configuration: api/configuration.md
-    - Utilities: api/utilities.md
+    - API Reference: reference/api.md
   - Development:
-    - Contributing: development/contributing.md
-    - Architecture: development/architecture.md
-    - Testing: development/testing.md
-  - About:
-    - Changelog: changelog.md
-    - License: license.md
+    - Contributing: ../CONTRIBUTING.md
+    - Testing: ../tests/README.md
 
 extra:
   social:

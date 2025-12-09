@@ -2,13 +2,18 @@
 Configuration management for langvio
 """
 
+import logging
 import os
 from typing import Any, Dict, Optional
 
 import yaml
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env
+# Load environment variables from .env file if present
+load_dotenv()
+
+# Initialize logger for configuration module
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -32,6 +37,9 @@ class Config:
         # Then load user config if provided
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
+
+        # Finally, override with environment variables if set
+        self._apply_environment_overrides()
 
     def _load_default_config(self) -> None:
         """Load the default configuration from default_config.yaml"""
@@ -202,6 +210,98 @@ class Config:
             LangSmith configuration dictionary
         """
         return self.config.get("langsmith", {})
+
+    def _apply_environment_overrides(self) -> None:
+        """Apply environment variable overrides to configuration."""
+        # Map environment variable values to config keys
+        # Handle both underscore and hyphen variants
+        env_llm_mapping = {
+            "openai_gpt4": "gpt-4",
+            "openai-gpt4": "gpt-4",
+            "openai_gpt-4": "gpt-4",
+            "openai-gpt-4": "gpt-4",
+            "gpt4": "gpt-4",
+            "gpt-4": "gpt-4",
+            "openai_gpt3": "gpt-3.5",
+            "openai-gpt3": "gpt-3.5",
+            "openai_gpt-3": "gpt-3.5",
+            "openai-gpt-3": "gpt-3.5",
+            "gpt3": "gpt-3.5",
+            "gpt-3.5": "gpt-3.5",
+            "gpt-3": "gpt-3.5",
+            "gemini": "gemini",
+            "google_gemini": "gemini",
+            "google-gemini": "gemini",
+        }
+
+        # Override default LLM from environment variable
+        env_llm = os.getenv("LANGVIO_DEFAULT_LLM")
+        if env_llm:
+            # Normalize the environment variable value (lowercase, replace spaces)
+            env_llm_normalized = env_llm.lower().replace(" ", "-")
+            
+            # Try mapping with underscores first (common in env vars)
+            llm_key = env_llm_mapping.get(env_llm_normalized)
+            
+            # If not found, try with underscores replaced by hyphens
+            if not llm_key:
+                env_llm_hyphen = env_llm_normalized.replace("_", "-")
+                llm_key = env_llm_mapping.get(env_llm_hyphen, env_llm_hyphen)
+            
+            # Check if the mapped key exists in config
+            if (
+                "llm" in self.config
+                and "models" in self.config["llm"]
+                and llm_key in self.config["llm"]["models"]
+            ):
+                self.config["llm"]["default"] = llm_key
+                logger.info(
+                    f"Overriding default LLM from environment: "
+                    f"{env_llm} -> {llm_key}"
+                )
+            else:
+                # Try the normalized value as-is (with hyphens)
+                env_llm_hyphen = env_llm_normalized.replace("_", "-")
+                if (
+                    "llm" in self.config
+                    and "models" in self.config["llm"]
+                    and env_llm_hyphen in self.config["llm"]["models"]
+                ):
+                    self.config["llm"]["default"] = env_llm_hyphen
+                    logger.info(
+                        f"Overriding default LLM from environment: "
+                        f"{env_llm} -> {env_llm_hyphen}"
+                    )
+                else:
+                    logger.warning(
+                        f"Environment variable LANGVIO_DEFAULT_LLM='{env_llm}' "
+                        f"does not match any configured LLM model. "
+                        f"Available models: {list(self.config.get('llm', {}).get('models', {}).keys())}"
+                    )
+
+        # Override default vision model from environment variable
+        env_vision = os.getenv("LANGVIO_DEFAULT_VISION")
+        if env_vision:
+            # Normalize the environment variable value
+            env_vision_lower = env_vision.lower().replace("_", "-").replace(" ", "-")
+            
+            # Check if the value exists in config
+            if (
+                "vision" in self.config
+                and "models" in self.config["vision"]
+                and env_vision_lower in self.config["vision"]["models"]
+            ):
+                self.config["vision"]["default"] = env_vision_lower
+                logger.info(
+                    f"Overriding default vision model from environment: "
+                    f"{env_vision} -> {env_vision_lower}"
+                )
+            else:
+                logger.warning(
+                    f"Environment variable LANGVIO_DEFAULT_VISION='{env_vision}' "
+                    f"does not match any configured vision model. "
+                    f"Available models: {list(self.config.get('vision', {}).get('models', {}).keys())}"
+                )
 
     def save_config(self, config_path: str) -> None:
         """

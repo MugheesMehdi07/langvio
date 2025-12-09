@@ -25,10 +25,11 @@ Langvio bridges the gap between **human language** and **computer vision**. Ask 
 
 - **🗣️ Natural Language Interface**: Ask questions like "Count all red cars" or "Find people wearing yellow"
 - **🎥 Multi-Modal Support**: Works with both images and videos
-- **🚀 Powered by YOLO**: Uses YOLOv11 and YOLOe for fast, accurate object detection
+- **🚀 Powered by YOLO-World v2**: Fast, accurate object detection without predefined classes
+- **📹 ByteTracker Integration**: Advanced multi-object tracking for video analysis with boundary crossing detection
 - **🤖 LLM Integration**: Supports OpenAI GPT and Google Gemini for intelligent explanations
-- **📊 Advanced Analytics**: Object counting, speed estimation, spatial relationships
-- **🎨 Visual Output**: Generates annotated images/videos with detection highlights
+- **📊 Advanced Analytics**: Object counting, speed estimation, spatial relationships, temporal tracking
+- **🎨 Visual Output**: Generates annotated images/videos with detection highlights and tracking trails
 - **🌐 Web Interface**: Includes a Flask web app for easy interaction
 - **🔧 Extensible**: Easy to add new models and capabilities
 
@@ -159,17 +160,23 @@ pipeline.process("Find all red objects in this image", "scene.jpg")
 pipeline.process("What objects are on the table?", "kitchen.jpg")
 ```
 
-### Video Analysis
+### Video Analysis with ByteTracker
 
 ```python
-# Track movement patterns
+# Track movement patterns (uses ByteTracker for multi-object tracking)
 pipeline.process("Track people walking through the scene", "crowd.mp4")
 
-# Speed analysis
+# Boundary crossing detection (ByteTracker tracks entry/exit)
+pipeline.process("How many vehicles entered vs exited the intersection?", "traffic.mp4")
+
+# Speed analysis (uses tracked trajectories from ByteTracker)
 pipeline.process("What's the average speed of vehicles?", "highway.mp4")
 
-# Activity detection
+# Activity detection with temporal tracking
 pipeline.process("Detect any unusual activities", "security_footage.mp4")
+
+# Object counting with tracking
+pipeline.process("Count people entering and exiting the building", "entrance.mp4")
 ```
 
 ### Advanced Queries
@@ -195,32 +202,41 @@ graph TD
     A[User Query] --> B[LLM Processor]
     B --> C[Query Parser]
     C --> D[Vision Processor]
-    D --> E[YOLO Detection]
+    D --> E[YOLO-World Detection]
     E --> F[Attribute Analysis]
     F --> G[Spatial Relationships]
-    G --> H[Temporal Tracking]
-    H --> I[LLM Explanation]
-    I --> J[Visualization]
-    J --> K[Output]
+    G --> H{Is Video?}
+    H -->|Yes| I[ByteTracker Multi-Object Tracking]
+    H -->|No| J[LLM Explanation]
+    I --> K[Boundary Crossing Detection]
+    K --> L[Speed Estimation]
+    L --> M[Temporal Analysis]
+    M --> J
+    J --> N[Visualization]
+    N --> O[Output with Tracking Trails]
 ```
 
 ### Core Components
 
 - **🧠 LLM Processor**: Parses queries and generates explanations (OpenAI, Google Gemini)
-- **👁️ Vision Processor**: Detects objects and attributes (YOLO, YOLOe)
+- **👁️ Vision Processor**: Detects objects and attributes using YOLO-World v2
+- **📹 ByteTracker**: Multi-object tracking system for video analysis with boundary crossing detection
 - **🎨 Media Processor**: Creates visualizations and handles I/O
 - **⚙️ Pipeline**: Orchestrates the entire workflow
 
 ## 📊 Supported Models
 
 ### Vision Models
-- **YOLOv11** (nano, small, medium, large, extra-large)
-- **YOLOe** (enhanced YOLO variants)
+- **YOLO-World v2** (small, medium, large, extra-large)
+  - `yolo_world_v2_s` - Small (fastest)
+  - `yolo_world_v2_m` - Medium (balanced, default)
+  - `yolo_world_v2_l` - Large (most accurate)
+  - `yolo_world_v2_x` - Extra-large (highest accuracy)
 - Automatic model selection based on performance needs
 
 ### Language Models
-- **OpenAI**: GPT-3.5 Turbo, GPT-4 Turbo
-- **Google**: Gemini Pro, Gemini Flash
+- **OpenAI**: GPT-3.5 Turbo (`gpt-3.5`), GPT-4 Turbo (`gpt-4`)
+- **Google**: Gemini Pro (`gemini`)
 - Extensible architecture for adding more providers
 
 ## 🛠️ Configuration
@@ -238,11 +254,16 @@ llm:
         temperature: 0.2
 
 vision:
-  default: "yoloe_large"
+  default: "yolo_world_v2_m"
   models:
-    yoloe_large:
-      model_path: "yoloe-11l-seg-pf.pt"
-      confidence: 0.5
+    yolo_world_v2_m:
+      type: "yolo_world"
+      model_name: "yolov8m-worldv2"
+      confidence: 0.45
+      # ByteTracker configuration
+      track_thresh: 0.3      # Detection confidence threshold for tracking
+      track_buffer: 70       # Frames to keep lost tracks
+      match_thresh: 0.6      # IoU threshold for track matching
 
 media:
   output_dir: "./results"
@@ -271,11 +292,35 @@ langvio --list-models
 
 ## 🌟 Advanced Features
 
-### YOLO11 Solutions Integration
+### Video Tracking with ByteTracker
 
-- **Object Counting**: Automatic boundary-crossing detection
-- **Speed Estimation**: Real-time speed analysis for video
-- **Advanced Tracking**: Multi-object tracking across frames
+Langvio uses **ByteTracker** for robust multi-object tracking in videos. ByteTracker is a state-of-the-art tracking algorithm that maintains object identity across video frames, even through occlusions and complex scenes.
+
+**Key ByteTracker Capabilities:**
+
+- **Multi-Object Tracking**: Tracks multiple objects simultaneously with unique persistent IDs
+- **Boundary Crossing Detection**: Automatically detects when objects enter/exit defined regions
+- **Object Counting**: Accurate counting with entry/exit tracking (in/out counts)
+- **Speed Estimation**: Calculates object speeds based on tracked trajectories over time
+- **Track Persistence**: Maintains object identity even through occlusions and temporary disappearances
+- **Configurable Tracking**: Adjustable thresholds for tracking confidence, buffer, and matching
+
+**ByteTracker Technical Features:**
+- Kalman filter-based motion prediction for smooth tracking
+- IoU-based data association for matching detections to tracks
+- Track buffer management for handling occlusions (configurable buffer size)
+- High/low confidence detection handling for robust tracking
+- Automatic track initialization and termination
+
+### YOLO-World v2 + ByteTracker Integration
+
+The combination of YOLO-World v2 detection and ByteTracker tracking provides:
+
+- **Seamless Integration**: YOLO-World detections feed directly into ByteTracker for tracking
+- **Efficient Processing**: Optimized frame sampling (default: every 5th frame, every 2nd for tracking tasks)
+- **Track File Management**: Saves/loads tracking data as JSON for faster re-analysis
+- **Visualization**: Draws tracking trails, object IDs, and trajectories on video output
+- **Performance**: Handles real-time video processing with configurable quality/speed tradeoffs
 
 ### Spatial Relationship Analysis
 
@@ -285,9 +330,13 @@ langvio --list-models
 
 ### Temporal Analysis (Video)
 
-- **Movement Patterns**: Track object trajectories and behaviors
-- **Activity Recognition**: Detect activities and interactions
-- **Temporal Relationships**: Understand object co-occurrence
+Powered by ByteTracker multi-object tracking:
+
+- **Movement Patterns**: Track object trajectories and behaviors across frames
+- **Activity Recognition**: Detect activities and interactions over time
+- **Temporal Relationships**: Understand object co-occurrence and interactions
+- **Trajectory Analysis**: Visualize and analyze object movement paths
+- **Entry/Exit Tracking**: Monitor objects crossing boundaries or entering/exiting regions
 
 ### Color & Attribute Detection
 
@@ -305,17 +354,38 @@ pipeline = langvio.create_pipeline()  # Uses best available model
 
 # Manual model selection for specific needs
 pipeline = langvio.create_pipeline(
-    vision_name="yoloe_large",  # High accuracy
-    llm_name="gpt-4"           # Advanced reasoning
+    vision_name="yolo_world_v2_l",  # High accuracy
+    llm_name="gpt-4"                # Advanced reasoning
 )
 ```
 
 ### Optimization Tips
 
-- **YOLOe models**: Better accuracy for complex scenes
-- **YOLO11 models**: Faster processing for real-time applications
-- **Confidence thresholds**: Adjust based on precision/recall needs
-- **Frame sampling**: Control video processing speed vs accuracy
+- **YOLO-World models**: Better accuracy for complex scenes with flexible object detection
+- **Model selection**: Use smaller models (`yolo_world_v2_s`) for speed, larger (`yolo_world_v2_l`) for accuracy
+- **Confidence thresholds**: Adjust based on precision/recall needs (lower = more detections)
+- **Frame sampling**: Control video processing speed vs accuracy (default: every 5th frame)
+- **Environment variables**: Use `LANGVIO_DEFAULT_LLM` and `LANGVIO_DEFAULT_VISION` to set defaults
+
+## 🧪 Testing
+
+Langvio includes a comprehensive test suite. Run tests with:
+
+```bash
+# Install test dependencies
+pip install langvio[dev]
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=langvio --cov-report=html
+
+# Run specific test file
+pytest tests/test_config.py
+```
+
+See [tests/README.md](tests/README.md) for more testing information.
 
 ## 🤝 Contributing
 
@@ -325,7 +395,7 @@ We welcome contributions! Here's how to get started:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/langvio.git
+git clone https://github.com/MugheesMehdi07/langvio.git
 cd langvio
 
 # Install in development mode
@@ -356,11 +426,11 @@ isort langvio/
 
 ## 🔗 Links & Resources
 
-- **🐙 [GitHub Repository](https://github.com/yourusername/langvio)**
+- **🐙 [GitHub Repository](https://github.com/MugheesMehdi07/langvio)**
 - **📦 [PyPI Package](https://pypi.org/project/langvio/)**
 - **📖 [Documentation](https://langvio.readthedocs.io/)**
-- **🐛 [Issue Tracker](https://github.com/yourusername/langvio/issues)**
-- **💬 [Discussions](https://github.com/yourusername/langvio/discussions)**
+- **🐛 [Issue Tracker](https://github.com/MugheesMehdi07/langvio/issues)**
+- **💬 [Discussions](https://github.com/MugheesMehdi07/langvio/discussions)**
 
 ## 📄 License
 
@@ -368,7 +438,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 🙏 Acknowledgments
 
-- **Ultralytics** for the amazing YOLO models
+- **Ultralytics** for the amazing YOLO-World v2 models
+- **ByteTracker** algorithm for robust multi-object tracking
 - **LangChain** for LLM integration framework
 - **OpenAI** and **Google** for language model APIs
 - **OpenCV** for computer vision utilities
@@ -379,6 +450,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **⭐ Star us on GitHub if Langvio helps you!**
 
-[⭐ Star](https://github.com/yourusername/langvio) • [🔗 Share](https://twitter.com/intent/tweet?text=Check%20out%20Langvio%20-%20Natural%20Language%20Computer%20Vision!&url=https://github.com/yourusername/langvio) • [🐛 Report Bug](https://github.com/yourusername/langvio/issues)
+[⭐ Star](https://github.com/MugheesMehdi07/langvio) • [🔗 Share](https://twitter.com/intent/tweet?text=Check%20out%20Langvio%20-%20Natural%20Language%20Computer%20Vision!&url=https://github.com/MugheesMehdi07/langvio) • [🐛 Report Bug](https://github.com/MugheesMehdi07/langvio/issues)
 
 </div>

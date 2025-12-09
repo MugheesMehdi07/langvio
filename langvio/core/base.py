@@ -29,18 +29,3 @@ class Processor(ABC):
             True if initialization was successful
         """
 
-    @classmethod
-    def from_config(cls, name: str, config: Dict[str, Any]) -> "Processor":
-        """
-        Create a processor from configuration.
-
-        Args:
-            name: Processor name
-            config: Configuration parameters
-
-        Returns:
-            Initialized processor
-        """
-        processor = cls(name, config)
-        processor.initialize()
-        return processor
