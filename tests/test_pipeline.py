@@ -42,19 +42,24 @@ llm:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
-    @patch('langvio.core.processor_manager.registry')
-    def test_set_llm_processor(self, mock_registry):
+    @patch('langvio.registry')
+    @patch.object(Config, 'get_llm_config')
+    def test_set_llm_processor(self, mock_get_config, mock_registry):
         """Test setting LLM processor"""
+        mock_get_config.return_value = {"model_name": "test", "model_kwargs": {}}
         mock_registry.list_llm_processors.return_value = {"test_llm": MagicMock()}
         mock_processor = MagicMock()
+        mock_processor.initialize.return_value = None
         mock_registry.get_llm_processor.return_value = mock_processor
         
         self.pipeline.set_llm_processor("test_llm")
         self.assertEqual(self.pipeline.processor_manager.llm_processor, mock_processor)
 
-    @patch('langvio.core.processor_manager.registry')
-    def test_set_vision_processor(self, mock_registry):
+    @patch('langvio.registry')
+    @patch.object(Config, 'get_vision_config')
+    def test_set_vision_processor(self, mock_get_config, mock_registry):
         """Test setting vision processor"""
+        mock_get_config.return_value = {"model_name": "test", "confidence": 0.5}
         mock_registry.list_vision_processors.return_value = {"test_vision": MagicMock()}
         mock_processor = MagicMock()
         mock_registry.get_vision_processor.return_value = mock_processor
@@ -64,11 +69,25 @@ llm:
 
     def test_process_file_not_found(self):
         """Test process raises FileNotFoundError for non-existent file"""
+        # Set up processors first so file check happens
+        with patch('langvio.registry') as mock_registry:
+            mock_registry.list_llm_processors.return_value = {"test_llm": MagicMock()}
+            mock_registry.list_vision_processors.return_value = {"test_vision": MagicMock()}
+            mock_llm = MagicMock()
+            mock_llm.initialize.return_value = None
+            mock_registry.get_llm_processor.return_value = mock_llm
+            mock_registry.get_vision_processor.return_value = MagicMock()
+            
+            with patch.object(Config, 'get_llm_config', return_value={"model_name": "test", "model_kwargs": {}}):
+                with patch.object(Config, 'get_vision_config', return_value={"model_name": "test"}):
+                    self.pipeline.set_llm_processor("test_llm")
+                    self.pipeline.set_vision_processor("test_vision")
+        
+        # Now test file not found
         with self.assertRaises(FileNotFoundError):
             self.pipeline.process("test query", "nonexistent.jpg")
 
-    @patch('langvio.core.processor_manager.registry')
-    def test_process_without_processors(self, mock_registry):
+    def test_process_without_processors(self):
         """Test process raises ValueError when processors not set"""
         # Create a temporary test file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.jpg', delete=False) as f:
@@ -81,17 +100,24 @@ llm:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
-    @patch('langvio.core.processor_manager.registry')
+    @patch('langvio.registry')
     @patch('langvio.utils.file_utils.is_video_file')
-    def test_process_image(self, mock_is_video, mock_registry):
+    @patch.object(Config, 'get_llm_config')
+    @patch.object(Config, 'get_vision_config')
+    @patch('langvio.core.visualization_manager.VisualizationManager.create_visualization')
+    def test_process_image(self, mock_viz, mock_get_vision_config, mock_get_llm_config, mock_is_video, mock_registry):
         """Test processing an image"""
         mock_is_video.return_value = False
+        mock_get_llm_config.return_value = {"model_name": "test", "model_kwargs": {}}
+        mock_get_vision_config.return_value = {"model_name": "test", "confidence": 0.5}
+        mock_viz.return_value = "/path/to/output.jpg"
         
         # Set up mocks
         mock_llm = MagicMock()
         mock_llm.parse_query.return_value = {"task_type": "identification"}
         mock_llm.generate_explanation.return_value = "Test explanation"
         mock_llm.get_highlighted_objects.return_value = []
+        mock_llm.initialize.return_value = None
         
         mock_vision = MagicMock()
         mock_vision.process_image.return_value = {"objects": []}

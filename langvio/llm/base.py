@@ -150,7 +150,9 @@ class BaseLLMProcessor(Processor):
         # Ensure processor is initialized
         if not hasattr(self, "explanation_chain") or self.explanation_chain is None:
             if not self.initialize():
-                error_msg = "LLM processor initialization failed. Cannot generate explanation."
+                error_msg = (
+                    "LLM processor initialization failed. Cannot generate explanation."
+                )
                 self.logger.error(error_msg)
                 return f"Error: {error_msg}"
 
@@ -247,4 +249,3 @@ class BaseLLMProcessor(Processor):
     def is_package_installed(self, package_name: str) -> bool:
         """Check if a Python package is installed."""
         return importlib.util.find_spec(package_name) is not None
-

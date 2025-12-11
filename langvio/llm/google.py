@@ -56,6 +56,7 @@ class GeminiProcessor(BaseLLMProcessor):
             # tenacity is fully initialized before importing langchain_google_genai
             try:
                 import tenacity
+
                 # Access an attribute to ensure the module is fully loaded
                 _ = tenacity.stop
             except (ImportError, AttributeError):
@@ -72,7 +73,7 @@ class GeminiProcessor(BaseLLMProcessor):
 
             # Check for API key in environment (supports both GOOGLE_API_KEY and GEMINI_API_KEY)
             api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-            
+
             if not api_key:
                 # Log a warning rather than setting it from config
                 self.logger.warning(
@@ -85,7 +86,7 @@ class GeminiProcessor(BaseLLMProcessor):
                     "Please set it using 'export GOOGLE_API_KEY=your_key' "
                     "or add it to your .env file"
                 )
-            
+
             # Log which API key variable was used (without exposing the key)
             if os.getenv("GOOGLE_API_KEY"):
                 self.logger.debug("Using GOOGLE_API_KEY from environment")
@@ -103,16 +104,23 @@ class GeminiProcessor(BaseLLMProcessor):
                 if "not found" in error_str or "404" in error_str:
                     # Try common alternative model names
                     alternatives = {
-                        "gemini-2.0-flash": ["gemini-2.0-flash-exp", "gemini-2.0-flash-thinking-exp"],
+                        "gemini-2.0-flash": [
+                            "gemini-2.0-flash-exp",
+                            "gemini-2.0-flash-thinking-exp",
+                        ],
                         "gemini-2.0-flash-exp": ["gemini-2.0-flash", "gemini-1.5-pro"],
                         "gemini-1.5-flash": ["gemini-1.5-pro", "gemini-pro"],
                     }
-                    
+
                     for alt_model in alternatives.get(model_name, []):
                         try:
                             self.logger.info(f"Trying alternative model: {alt_model}")
-                            self.llm = ChatGoogleGenerativeAI(model=alt_model, **model_kwargs)
-                            self.logger.info(f"Successfully initialized with alternative model: {alt_model}")
+                            self.llm = ChatGoogleGenerativeAI(
+                                model=alt_model, **model_kwargs
+                            )
+                            self.logger.info(
+                                f"Successfully initialized with alternative model: {alt_model}"
+                            )
                             break
                         except Exception:
                             continue

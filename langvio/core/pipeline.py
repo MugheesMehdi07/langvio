@@ -51,17 +51,17 @@ class Pipeline:
     def process(self, query: str, media_path: str) -> Dict[str, Any]:
         """
         Process a query on media with enhanced capabilities.
-        
+
         This is the main entry point for processing queries. It orchestrates:
         1. Query parsing using LLM
         2. Object detection using vision models
         3. Explanation generation using LLM
         4. Visualization creation
-        
+
         Args:
             query: Natural language query (e.g., "Count all red cars")
             media_path: Path to image or video file
-            
+
         Returns:
             Dictionary containing:
                 - query: Original query
@@ -72,7 +72,7 @@ class Pipeline:
                 - detections: Raw detection results
                 - query_params: Parsed query parameters
                 - highlighted_objects: Objects highlighted in visualization
-                
+
         Raises:
             ValueError: If processors are not set
             FileNotFoundError: If media file doesn't exist
@@ -107,8 +107,10 @@ class Pipeline:
             # This extracts target objects, task type, attributes, etc.
             self.logger.debug("Step 1: Parsing query with LLM")
             query_params = self.processor_manager.parse_query(query)
-            self.logger.info(f"Parsed query params: task_type={query_params.get('task_type')}, "
-                           f"target_objects={query_params.get('target_objects', [])}")
+            self.logger.info(
+                f"Parsed query params: task_type={query_params.get('task_type')}, "
+                f"target_objects={query_params.get('target_objects', [])}"
+            )
 
             # Step 2: Run detection with vision processor
             # This performs object detection, tracking (for videos), and attribute extraction

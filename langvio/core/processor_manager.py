@@ -89,13 +89,13 @@ class ProcessorManager:
     def parse_query(self, query: str) -> Dict[str, Any]:
         """
         Parse a natural language query into structured parameters.
-        
+
         Args:
             query: Natural language query string
-            
+
         Returns:
             Dictionary containing parsed query parameters (target_objects, task_type, etc.)
-            
+
         Raises:
             ValueError: If LLM processor is not set
         """
@@ -106,7 +106,9 @@ class ProcessorManager:
 
         self.logger.debug(f"Parsing query: {query[:100]}...")
         parsed_params = self.llm_processor.parse_query(query)
-        self.logger.debug(f"Parsed query parameters: {parsed_params.get('task_type', 'unknown')} task")
+        self.logger.debug(
+            f"Parsed query parameters: {parsed_params.get('task_type', 'unknown')} task"
+        )
         return parsed_params
 
     def process_media(
@@ -114,14 +116,14 @@ class ProcessorManager:
     ) -> Dict[str, Any]:
         """
         Process media file with vision processor.
-        
+
         Args:
             media_path: Path to the media file (image or video)
             query_params: Parsed query parameters from LLM
-            
+
         Returns:
             Dictionary containing detection results
-            
+
         Raises:
             ValueError: If vision processor is not set
         """
@@ -151,7 +153,9 @@ class ProcessorManager:
             detections = self.vision_processor.process_video(
                 media_path, query_params, sample_rate
             )
-            self.logger.info(f"Video processing complete. Found {len(detections.get('frame_detections', {}))} frames with detections")
+            self.logger.info(
+                f"Video processing complete. Found {len(detections.get('frame_detections', {}))} frames with detections"
+            )
             return detections
         else:
             # Get all detections with YOLO-World for image
@@ -164,14 +168,14 @@ class ProcessorManager:
     def generate_explanation(self, query: str, detections: Dict[str, Any]) -> str:
         """
         Generate explanation using LLM processor.
-        
+
         Args:
             query: Original user query
             detections: Detection results from vision processor
-            
+
         Returns:
             Natural language explanation of the detection results
-            
+
         Raises:
             ValueError: If LLM processor is not set
         """
@@ -182,10 +186,16 @@ class ProcessorManager:
 
         # Determine if this is a video based on detection structure
         is_video = "frame_detections" in detections
-        self.logger.info(f"Generating explanation for {'video' if is_video else 'image'}")
+        self.logger.info(
+            f"Generating explanation for {'video' if is_video else 'image'}"
+        )
 
-        explanation = self.llm_processor.generate_explanation(query, detections, is_video)
-        self.logger.debug(f"Generated explanation length: {len(explanation)} characters")
+        explanation = self.llm_processor.generate_explanation(
+            query, detections, is_video
+        )
+        self.logger.debug(
+            f"Generated explanation length: {len(explanation)} characters"
+        )
         return explanation
 
     def get_highlighted_objects(self):

@@ -8,9 +8,26 @@ from typing import Any, Dict, Optional
 
 import yaml
 from dotenv import load_dotenv
+import os
 
 # Load environment variables from .env file if present
-load_dotenv()
+# Try to find .env file in multiple locations:
+# 1. Current working directory
+# 2. langvio package directory
+# 3. Parent directory (project root)
+env_paths = [
+    os.path.join(os.getcwd(), ".env"),  # Current working directory
+    os.path.join(os.path.dirname(__file__), "..", ".env"),  # langvio/.env
+    os.path.join(os.path.dirname(__file__), "..", "..", ".env"),  # project root/.env
+]
+
+for env_path in env_paths:
+    if os.path.exists(env_path):
+        load_dotenv(env_path, override=True)
+        break
+else:
+    # If no .env file found, try default load_dotenv() behavior
+    load_dotenv(override=True)
 
 # Initialize logger for configuration module
 logger = logging.getLogger(__name__)
@@ -180,7 +197,13 @@ class Config:
             model_name = self.config["vision"]["default"]
 
         if model_name not in self.config["vision"]["models"]:
-            raise ValueError(f'Vision model "{model_name}" not found in configuration')
+            # If model is not in config but might be registered, return empty config
+            # The registry will use its default kwargs
+            logger.warning(
+                f'Vision model "{model_name}" not found in configuration. '
+                f"Using default registry settings if available."
+            )
+            return {}
 
         return self.config["vision"]["models"][model_name]
 
@@ -213,68 +236,48 @@ class Config:
 
     def _apply_environment_overrides(self) -> None:
         """Apply environment variable overrides to configuration."""
-        # Map environment variable values to config keys
-        # Handle both underscore and hyphen variants
-        env_llm_mapping = {
-            "openai_gpt4": "gpt-4",
-            "openai-gpt4": "gpt-4",
-            "openai_gpt-4": "gpt-4",
-            "openai-gpt-4": "gpt-4",
-            "gpt4": "gpt-4",
-            "gpt-4": "gpt-4",
-            "openai_gpt3": "gpt-3.5",
-            "openai-gpt3": "gpt-3.5",
-            "openai_gpt-3": "gpt-3.5",
-            "openai-gpt-3": "gpt-3.5",
-            "gpt3": "gpt-3.5",
-            "gpt-3.5": "gpt-3.5",
-            "gpt-3": "gpt-3.5",
-            "gemini": "gemini",
-            "google_gemini": "gemini",
-            "google-gemini": "gemini",
-        }
+        # Override default LLM from environment variable if set
+        env_default_llm = os.environ.get("LANGVIO_DEFAULT_LLM")
+        if env_default_llm and "llm" in self.config:
+            # Map common aliases to actual model names (matching factory registrations)
+            llm_alias_map = {
+                "openai": "gpt-3.5",  # Default OpenAI model
+                "gpt": "gpt-3.5",
+                "gpt-3": "gpt-3.5",  # Map gpt-3 config key to gpt-3.5 registry name
+                "gpt-3.5": "gpt-3.5",
+                "gpt-4": "gpt-4.1-mini",
+                "gemini": "gemini",
+            }
 
-        # Override default LLM from environment variable
-        env_llm = os.getenv("LANGVIO_DEFAULT_LLM")
-        if env_llm:
-            # Normalize the environment variable value (lowercase, replace spaces)
-            env_llm_normalized = env_llm.lower().replace(" ", "-")
-            
-            # Try mapping with underscores first (common in env vars)
-            llm_key = env_llm_mapping.get(env_llm_normalized)
-            
-            # If not found, try with underscores replaced by hyphens
-            if not llm_key:
-                env_llm_hyphen = env_llm_normalized.replace("_", "-")
-                llm_key = env_llm_mapping.get(env_llm_hyphen, env_llm_hyphen)
-            
-            # Check if the mapped key exists in config
-            if (
-                "llm" in self.config
-                and "models" in self.config["llm"]
-                and llm_key in self.config["llm"]["models"]
-            ):
-                self.config["llm"]["default"] = llm_key
-                logger.info(
-                    f"Overriding default LLM from environment: "
-                    f"{env_llm} -> {llm_key}"
-                )
-            else:
-                # Try the normalized value as-is (with hyphens)
-                env_llm_hyphen = env_llm_normalized.replace("_", "-")
-                if (
-                    "llm" in self.config
-                    and "models" in self.config["llm"]
-                    and env_llm_hyphen in self.config["llm"]["models"]
-                ):
-                    self.config["llm"]["default"] = env_llm_hyphen
+            # Use mapped name if available, otherwise use the env value directly
+            mapped_name = llm_alias_map.get(env_default_llm.lower(), env_default_llm)
+
+            # Check if mapped name exists in config models or is a valid registry name
+            if "models" in self.config["llm"]:
+                # First check if mapped_name exists in config
+                if mapped_name in self.config["llm"]["models"]:
+                    self.config["llm"]["default"] = mapped_name
                     logger.info(
                         f"Overriding default LLM from environment: "
-                        f"{env_llm} -> {env_llm_hyphen}"
+                        f"{env_default_llm} -> {mapped_name}"
+                    )
+                # Also check if the original env value exists (for direct model names)
+                elif env_default_llm in self.config["llm"]["models"]:
+                    self.config["llm"]["default"] = env_default_llm
+                    logger.info(
+                        f"Overriding default LLM from environment: "
+                        f"{env_default_llm} -> {env_default_llm}"
+                    )
+                # If it's a valid alias, set it anyway (registry will handle it)
+                elif mapped_name in llm_alias_map.values():
+                    self.config["llm"]["default"] = mapped_name
+                    logger.info(
+                        f"Overriding default LLM from environment: "
+                        f"{env_default_llm} -> {mapped_name} (registry will handle)"
                     )
                 else:
                     logger.warning(
-                        f"Environment variable LANGVIO_DEFAULT_LLM='{env_llm}' "
+                        f"Environment variable LANGVIO_DEFAULT_LLM='{env_default_llm}' "
                         f"does not match any configured LLM model. "
                         f"Available models: {list(self.config.get('llm', {}).get('models', {}).keys())}"
                     )
@@ -284,7 +287,7 @@ class Config:
         if env_vision:
             # Normalize the environment variable value
             env_vision_lower = env_vision.lower().replace("_", "-").replace(" ", "-")
-            
+
             # Check if the value exists in config
             if (
                 "vision" in self.config

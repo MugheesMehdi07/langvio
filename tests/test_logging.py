@@ -50,14 +50,29 @@ class TestLogging(unittest.TestCase):
             logger = logging.getLogger(__name__)
             logger.info("Test message")
             
+            # Close all handlers to release file locks (Windows issue)
+            for handler in handlers:
+                handler.close()
+            
             # Verify file was created and contains message
             self.assertTrue(os.path.exists(log_file))
             with open(log_file, 'r') as f:
                 content = f.read()
             self.assertIn("Test message", content)
         finally:
+            # Close handlers again and remove file
+            for handler in logging.root.handlers[:]:
+                handler.close()
+                logging.root.removeHandler(handler)
+            # Small delay for Windows file system
+            import time
+            time.sleep(0.1)
             if os.path.exists(log_file):
-                os.unlink(log_file)
+                try:
+                    os.unlink(log_file)
+                except PermissionError:
+                    # File might still be locked, skip deletion
+                    pass
 
     def test_setup_logging_invalid_level(self):
         """Test setting up logging with invalid level defaults to INFO"""

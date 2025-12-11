@@ -76,11 +76,12 @@ llm:
         config = Config()
         self.assertEqual(config.config["llm"]["default"], "gemini")
 
-    @patch.dict(os.environ, {"LANGVIO_DEFAULT_VISION": "yolo_world_v2_m"})
+    @patch.dict(os.environ, {"LANGVIO_DEFAULT_VISION": "yolo11n"})
     def test_environment_override_vision(self):
         """Test that environment variable overrides default vision model"""
         config = Config()
-        self.assertEqual(config.config["vision"]["default"], "yolo_world_v2_m")
+        # yolo11n is in the config, so it should work
+        self.assertEqual(config.config["vision"]["default"], "yolo11n")
 
     def test_invalid_llm_model(self):
         """Test that invalid LLM model raises ValueError"""
@@ -88,9 +89,11 @@ llm:
             self.config.get_llm_config("invalid_model")
 
     def test_invalid_vision_model(self):
-        """Test that invalid vision model raises ValueError"""
-        with self.assertRaises(ValueError):
-            self.config.get_vision_config("invalid_model")
+        """Test that invalid vision model returns empty dict (allows registry defaults)"""
+        # Changed behavior: returns empty dict instead of raising ValueError
+        # This allows registered processors to use their default kwargs
+        result = self.config.get_vision_config("invalid_model")
+        self.assertEqual(result, {})
 
     def test_save_config(self):
         """Test saving configuration to file"""

@@ -33,10 +33,13 @@ class TestProcessorManager(unittest.TestCase):
         self.manager.vision_processor = MagicMock()
         self.assertTrue(self.manager.has_processors())
 
-    @patch('langvio.core.processor_manager.registry')
-    def test_set_llm_processor(self, mock_registry):
+    @patch('langvio.registry')
+    @patch.object(Config, 'get_llm_config')
+    def test_set_llm_processor(self, mock_get_config, mock_registry):
         """Test setting LLM processor"""
+        mock_get_config.return_value = {"model_name": "test", "model_kwargs": {}}
         mock_processor = MagicMock()
+        mock_processor.initialize.return_value = None
         mock_registry.list_llm_processors.return_value = {"test_llm": MagicMock()}
         mock_registry.get_llm_processor.return_value = mock_processor
         
@@ -44,9 +47,11 @@ class TestProcessorManager(unittest.TestCase):
         self.assertEqual(self.manager.llm_processor, mock_processor)
         mock_processor.initialize.assert_called_once()
 
-    @patch('langvio.core.processor_manager.registry')
-    def test_set_vision_processor(self, mock_registry):
+    @patch('langvio.registry')
+    @patch.object(Config, 'get_vision_config')
+    def test_set_vision_processor(self, mock_get_config, mock_registry):
         """Test setting vision processor"""
+        mock_get_config.return_value = {"model_name": "test", "confidence": 0.5}
         mock_processor = MagicMock()
         mock_registry.list_vision_processors.return_value = {"test_vision": MagicMock()}
         mock_registry.get_vision_processor.return_value = mock_processor
