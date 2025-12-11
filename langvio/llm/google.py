@@ -35,7 +35,7 @@ class GeminiProcessor(BaseLLMProcessor):
         super().__init__(name, config)
         self.logger = logging.getLogger(__name__)
 
-    def _initialize_llm(self) -> None:
+    def _initialize_llm(self) -> None:  # noqa: C901
         """
         Initialize the Google Gemini model via LangChain.
         This is the only method that needs to be implemented.
@@ -71,7 +71,8 @@ class GeminiProcessor(BaseLLMProcessor):
             model_name = self.config["model_name"]
             model_kwargs = self.config["model_kwargs"].copy()
 
-            # Check for API key in environment (supports both GOOGLE_API_KEY and GEMINI_API_KEY)
+            # Check for API key in environment
+            # (supports both GOOGLE_API_KEY and GEMINI_API_KEY)
             api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
             if not api_key:
@@ -82,8 +83,9 @@ class GeminiProcessor(BaseLLMProcessor):
                     "or add it to your .env file"
                 )
                 raise ValueError(
-                    "GOOGLE_API_KEY or GEMINI_API_KEY environment variable is required. "
-                    "Please set it using 'export GOOGLE_API_KEY=your_key' "
+                    "GOOGLE_API_KEY or GEMINI_API_KEY environment variable "
+                    "is required. Please set it using "
+                    "'export GOOGLE_API_KEY=your_key' "
                     "or add it to your .env file"
                 )
 
@@ -96,7 +98,9 @@ class GeminiProcessor(BaseLLMProcessor):
             # Create the Gemini LLM
             # Try the model name as-is first, but also handle common variations
             try:
-                self.llm = ChatGoogleGenerativeAI(model=model_name, **model_kwargs)
+                self.llm: Optional[Any] = ChatGoogleGenerativeAI(
+                    model=model_name, **model_kwargs
+                )
                 self.logger.info(f"Initialized Google Gemini model: {model_name}")
             except Exception as model_error:
                 # If model not found, try alternative names
@@ -115,11 +119,12 @@ class GeminiProcessor(BaseLLMProcessor):
                     for alt_model in alternatives.get(model_name, []):
                         try:
                             self.logger.info(f"Trying alternative model: {alt_model}")
-                            self.llm = ChatGoogleGenerativeAI(
+                            self.llm = ChatGoogleGenerativeAI(  # type: ignore[assignment]
                                 model=alt_model, **model_kwargs
                             )
                             self.logger.info(
-                                f"Successfully initialized with alternative model: {alt_model}"
+                                f"Successfully initialized with "
+                                f"alternative model: {alt_model}"
                             )
                             break
                         except Exception:
@@ -135,9 +140,10 @@ class GeminiProcessor(BaseLLMProcessor):
             if "quota" in error_msg.lower() or "429" in error_msg:
                 self.logger.error(
                     f"Error initializing Google Gemini model: {e}\n"
-                    f"NOTE: If you're seeing quota errors with 'gemini-2.0-flash', "
-                    f"this model requires Google Cloud billing enabled. "
-                    f"Try using 'gemini-1.5-flash' or 'gemini-1.5-pro' for free tier access."
+                    f"NOTE: If you're seeing quota errors with "
+                    f"'gemini-2.0-flash', this model requires Google Cloud "
+                    f"billing enabled. Try using 'gemini-1.5-flash' or "
+                    f"'gemini-1.5-pro' for free tier access."
                 )
             else:
                 self.logger.error(f"Error initializing Google Gemini model: {e}")

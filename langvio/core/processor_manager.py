@@ -94,7 +94,8 @@ class ProcessorManager:
             query: Natural language query string
 
         Returns:
-            Dictionary containing parsed query parameters (target_objects, task_type, etc.)
+            Dictionary containing parsed query parameters
+            (target_objects, task_type, etc.)
 
         Raises:
             ValueError: If LLM processor is not set
@@ -153,8 +154,10 @@ class ProcessorManager:
             detections = self.vision_processor.process_video(
                 media_path, query_params, sample_rate
             )
+            frame_count = len(detections.get("frame_detections", {}))
             self.logger.info(
-                f"Video processing complete. Found {len(detections.get('frame_detections', {}))} frames with detections"
+                f"Video processing complete. "
+                f"Found {frame_count} frames with detections"
             )
             return detections
         else:

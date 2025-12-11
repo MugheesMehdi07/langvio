@@ -33,9 +33,9 @@ class BaseLLMProcessor(Processor):
         """Initialize LLM processor."""
         super().__init__(name, config)
         self.logger = logging.getLogger(__name__)
-        self.llm = None
-        self.query_chat_prompt = None
-        self.explanation_chat_prompt = None
+        self.llm: Optional[Any] = None
+        self.query_chat_prompt: Optional[Any] = None
+        self.explanation_chat_prompt: Optional[Any] = None
 
     def initialize(self) -> bool:
         """Initialize the processor with its configuration."""
@@ -60,7 +60,7 @@ class BaseLLMProcessor(Processor):
         system_message = SystemMessage(content=SYSTEM_PROMPT)
 
         # Query parsing prompt
-        self.query_chat_prompt = ChatPromptTemplate.from_messages(
+        self.query_chat_prompt = ChatPromptTemplate.from_messages(  # type: ignore[assignment]
             [
                 system_message,
                 MessagesPlaceholder(variable_name="history"),
@@ -69,7 +69,7 @@ class BaseLLMProcessor(Processor):
         )
 
         # Explanation prompt
-        self.explanation_chat_prompt = ChatPromptTemplate.from_messages(
+        self.explanation_chat_prompt = ChatPromptTemplate.from_messages(  # type: ignore[assignment]
             [
                 system_message,
                 MessagesPlaceholder(variable_name="history"),
@@ -79,8 +79,14 @@ class BaseLLMProcessor(Processor):
 
         # Create chains
         json_parser = SimpleJsonOutputParser()
-        self.query_chain = self.query_chat_prompt | self.llm | json_parser
-        self.explanation_chain = self.explanation_chat_prompt | self.llm
+        if self.query_chat_prompt and self.llm:
+            self.query_chain = self.query_chat_prompt | self.llm | json_parser  # type: ignore[has-type]
+        else:
+            self.query_chain = None  # type: ignore[assignment]
+        if self.explanation_chat_prompt and self.llm:
+            self.explanation_chain = self.explanation_chat_prompt | self.llm  # type: ignore[has-type]
+        else:
+            self.explanation_chain = None  # type: ignore[assignment]
 
     def parse_query(self, query: str) -> Dict[str, Any]:
         """Parse a natural language query into structured parameters."""
@@ -138,7 +144,7 @@ class BaseLLMProcessor(Processor):
 
         return parsed
 
-    def generate_explanation(
+    def generate_explanation(  # noqa: C901
         self,
         query: str,
         detections: Dict[str, List[Dict[str, Any]]],
@@ -185,7 +191,7 @@ class BaseLLMProcessor(Processor):
             detection_summary = format_video_summary(detections, parsed_query)
 
             # No object highlighting for videos since we don't have per-frame data
-            self._highlighted_objects = []
+            self._highlighted_objects: List[Dict[str, Any]] = []
 
         else:
             # For images, use the existing indexing and formatting approach

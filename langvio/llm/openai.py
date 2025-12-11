@@ -70,7 +70,7 @@ class OpenAIProcessor(BaseLLMProcessor):
                 )
             else:
                 # Create the OpenAI LLM
-                self.llm = ChatOpenAI(model_name=model_name, **model_kwargs)
+                self.llm = ChatOpenAI(model=model_name, **model_kwargs)
 
             self.logger.info(f"Initialized OpenAI model: {model_name}")
         except Exception as e:

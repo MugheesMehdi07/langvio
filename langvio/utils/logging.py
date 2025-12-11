@@ -47,7 +47,7 @@ def setup_logging(config: Optional[Dict[str, Any]] = None) -> None:
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         file_handler.setFormatter(file_formatter)
-        handlers.append(file_handler)
+        handlers.append(file_handler)  # type: ignore[arg-type]
 
     # Configure root logger
     logging.basicConfig(level=level, handlers=handlers, force=True)

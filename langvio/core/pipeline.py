@@ -113,7 +113,8 @@ class Pipeline:
             )
 
             # Step 2: Run detection with vision processor
-            # This performs object detection, tracking (for videos), and attribute extraction
+            # This performs object detection, tracking (for videos),
+            # and attribute extraction
             self.logger.debug("Step 2: Running vision detection")
             all_detections = self.processor_manager.process_media(
                 media_path, query_params

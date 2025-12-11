@@ -7,7 +7,7 @@ import re
 from typing import Any, Counter, Dict, List, Tuple
 
 
-def process_image_detections_and_format_summary(
+def process_image_detections_and_format_summary(  # noqa: C901
     detections: Dict[str, Any], query_params: Dict[str, Any]
 ) -> Tuple[str, Dict[str, Dict[str, Any]]]:
     """
@@ -20,7 +20,7 @@ def process_image_detections_and_format_summary(
     Returns:
         Tuple of (formatted_summary, detection_map)
     """
-    detection_map = {}
+    detection_map: Dict[str, Dict[str, Any]] = {}
 
     # Extract objects list
     objects = detections.get("objects", [])
@@ -123,7 +123,7 @@ def process_image_detections_and_format_summary(
     return "\n".join(summary_parts), detection_map
 
 
-def format_video_summary(
+def format_video_summary(  # noqa: C901
     video_results: Dict[str, Any], parsed_query: Dict[str, Any]
 ) -> str:
     """
@@ -464,10 +464,13 @@ def analyze_frame_activity(
     sorted_frames = sorted(frame_counts.items(), key=lambda x: x[1], reverse=True)
 
     for frame_num, count in sorted_frames[:10]:  # Top 10 most active frames
-        types = frame_types.get(frame_num, {})
-        types_str = ", ".join(
-            [f"{obj_type}({cnt})" for obj_type, cnt in types.most_common(3)]
-        )
+        types: Any = frame_types.get(frame_num, {})
+        if hasattr(types, "most_common"):
+            types_str = ", ".join(
+                [f"{obj_type}({cnt})" for obj_type, cnt in types.most_common(3)]
+            )
+        else:
+            types_str = str(types)
 
         activity_timeline.append(
             {"frame": frame_num, "count": count, "types": types_str}
@@ -568,7 +571,7 @@ def create_frame_summary_for_llm(
     return "\n".join(summary_parts)
 
 
-def extract_object_ids(highlight_text: str) -> List[str]:
+def extract_object_ids(highlight_text: str) -> List[str]:  # noqa: C901
     """
     Extract object IDs from highlight text, handling various formats.
 
@@ -699,7 +702,7 @@ def parse_explanation_response(
     return explanation_text, highlight_objects
 
 
-def format_enhanced_video_summary(
+def format_enhanced_video_summary(  # noqa: C901
     video_results: Dict[str, Any], parsed_query: Dict[str, Any]
 ) -> str:
     """

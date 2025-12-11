@@ -5,7 +5,7 @@ Tracker file manager for saving and loading detection and tracking data
 import json
 import os
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 logger = logging.getLogger(__name__)

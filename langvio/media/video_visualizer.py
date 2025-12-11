@@ -16,7 +16,7 @@ class VideoVisualizer:
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-    def visualize_with_highlights(
+    def visualize_with_highlights(  # noqa: C901
         self,
         video_path: str,
         output_path: str,
@@ -35,7 +35,7 @@ class VideoVisualizer:
 
         try:
             # Create a lookup for highlighted objects by frame
-            highlighted_by_frame = {}
+            highlighted_by_frame: Dict[str, List[Dict[str, Any]]] = {}
 
             for obj in highlighted_objects:
                 frame_key = obj.get("frame_key")
@@ -58,11 +58,13 @@ class VideoVisualizer:
             fps = cap.get(cv2.CAP_PROP_FPS)
 
             # Create video writer
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            fourcc = cv2.VideoWriter.fourcc(*"mp4v")  # type: ignore[attr-defined]
             writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             # For tracking visualization - keep track of past positions
-            tracks = {}  # Dictionary mapping track_id to list of past positions
+            tracks: Dict[int, List[Tuple[int, int]]] = (
+                {}
+            )  # Dictionary mapping track_id to list of past positions
 
             # Process frames
             frame_idx = 0
@@ -79,7 +81,9 @@ class VideoVisualizer:
                     all_detections = all_frame_detections[frame_key]
 
                     # Get highlighted detections for this frame
-                    highlighted_detections = highlighted_by_frame.get(frame_key, [])
+                    highlighted_detections: List[Dict[str, Any]] = (
+                        highlighted_by_frame.get(frame_key, [])
+                    )
 
                     # Create set of highlighted detections for quick lookup
                     highlighted_signatures = set()
@@ -195,7 +199,7 @@ class VideoVisualizer:
 
         return (b, g, r)  # Return BGR for OpenCV
 
-    def _draw_single_detection(
+    def _draw_single_detection(  # noqa: C901
         self,
         image: np.ndarray,
         det: Dict[str, Any],

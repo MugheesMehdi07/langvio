@@ -7,6 +7,7 @@ __version__ = "0.0.1"
 # === Imports ===
 
 # Standard library
+import os
 import sys
 
 # Third-party
@@ -27,8 +28,6 @@ from langvio.vision.yolo_world.detector import YOLOWorldProcessor
 
 # Load environment variables from .env file
 # Ensure .env is loaded before any other imports that might need env vars
-import os
-from dotenv import load_dotenv
 
 # Try to find .env file in multiple locations:
 # 1. Current working directory
@@ -154,7 +153,8 @@ try:
             )
     else:
         logger.debug(
-            "langchain_openai not available, skipping config-based LLM processor registration"
+            "langchain_openai not available, "
+            "skipping config-based LLM processor registration"
         )
 except Exception as e:
     # Log the error for debugging
@@ -167,7 +167,7 @@ except Exception as e:
 # === Pipeline Creator ===
 
 
-def create_pipeline(config_path=None, llm_name=None, vision_name=None):
+def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa: C901
     """
     Create a pipeline with optional configuration.
 
@@ -226,7 +226,8 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):
                     f"ERROR: No valid vision processor found. "
                     f"Registered processors: {list(available_vision)}\n"
                     f"Config processors: {list(config_vision_models)}\n"
-                    f"Please ensure at least one vision processor is both registered and configured."
+                    f"Please ensure at least one vision processor is "
+                    f"both registered and configured."
                 )
                 print(error_msg, file=sys.stderr)
                 sys.exit(1)

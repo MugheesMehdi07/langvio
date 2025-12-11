@@ -94,7 +94,7 @@ class ImageVisualizer:
         except Exception as e:
             self.logger.error(f"Error visualizing image: {e}")
 
-    def _draw_single_detection(
+    def _draw_single_detection(  # noqa: C901
         self,
         image: np.ndarray,
         det: Dict[str, Any],

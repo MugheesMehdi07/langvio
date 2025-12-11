@@ -2,14 +2,12 @@
 YOLO-World video visualization module with tracker file support
 """
 
-from collections import defaultdict, deque
+import json
 import logging
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2
-
 import numpy as np
-import json
 
 
 class YOLOWorldVideoVisualizer:
@@ -18,14 +16,14 @@ class YOLOWorldVideoVisualizer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = logging.getLogger(__name__)
-        self.previous_boxes = {}
+        self.previous_boxes: Dict[str, Any] = {}
 
-    def visualize_with_tracker_data(
+    def visualize_with_tracker_data(  # noqa: C901
         self,
         video_path: str,
         output_path: str,
         tracker_data: Dict[str, Any],
-        highlighted_objects: List[Dict[str, Any]] = None,
+        highlighted_objects: Optional[List[Dict[str, Any]]] = None,
         original_box_color: Union[Tuple[int, int, int], List[int]] = (0, 255, 0),
         highlight_color: Union[Tuple[int, int, int], List[int]] = (0, 0, 255),
         text_color: Union[Tuple[int, int, int], List[int]] = (255, 255, 255),
@@ -41,10 +39,6 @@ class YOLOWorldVideoVisualizer:
             # Extract data from tracker format
             detections = tracker_data.get("detections", [])
             tracks = tracker_data.get("tracks", [])
-            metadata = tracker_data.get("metadata", {})
-
-            # Create track lookup for visualization
-            track_lookup = {track["track_id"]: track for track in tracks}
 
             # Create highlighted objects lookup
             highlighted_track_ids = set()
@@ -71,7 +65,7 @@ class YOLOWorldVideoVisualizer:
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
             # Setup video writer
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            fourcc = cv2.VideoWriter.fourcc(*"mp4v")  # type: ignore[attr-defined]
             out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             # Create frame detection lookup
@@ -81,8 +75,8 @@ class YOLOWorldVideoVisualizer:
                 frame_detections[frame_id] = frame_data["objects"]
 
             # Track visualization data
-            track_trajectories = {}
-            track_colors = {}
+            track_trajectories: Dict[int, List[Tuple[int, int]]] = {}
+            track_colors: Dict[int, Tuple[int, int, int]] = {}
 
             frame_count = 0
             while cap.isOpened():
@@ -115,11 +109,17 @@ class YOLOWorldVideoVisualizer:
                         box_color = original_box_color
 
                     # Draw bounding box
+                    box_color_tuple: Tuple[int, int, int] = (
+                        tuple(box_color) if isinstance(box_color, list) else box_color  # type: ignore[assignment]
+                    )
+                    text_color_tuple: Tuple[int, int, int] = (
+                        tuple(text_color) if isinstance(text_color, list) else text_color  # type: ignore[assignment]
+                    )
                     self._draw_detection_box(
                         frame,
                         detection,
-                        box_color,
-                        text_color,
+                        box_color_tuple,
+                        text_color_tuple,
                         line_thickness,
                         show_attributes,
                         show_confidence,
@@ -263,7 +263,7 @@ class YOLOWorldVideoVisualizer:
         video_path: str,
         tracker_file_path: str,
         output_path: str,
-        highlighted_objects: List[Dict[str, Any]] = None,
+        highlighted_objects: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> None:
         """Visualize video from tracker file"""

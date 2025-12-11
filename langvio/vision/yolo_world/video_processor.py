@@ -150,7 +150,7 @@ class YOLOWorldVideoProcessor:
             self.logger.info("=== PERFORMANCE SUMMARY ===")
             self.logger.info(f"Total frames processed: {processed_frames}")
             self.logger.info(f"Total processing time: {total_time:.2f} seconds")
-            self.logger.info(f"Processing FPS: {processed_frames/total_time:.2f}")
+            self.logger.info(f"Processing FPS: {processed_frames / total_time:.2f}")
             self.logger.info(f"Tracker file saved: {tracker_file_path}")
 
             return legacy_result

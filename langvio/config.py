@@ -6,9 +6,8 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from dotenv import load_dotenv
-import os
 
 # Load environment variables from .env file if present
 # Try to find .env file in multiple locations:
@@ -46,7 +45,7 @@ class Config:
             config_path: Path to a YAML configuration file
         """
         # Initialize empty config
-        self.config = {}
+        self.config: Dict[str, Any] = {}
 
         # First load default config
         self._load_default_config()
@@ -276,10 +275,13 @@ class Config:
                         f"{env_default_llm} -> {mapped_name} (registry will handle)"
                     )
                 else:
+                    available_models = list(
+                        self.config.get("llm", {}).get("models", {}).keys()
+                    )
                     logger.warning(
-                        f"Environment variable LANGVIO_DEFAULT_LLM='{env_default_llm}' "
-                        f"does not match any configured LLM model. "
-                        f"Available models: {list(self.config.get('llm', {}).get('models', {}).keys())}"
+                        f"Environment variable LANGVIO_DEFAULT_LLM="
+                        f"'{env_default_llm}' does not match any configured "
+                        f"LLM model. Available models: {available_models}"
                     )
 
         # Override default vision model from environment variable
@@ -300,10 +302,13 @@ class Config:
                     f"{env_vision} -> {env_vision_lower}"
                 )
             else:
+                available_models = list(
+                    self.config.get("vision", {}).get("models", {}).keys()
+                )
                 logger.warning(
-                    f"Environment variable LANGVIO_DEFAULT_VISION='{env_vision}' "
-                    f"does not match any configured vision model. "
-                    f"Available models: {list(self.config.get('vision', {}).get('models', {}).keys())}"
+                    f"Environment variable LANGVIO_DEFAULT_VISION="
+                    f"'{env_vision}' does not match any configured vision "
+                    f"model. Available models: {available_models}"
                 )
 
     def save_config(self, config_path: str) -> None:

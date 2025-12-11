@@ -109,7 +109,7 @@ def calculate_relative_positions(
     return detections
 
 
-def detect_spatial_relationships(
+def detect_spatial_relationships(  # noqa: C901
     detections: List[Dict[str, Any]], distance_threshold: float = 0.2
 ) -> List[Dict[str, Any]]:
     """
