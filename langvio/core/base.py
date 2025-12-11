@@ -28,4 +28,3 @@ class Processor(ABC):
         Returns:
             True if initialization was successful
         """
-
