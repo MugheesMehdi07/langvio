@@ -2,7 +2,7 @@
 # Note: API keys should be provided through environment variables
 
 llm:
-  default: "gpt-4.1-mini"  # Can be overridden with LANGVIO_DEFAULT_LLM environment variable
+  default: "gpt-4o-mini"
   models:
     gemini:
       model_name: "gemini-2.0-flash"
@@ -16,60 +16,44 @@ llm:
         temperature: 0.0
         max_tokens: 1024
 
-    gpt-3.5:  # Alias for gpt-3 (matches factory registration)
-      model_name: "gpt-3.5-turbo"
-      model_kwargs:
-        temperature: 0.0
-        max_tokens: 1024
-
-
-    # GPT-4.1 models (newer, faster variants)
-    "gpt-4.1-mini":
+    gpt-4:
       model_name: "gpt-4.1-mini"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-
-    "gpt-4.1-mini-latest":
-      model_name: "gpt-4.1-mini-2025-04-14"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-
-    "gpt-4.1-nano":
-      model_name: "gpt-4.1-nano"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-
-    "gpt-4.1-nano-latest":
-      model_name: "gpt-4.1-nano-2025-04-14"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-
-    # GPT-4o models
-    "gpt-4o-mini":
-      model_name: "gpt-4o-mini"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-
-    "gpt-4o-mini-latest":
-      model_name: "gpt-4o-mini-2024-07-18"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-
-    # GPT-5 models (latest generation)
-    "gpt-5-nano":
-      model_name: "gpt-5-nano"
       model_kwargs:
         temperature: 0.1
         max_tokens: 2048
 
-    "gpt-5-nano-latest":
-      model_name: "gpt-5-nano-2025-08-07"
+    gpt-4o-mini:
+      model_name: "gpt-4o-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4o-mini-2024-07-18:
+      model_name: "gpt-4o-mini-2024-07-18"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-mini:
+      model_name: "gpt-4.1-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-mini-2025-04-14:
+      model_name: "gpt-4.1-mini-2025-04-14"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-nano:
+      model_name: "gpt-4.1-nano"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-nano-2025-04-14:
+      model_name: "gpt-4.1-nano-2025-04-14"
       model_kwargs:
         temperature: 0.1
         max_tokens: 2048

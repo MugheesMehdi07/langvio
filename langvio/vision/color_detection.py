@@ -291,7 +291,7 @@ class ColorDetector:
         for lower, upper, color_name in cls.COLOR_RANGES:
             if color_name == target_color:
                 mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
-                combined_mask = cv2.bitwise_or(combined_mask, mask)
+                combined_mask = cv2.bitwise_or(combined_mask, mask).astype(np.uint8)
 
         return combined_mask
 
