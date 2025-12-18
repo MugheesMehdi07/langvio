@@ -2,21 +2,22 @@ from setuptools import find_packages, setup
 
 setup(
     name="langvio",
-    version="0.3.0",
+    version="0.0.3",
     description="Connect language models to vision models for natural language visual analysis",
-    author="Your Name",
-    author_email="your.email@example.com",
-    packages=find_packages(),
+    author="Mughees Mehdi",
+    author_email="mugheesmehdi@gmail.com",
+    packages=find_packages(exclude=["tests*", "examples*", "webapp*", "docs*"]),
     install_requires=[
-        "torch>=1.7.0",
-        "numpy>=1.18.0",
-        "opencv-python>=4.5.0",
-        "pyyaml>=5.4.0",
-        "langchain>=0.1.0",  # Core LangChain dependency
-        "langchain-core>=0.1.0",  # LangChain core components
-        "ultralytics>=8.0.0",
-        "pillow>=8.0.0",
-        "python-dotenv>=0.19.0",  # For loading .env files
+        "torch>=2.9.1",
+        "ultralytics>=8.3.240",
+        "opencv-python>=4.12.0.88",
+        "numpy>=2.2.6",
+        "pillow>=12.0.0",
+        "langchain-core>=1.2.2",
+        "langchain-community>=0.4.1",
+        "pyyaml>=6.0.3",
+        "python-dotenv>=1.2.1",
+        "tqdm>=4.67.1",
     ],
     extras_require={
         # Individual providers
@@ -25,34 +26,34 @@ setup(
             "langchain-openai>=0.0.1",
         ],
         "google": [
-            "google-generativeai>=0.3.0",
-            "langchain-google-genai>=0.0.1",
+            "google-generativeai>=0.3.0,<1.0.0",
+            "langchain-google-genai>=2.0.0",
         ],
         # Grouped providers
         "all-llm": [
-            "openai>=1.0.0",
-            "langchain-openai>=0.0.1",
-            "google-generativeai>=0.3.0",
-            "langchain-google-genai>=0.0.1",
+            "langvio[openai,google]",
         ],
         # Development tools
         "dev": [
-            "pytest>=6.0.0",
-            "black>=21.5b2",
-            "isort>=5.9.1",
-            "flake8>=3.9.2",
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "black>=22.0.0",
+            "isort>=5.10.0",
+            "flake8>=5.0.0",
+            "mypy>=1.0.0",
+        ],
+        # Web app
+        "webapp": [
+            "flask>=2.0.0",
+            "werkzeug>=2.0.0",
         ],
     },
     entry_points={
         "console_scripts": [
             "langvio=langvio.cli:main",
         ],
-        "langvio.llm_processors": [
-            "openai = langvio.llm.openai:OpenAIProcessor [openai]",
-            "google = langvio.llm.google:GeminiProcessor [google]",
-        ],
     },
-    python_requires=">=3.8",
+    python_requires=">=3.8,<3.13",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -61,5 +62,14 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Multimedia :: Graphics :: 3D Modeling",
+        "Topic :: Text Processing :: Linguistic",
     ],
+    package_data={
+        "langvio": ["*.yaml", "*.yml", "*.json"],
+    },
 )
