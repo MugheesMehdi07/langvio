@@ -213,6 +213,9 @@ class VisualizationManager:
                 if "detection" in obj and "object_id" in obj["detection"]:
                     highlighted_lookup.add(obj["detection"]["object_id"])
 
+            # Store last known detections for interpolation (to prevent flickering)
+            last_known_detections: List[Dict[str, Any]] = []
+
             frame_idx = 0
             while cap.isOpened():
                 ret, frame = cap.read()
@@ -221,10 +224,20 @@ class VisualizationManager:
 
                 # Draw detections if we have them for this frame
                 frame_key = str(frame_idx)
-                if frame_key in frame_detections:
+                current_detections = frame_detections.get(frame_key, [])
+
+                # If no detections for this frame, use last known detections to prevent flickering
+                if not current_detections and last_known_detections:
+                    current_detections = last_known_detections
+                elif current_detections:
+                    # Update last known detections
+                    last_known_detections = current_detections.copy()
+
+                # Draw detections on frame
+                if current_detections:
                     frame = self._draw_detections_on_frame(
                         frame,
-                        frame_detections[frame_key],
+                        current_detections,
                         highlighted_lookup,
                         viz_config,
                     )

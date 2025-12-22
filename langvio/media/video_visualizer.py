@@ -69,6 +69,10 @@ class VideoVisualizer:
             # Process frames
             frame_idx = 0
 
+            # Store last known detections for interpolation (to prevent flickering)
+            last_known_detections: List[Dict[str, Any]] = []
+            last_known_highlighted_signatures: set = set()
+
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
@@ -76,9 +80,22 @@ class VideoVisualizer:
 
                 # Check if we have detections for this frame
                 frame_key = str(frame_idx)
-                if frame_key in all_frame_detections:
-                    # Get current detections
-                    all_detections = all_frame_detections[frame_key]
+                all_detections = all_frame_detections.get(frame_key, [])
+
+                # If no detections for this frame, use last known detections to prevent flickering
+                if not all_detections and last_known_detections:
+                    all_detections = last_known_detections.copy()
+                    highlighted_signatures = last_known_highlighted_signatures.copy()
+                elif all_detections:
+                    # Update last known detections
+                    last_known_detections = []
+                    for det in all_detections:
+                        det_copy = det.copy()
+                        if "bbox" in det_copy:
+                            det_copy["bbox"] = det_copy["bbox"].copy()
+                        if "attributes" in det_copy:
+                            det_copy["attributes"] = det_copy["attributes"].copy()
+                        last_known_detections.append(det_copy)
 
                     # Get highlighted detections for this frame
                     highlighted_detections: List[Dict[str, Any]] = (
@@ -99,6 +116,10 @@ class VideoVisualizer:
                             )
                             highlighted_signatures.add(signature)
 
+                    last_known_highlighted_signatures = highlighted_signatures.copy()
+
+                # Process detections if we have any
+                if all_detections:
                     # Update tracks for visualization
                     for det in all_detections:
                         if "track_id" in det:

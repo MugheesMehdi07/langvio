@@ -78,6 +78,15 @@ class YOLOWorldVideoVisualizer:
             track_trajectories: Dict[int, List[Tuple[int, int]]] = {}
             track_colors: Dict[int, Tuple[int, int, int]] = {}
 
+            # Store last known detections for interpolation (to prevent flickering)
+            last_known_detections: Dict[int, Dict[str, Any]] = (
+                {}
+            )  # track_id -> detection
+            last_frame_with_detections = -1
+            last_known_frame_detections: List[Dict[str, Any]] = (
+                []
+            )  # Full list of last detections
+
             frame_count = 0
             while cap.isOpened():
                 ret, frame = cap.read()
@@ -86,6 +95,38 @@ class YOLOWorldVideoVisualizer:
 
                 # Get detections for this frame
                 current_detections = frame_detections.get(frame_count, [])
+
+                # If no detections for this frame, use interpolated detections from last known frame
+                if not current_detections and last_known_frame_detections:
+                    # Use last known detections to prevent flickering
+                    # Create deep copies to avoid modifying original data
+                    current_detections = []
+                    for det in last_known_frame_detections:
+                        interpolated_det = det.copy()
+                        if "bbox" in interpolated_det:
+                            interpolated_det["bbox"] = interpolated_det["bbox"].copy()
+                        if "attributes" in interpolated_det:
+                            interpolated_det["attributes"] = interpolated_det[
+                                "attributes"
+                            ].copy()
+                        interpolated_det["_interpolated"] = True
+                        current_detections.append(interpolated_det)
+                elif current_detections:
+                    # Update last known detections
+                    last_known_detections.clear()
+                    last_known_frame_detections = []
+                    for det in current_detections:
+                        track_id = det.get("track_id")
+                        if track_id is not None:
+                            last_known_detections[track_id] = det.copy()
+                        # Store full detection for interpolation
+                        det_copy = det.copy()
+                        if "bbox" in det_copy:
+                            det_copy["bbox"] = det_copy["bbox"].copy()
+                        if "attributes" in det_copy:
+                            det_copy["attributes"] = det_copy["attributes"].copy()
+                        last_known_frame_detections.append(det_copy)
+                    last_frame_with_detections = frame_count
 
                 # Draw tracking trajectories
                 if show_tracking:
