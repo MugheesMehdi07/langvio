@@ -107,10 +107,10 @@ Each analysis returns:
 
 ## Next Steps
 
-- Check the [Configuration Guide](configuration.md) to customize models and settings
-- See [Examples](examples.md) for more advanced use cases
-- Read the [API Reference](api_reference.md) for detailed function documentation
-- Learn about [Advanced Features](advanced_features.md) like video tracking and spatial analysis
+- Check the [Configuration Guide](../guides/configuration.md) to customize models and settings
+- See [Examples](../guides/examples.md) for more advanced use cases
+- Read the [API Reference](../reference/api.md) for detailed function documentation
+- Learn about [Advanced Features](../advanced/features.md) like video tracking and spatial analysis
 
 ## Troubleshooting
 

@@ -84,3 +84,6 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .DS_Store
+
+# MkDocs build output
+site/

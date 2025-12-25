@@ -1,0 +1,7 @@
+# Documentation build requirements for Read the Docs
+mkdocs>=1.5.0
+mkdocs-material>=9.0.0
+mkdocstrings[python]>=0.24.0
+pymdown-extensions>=10.0.0
+materialx>=2.0.0
+

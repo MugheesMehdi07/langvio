@@ -165,11 +165,11 @@ print(result['explanation'])
 # Langvio Documentation
 
 ## Quick Links
-- [Getting Started](getting-started.md) - Installation and first analysis
-- [Configuration](configuration.md) - Customize models and settings
-- [Examples](examples.md) - Practical use cases and code samples
-- [API Reference](api-reference.md) - Complete function documentation
-- [Advanced Features](advanced-features.md) - Complex workflows and optimization
+- [Getting Started](getting-started/getting_started.md) - Installation and first analysis
+- [Configuration](guides/configuration.md) - Customize models and settings
+- [Examples](guides/examples.md) - Practical use cases and code samples
+- [API Reference](reference/api.md) - Complete function documentation
+- [Advanced Features](advanced/features.md) - Complex workflows and optimization
 
 ## Additional Resources
 - [GitHub Repository](https://github.com/MugheesMehdi07/langvio)
@@ -185,6 +185,6 @@ print(result['explanation'])
 
 ## License
 
-Langvio is released under the MIT License. See [License](license.md) for details.
+Langvio is released under the MIT License. See the [LICENSE file](https://github.com/MugheesMehdi07/langvio/blob/main/LICENSE) for details.
 
 ---
