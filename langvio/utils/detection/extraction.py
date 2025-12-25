@@ -96,7 +96,7 @@ def extract_detections(results) -> List[Dict[str, Any]]:
     return detections
 
 
-def add_unified_attributes(
+def add_unified_attributes(  # noqa: C901
     detections: List[Dict[str, Any]],
     width: int,
     height: int,

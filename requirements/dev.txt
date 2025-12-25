@@ -4,4 +4,14 @@ pytest-cov>=4.0.0
 black>=22.0.0
 isort>=5.10.0
 flake8>=5.0.0
-mypy>=1.0.0
+black==25.12.0
+coverage==7.13.0
+flake8==7.2.0
+mccabe==0.7.0
+mypy==1.19.0
+pycodestyle==2.13.0
+pyflakes==3.3.2
+iniconfig==2.3.0
+pathspec==0.12.1
+platformdirs==4.5.1
+pluggy==1.6.0

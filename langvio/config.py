@@ -2,13 +2,34 @@
 Configuration management for langvio
 """
 
+import logging
 import os
 from typing import Any, Dict, Optional
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env
+# Load environment variables from .env file if present
+# Try to find .env file in multiple locations:
+# 1. Current working directory
+# 2. langvio package directory
+# 3. Parent directory (project root)
+env_paths = [
+    os.path.join(os.getcwd(), ".env"),  # Current working directory
+    os.path.join(os.path.dirname(__file__), "..", ".env"),  # langvio/.env
+    os.path.join(os.path.dirname(__file__), "..", "..", ".env"),  # project root/.env
+]
+
+for env_path in env_paths:
+    if os.path.exists(env_path):
+        load_dotenv(env_path, override=True)
+        break
+else:
+    # If no .env file found, try default load_dotenv() behavior
+    load_dotenv(override=True)
+
+# Initialize logger for configuration module
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -24,7 +45,7 @@ class Config:
             config_path: Path to a YAML configuration file
         """
         # Initialize empty config
-        self.config = {}
+        self.config: Dict[str, Any] = {}
 
         # First load default config
         self._load_default_config()
@@ -32,6 +53,9 @@ class Config:
         # Then load user config if provided
         if config_path and os.path.exists(config_path):
             self.load_config(config_path)
+
+        # Finally, override with environment variables if set
+        self._apply_environment_overrides()
 
     def _load_default_config(self) -> None:
         """Load the default configuration from default_config.yaml"""
@@ -172,7 +196,13 @@ class Config:
             model_name = self.config["vision"]["default"]
 
         if model_name not in self.config["vision"]["models"]:
-            raise ValueError(f'Vision model "{model_name}" not found in configuration')
+            # If model is not in config but might be registered, return empty config
+            # The registry will use its default kwargs
+            logger.warning(
+                f'Vision model "{model_name}" not found in configuration. '
+                f"Using default registry settings if available."
+            )
+            return {}
 
         return self.config["vision"]["models"][model_name]
 
@@ -202,6 +232,84 @@ class Config:
             LangSmith configuration dictionary
         """
         return self.config.get("langsmith", {})
+
+    def _apply_environment_overrides(self) -> None:
+        """Apply environment variable overrides to configuration."""
+        # Override default LLM from environment variable if set
+        env_default_llm = os.environ.get("LANGVIO_DEFAULT_LLM")
+        if env_default_llm and "llm" in self.config:
+            # Map common aliases to actual model names (matching factory registrations)
+            llm_alias_map = {
+                "openai": "gpt-3.5",  # Default OpenAI model
+                "gpt": "gpt-3.5",
+                "gpt-3": "gpt-3.5",  # Map gpt-3 config key to gpt-3.5 registry name
+                "gpt-3.5": "gpt-3.5",
+                "gpt-4": "gpt-4.1-mini",
+                "gemini": "gemini",
+            }
+
+            # Use mapped name if available, otherwise use the env value directly
+            mapped_name = llm_alias_map.get(env_default_llm.lower(), env_default_llm)
+
+            # Check if mapped name exists in config models or is a valid registry name
+            if "models" in self.config["llm"]:
+                # First check if mapped_name exists in config
+                if mapped_name in self.config["llm"]["models"]:
+                    self.config["llm"]["default"] = mapped_name
+                    logger.info(
+                        f"Overriding default LLM from environment: "
+                        f"{env_default_llm} -> {mapped_name}"
+                    )
+                # Also check if the original env value exists (for direct model names)
+                elif env_default_llm in self.config["llm"]["models"]:
+                    self.config["llm"]["default"] = env_default_llm
+                    logger.info(
+                        f"Overriding default LLM from environment: "
+                        f"{env_default_llm} -> {env_default_llm}"
+                    )
+                # If it's a valid alias, set it anyway (registry will handle it)
+                elif mapped_name in llm_alias_map.values():
+                    self.config["llm"]["default"] = mapped_name
+                    logger.info(
+                        f"Overriding default LLM from environment: "
+                        f"{env_default_llm} -> {mapped_name} (registry will handle)"
+                    )
+                else:
+                    available_models = list(
+                        self.config.get("llm", {}).get("models", {}).keys()
+                    )
+                    logger.warning(
+                        f"Environment variable LANGVIO_DEFAULT_LLM="
+                        f"'{env_default_llm}' does not match any configured "
+                        f"LLM model. Available models: {available_models}"
+                    )
+
+        # Override default vision model from environment variable
+        env_vision = os.getenv("LANGVIO_DEFAULT_VISION")
+        if env_vision:
+            # Normalize the environment variable value
+            env_vision_lower = env_vision.lower().replace("_", "-").replace(" ", "-")
+
+            # Check if the value exists in config
+            if (
+                "vision" in self.config
+                and "models" in self.config["vision"]
+                and env_vision_lower in self.config["vision"]["models"]
+            ):
+                self.config["vision"]["default"] = env_vision_lower
+                logger.info(
+                    f"Overriding default vision model from environment: "
+                    f"{env_vision} -> {env_vision_lower}"
+                )
+            else:
+                available_models = list(
+                    self.config.get("vision", {}).get("models", {}).keys()
+                )
+                logger.warning(
+                    f"Environment variable LANGVIO_DEFAULT_VISION="
+                    f"'{env_vision}' does not match any configured vision "
+                    f"model. Available models: {available_models}"
+                )
 
     def save_config(self, config_path: str) -> None:
         """

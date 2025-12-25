@@ -201,7 +201,7 @@ class VisualizationManager:
             fps = cap.get(cv2.CAP_PROP_FPS)
 
             # Create video writer
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            fourcc = cv2.VideoWriter.fourcc(*"mp4v")  # type: ignore[attr-defined]
             writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             # Prepare overlay information
@@ -213,6 +213,9 @@ class VisualizationManager:
                 if "detection" in obj and "object_id" in obj["detection"]:
                     highlighted_lookup.add(obj["detection"]["object_id"])
 
+            # Store last known detections for interpolation (to prevent flickering)
+            last_known_detections: List[Dict[str, Any]] = []
+
             frame_idx = 0
             while cap.isOpened():
                 ret, frame = cap.read()
@@ -221,10 +224,20 @@ class VisualizationManager:
 
                 # Draw detections if we have them for this frame
                 frame_key = str(frame_idx)
-                if frame_key in frame_detections:
+                current_detections = frame_detections.get(frame_key, [])
+
+                # If no detections for this frame, use last known detections to prevent flickering
+                if not current_detections and last_known_detections:
+                    current_detections = last_known_detections
+                elif current_detections:
+                    # Update last known detections
+                    last_known_detections = current_detections.copy()
+
+                # Draw detections on frame
+                if current_detections:
                     frame = self._draw_detections_on_frame(
                         frame,
-                        frame_detections[frame_key],
+                        current_detections,
                         highlighted_lookup,
                         viz_config,
                     )
@@ -250,12 +263,18 @@ class VisualizationManager:
 
     def _prepare_overlay_information(self, summary: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare comprehensive overlay information from video summary"""
-        overlay_info = {"lines": [], "stats": {}, "insights": []}
+        overlay_info: Dict[str, Any] = {
+            "lines": [],
+            "stats": {},
+            "insights": [],
+        }
+        lines_list: List[str] = []
+        insights_list: List[str] = []
 
         # Video info
         video_info = summary.get("video_info", {})
         if video_info.get("primary_objects"):
-            overlay_info["lines"].append(
+            lines_list.append(
                 f"Objects: {', '.join(video_info['primary_objects'][:3])}"
             )
 
@@ -263,12 +282,10 @@ class VisualizationManager:
         counting = summary.get("counting_analysis", {})
         if counting:
             if "total_crossings" in counting:
-                overlay_info["lines"].append(
-                    f"Crossings: {counting['total_crossings']}"
-                )
+                lines_list.append(f"Crossings: {counting['total_crossings']}")
             if "net_flow" in counting and counting["net_flow"] != 0:
                 flow_direction = "In" if counting["net_flow"] > 0 else "Out"
-                overlay_info["lines"].append(
+                lines_list.append(
                     f"Net Flow: {abs(counting['net_flow'])} {flow_direction}"
                 )
 
@@ -276,9 +293,7 @@ class VisualizationManager:
         speed = summary.get("speed_analysis", {})
         if speed and speed.get("speed_available"):
             if "average_speed_kmh" in speed:
-                overlay_info["lines"].append(
-                    f"Avg Speed: {speed['average_speed_kmh']} km/h"
-                )
+                lines_list.append(f"Avg Speed: {speed['average_speed_kmh']} km/h")
 
         # Movement patterns
         temporal = summary.get("temporal_relationships", {})
@@ -287,13 +302,15 @@ class VisualizationManager:
             if movement:
                 moving_count = movement.get("moving_count", 0)
                 stationary_count = movement.get("stationary_count", 0)
-                overlay_info["lines"].append(
-                    f"Moving: {moving_count}, Static: {stationary_count}"
-                )
+                lines_list.append(f"Moving: {moving_count}, Static: {stationary_count}")
 
         # Primary insights
         insights = summary.get("primary_insights", [])
-        overlay_info["insights"] = insights[:3]  # Top 3 insights
+        insights_list = insights[:3]  # Top 3 insights
+
+        # Update overlay_info with collected data
+        overlay_info["lines"] = lines_list
+        overlay_info["insights"] = insights_list
 
         return overlay_info
 

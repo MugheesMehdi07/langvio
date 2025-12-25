@@ -43,6 +43,20 @@ def register_llm_processors(registry: ModelRegistry) -> None:
                 model_kwargs={"temperature": 0.2},
             )
 
+            registry.register_llm_processor(
+                "gpt-4.1-mini",
+                OpenAIProcessor,
+                model_name="gpt-4.1-mini",
+                model_kwargs={"temperature": 0.2},
+            )
+
+            registry.register_llm_processor(
+                "gpt-4o-mini",
+                OpenAIProcessor,
+                model_name="gpt-4o-mini",
+                model_kwargs={"temperature": 0.2},
+            )
+
             llm_providers_found = True
             logger.info("Registered OpenAI LLM processors")
         except Exception as e:

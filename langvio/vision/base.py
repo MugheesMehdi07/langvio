@@ -79,7 +79,7 @@ class BaseVisionProcessor(Processor):
             pass
         return None
 
-    def _enhance_detections_with_attributes(
+    def _enhance_detections_with_attributes(  # noqa: C901
         self, detections: List[Dict[str, Any]], image_path: str
     ) -> List[Dict[str, Any]]:
         """
@@ -148,9 +148,9 @@ class BaseVisionProcessor(Processor):
                     det["attributes"]["is_multicolored"] = color_info["is_multicolored"]
 
                     # Optionally add all detected colors
-                    det["attributes"]["colors"] = list(
-                        color_info["color_percentages"].keys()
-                    )
+                    color_percentages = color_info.get("color_percentages", {})
+                    if isinstance(color_percentages, dict):
+                        det["attributes"]["colors"] = list(color_percentages.keys())
 
         except Exception:
             # In case of any errors, return original detections

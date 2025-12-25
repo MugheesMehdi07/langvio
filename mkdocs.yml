@@ -84,6 +84,9 @@ nav:
     - API Reference: reference/api.md
   - Advanced:
     - Advanced Features: advanced/features.md
+  - Development:
+    - Contributing: ../CONTRIBUTING.md
+    - Testing: ../tests/README.md
 
 extra:
   social:

@@ -9,7 +9,7 @@ Creates and configures a Langvio pipeline.
 **Parameters:**
 - `config_path` (str, optional): Path to YAML configuration file
 - `llm_name` (str, optional): LLM processor name ("gpt-3.5", "gpt-4", "gemini")
-- `vision_name` (str, optional): Vision processor name ("yolo", "yoloe", "yoloe_large")
+- `vision_name` (str, optional): Vision processor name ("yolo_world_v2_s", "yolo_world_v2_m", "yolo_world_v2_l", "yolo_world_v2_x")
 
 **Returns:**
 - `Pipeline`: Configured pipeline object
@@ -22,7 +22,7 @@ pipeline = langvio.create_pipeline()
 # With specific models
 pipeline = langvio.create_pipeline(
     llm_name="gpt-4",
-    vision_name="yoloe_large"
+    vision_name="yolo_world_v2_l"
 )
 
 # With config file
@@ -78,7 +78,7 @@ Change the vision model processor.
 
 **Example:**
 ```python
-pipeline.set_vision_processor("yoloe_large")
+pipeline.set_vision_processor("yolo_world_v2_l")
 ```
 
 ## Configuration Class
@@ -201,7 +201,7 @@ langvio --query "QUERY" --media "FILE_PATH"
 langvio -q "Count cars" -m parking.jpg
 
 # With specific models
-langvio -q "Find red objects" -m scene.jpg -l gpt-4 -v yoloe_large
+langvio -q "Find red objects" -m scene.jpg -l gpt-4 -v yolo_world_v2_l
 
 # With config file
 langvio -q "Analyze traffic" -m traffic.mp4 -c config.yaml
@@ -296,7 +296,7 @@ langvio --list-models
 **Out of Memory:**
 ```python
 # Error: CUDA out of memory
-# Solution: Use smaller model (vision_name="yolo") or enable CPU mode
+# Solution: Use smaller model (vision_name="yolo_world_v2_s") or enable CPU mode
 ```
 
 ### Error Recovery
@@ -311,16 +311,16 @@ except Exception as e:
 ## Performance Guidelines
 
 ### For Speed
-- Use `vision_name="yolo"` (fastest)
+- Use `vision_name="yolo_world_v2_s"` (fastest)
 - Use `llm_name="gpt-3.5"` or `llm_name="gemini"`
 - Lower confidence thresholds
-- Process fewer video frames
+- Process fewer video frames (higher sample_rate)
 
 ### For Accuracy  
-- Use `vision_name="yoloe_large"` (most accurate)
+- Use `vision_name="yolo_world_v2_l"` (most accurate)
 - Use `llm_name="gpt-4"` (best reasoning)
 - Higher confidence thresholds
-- Process more video frames
+- Process more video frames (lower sample_rate)
 
 ### For Cost Optimization
 - Use `llm_name="gemini"` (free tier available)
@@ -338,5 +338,5 @@ GOOGLE_API_KEY=your_google_key
 CUDA_VISIBLE_DEVICES=0
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 LANGVIO_DEFAULT_LLM=gemini
-LANGVIO_DEFAULT_VISION=yoloe
+LANGVIO_DEFAULT_VISION=yolo_world_v2_m
 ```

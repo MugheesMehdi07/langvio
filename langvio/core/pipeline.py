@@ -49,8 +49,35 @@ class Pipeline:
         self.processor_manager.set_vision_processor(processor_name)
 
     def process(self, query: str, media_path: str) -> Dict[str, Any]:
-        """Process a query on media with enhanced capabilities"""
-        self.logger.info(f"Processing query: {query}")
+        """
+        Process a query on media with enhanced capabilities.
+
+        This is the main entry point for processing queries. It orchestrates:
+        1. Query parsing using LLM
+        2. Object detection using vision models
+        3. Explanation generation using LLM
+        4. Visualization creation
+
+        Args:
+            query: Natural language query (e.g., "Count all red cars")
+            media_path: Path to image or video file
+
+        Returns:
+            Dictionary containing:
+                - query: Original query
+                - media_path: Input media path
+                - media_type: "image" or "video"
+                - output_path: Path to processed/annotated media
+                - explanation: Natural language explanation
+                - detections: Raw detection results
+                - query_params: Parsed query parameters
+                - highlighted_objects: Objects highlighted in visualization
+
+        Raises:
+            ValueError: If processors are not set
+            FileNotFoundError: If media file doesn't exist
+        """
+        self.logger.info(f"Processing query: {query} on media: {media_path}")
 
         # Check if processors are set
         if not self.processor_manager.has_processors():
@@ -73,34 +100,49 @@ class Pipeline:
         # Check media type
         is_video = is_video_file(media_path)
         media_type = "video" if is_video else "image"
+        self.logger.info(f"Detected media type: {media_type}")
 
         try:
-            # 1. Parse query with LLM to get structured parameters
+            # Step 1: Parse query with LLM to get structured parameters
+            # This extracts target objects, task type, attributes, etc.
+            self.logger.debug("Step 1: Parsing query with LLM")
             query_params = self.processor_manager.parse_query(query)
-            self.logger.info(f"Parsed query params: {query_params}")
+            self.logger.info(
+                f"Parsed query params: task_type={query_params.get('task_type')}, "
+                f"target_objects={query_params.get('target_objects', [])}"
+            )
 
-            # 2. Run detection with vision processor
+            # Step 2: Run detection with vision processor
+            # This performs object detection, tracking (for videos),
+            # and attribute extraction
+            self.logger.debug("Step 2: Running vision detection")
             all_detections = self.processor_manager.process_media(
                 media_path, query_params
             )
 
-            # Log detection results to JSON
+            # Log detection results to JSON for debugging/analysis
             self._log_detections_to_json(all_detections, query, media_path)
 
-            # 3. Generate explanation using all detected objects and metrics
+            # Step 3: Generate explanation using all detected objects and metrics
+            # The LLM synthesizes the detection results into natural language
+            self.logger.debug("Step 3: Generating explanation with LLM")
             explanation = self.processor_manager.generate_explanation(
                 query, all_detections
             )
 
-            # 4. Get highlighted objects from the LLM processor
+            # Step 4: Get highlighted objects from the LLM processor
+            # These are objects that match the query criteria and should be emphasized
             highlighted_objects = self.processor_manager.get_highlighted_objects()
+            self.logger.debug(f"Found {len(highlighted_objects)} highlighted objects")
 
-            # 5. Create visualization with highlighted objects
+            # Step 5: Create visualization with highlighted objects
+            # This draws bounding boxes, labels, and highlights on the media
+            self.logger.debug("Step 5: Creating visualization")
             output_path = self.visualization_manager.create_visualization(
                 media_path, all_detections, highlighted_objects, query_params
             )
 
-            # Prepare result
+            # Prepare result dictionary
             result = {
                 "query": query,
                 "media_path": media_path,
@@ -112,11 +154,11 @@ class Pipeline:
                 "highlighted_objects": highlighted_objects,
             }
 
-            self.logger.info("Processed query successfully")
+            self.logger.info(f"Processing complete. Output saved to: {output_path}")
             return result
 
         except Exception as e:
-            self.logger.error(f"Error processing query: {e}")
+            self.logger.error(f"Error processing query: {e}", exc_info=True)
             raise
 
     def _log_detections_to_json(

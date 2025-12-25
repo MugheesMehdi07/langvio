@@ -6,12 +6,8 @@ import logging
 from typing import Any, Dict
 
 import torch
-import cv2
 
-from langvio.prompts.constants import (
-    DEFAULT_CONFIDENCE_THRESHOLD,
-    DEFAULT_VIDEO_SAMPLE_RATE,
-)
+from langvio.prompts.constants import DEFAULT_CONFIDENCE_THRESHOLD
 from langvio.vision.base import BaseVisionProcessor
 from langvio.vision.yolo_world.video_processor import YOLOWorldVideoProcessor
 from langvio.vision.yolo_world.image_processor import YOLOWorldImageProcessor
@@ -64,21 +60,22 @@ class YOLOWorldProcessor(BaseVisionProcessor):
             try:
                 from ultralytics import YOLOWorld
 
-                self.model = YOLOWorld(self.model_name)
+                self.model = YOLOWorld(self.model_name)  # type: ignore[assignment]
             except ImportError:
                 self.logger.error(
-                    "YOLO-World not available. Install with: pip install ultralytics>=8.0.0"
+                    "YOLO-World not available. "
+                    "Install with: pip install ultralytics>=8.0.0"
                 )
                 return False
 
             # Move to GPU and enable half precision if available
-            if torch.cuda.is_available():
-                self.model.to("cuda")
+            if torch.cuda.is_available() and self.model:
+                self.model.to("cuda")  # type: ignore[attr-defined]
                 try:
-                    self.model.half()  # Enable FP16 for 2x speed boost
-                    self.logger.info("✅ Half precision (FP16) enabled")
+                    self.model.half()  # type: ignore[attr-defined]  # Enable FP16
+                    self.logger.info("[OK] Half precision (FP16) enabled")
                 except Exception:
-                    self.logger.info("⚠️ Half precision not available, using FP32")
+                    self.logger.info("[WARN] Half precision not available, using FP32")
 
             # Warm up the model
             self._warmup_model()
@@ -103,7 +100,7 @@ class YOLOWorldProcessor(BaseVisionProcessor):
             with torch.no_grad():
                 for _ in range(3):  # 3 warmup runs
                     self.model(dummy_input, verbose=False)
-            self.logger.info("✅ Model warmed up", self.model_name)
+            self.logger.info(f"[OK] Model warmed up: {self.model_name}")
         except Exception as e:
             self.logger.warning(f"Warmup failed: {e}")
 

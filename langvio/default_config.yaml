@@ -2,7 +2,7 @@
 # Note: API keys should be provided through environment variables
 
 llm:
-  default: "gemini"
+  default: "gpt-4o-mini"
   models:
     gemini:
       model_name: "gemini-2.0-flash"
@@ -17,45 +17,85 @@ llm:
         max_tokens: 1024
 
     gpt-4:
-      model_name: "gpt-4-turbo"
+      model_name: "gpt-4.1-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4o-mini:
+      model_name: "gpt-4o-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4o-mini-2024-07-18:
+      model_name: "gpt-4o-mini-2024-07-18"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-mini:
+      model_name: "gpt-4.1-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-mini-2025-04-14:
+      model_name: "gpt-4.1-mini-2025-04-14"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-nano:
+      model_name: "gpt-4.1-nano"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+
+    gpt-4.1-nano-2025-04-14:
+      model_name: "gpt-4.1-nano-2025-04-14"
       model_kwargs:
         temperature: 0.1
         max_tokens: 2048
 
 vision:
-  default: "yolo_world_v2_m"  # YOLO-World medium model
+  default: "yolo11n"  # Changed to fastest nano model
   models:
-    yolo_world_v2_s:  # YOLO-World small - fastest
-      type: "yolo_world"
-      model_name: "yolov8s-worldv2"
-      confidence: 0.5
-      track_thresh: 0.5
-      track_buffer: 30
-      match_thresh: 0.8
+    yolo11n:  # Fastest YOLO11 model
+      type: "yolo"
+      model_path: "yolo11n.pt"
+      confidence: 0.8
+      model_type: "yolo"
       
-    yolo_world_v2_m:  # YOLO-World medium - balanced (default)
-      type: "yolo_world"
-      model_name: "yolov8m-worldv2"
-      confidence: 0.45
-      track_thresh: 0.3
-      track_buffer: 70
-      match_thresh: 0.6
+    yoloe:
+      type: "yolo"
+      model_path: "yoloe-11s-seg-pf.pt"  # YOLOe nano - fastest
+      confidence: 0.8
+      model_type: "yoloe"
 
-    yolo_world_v2_l:  # YOLO-World large - most accurate
-      type: "yolo_world"
-      model_name: "yolov8l-worldv2"
-      confidence: 0.5
-      track_thresh: 0.5
-      track_buffer: 30
-      match_thresh: 0.8
+    yoloe_medium:
+        type: "yolo"
+        model_path: "yoloe-11m-seg-pf.pt"  # YOLOe medium - balanced
+        confidence: 0.5
+        model_type: "yoloe"
 
-    yolo_world_v2x:  # YOLO-World extra large - highest accuracy
-      type: "yolo_world"
-      model_name: "yolov8x-worldv2"
+    yoloe_large:
+        type: "yolo"
+        model_path: "yoloe-11l-seg-pf.pt"  # YOLOe extra large - most accurate
+        confidence: 0.5
+        model_type: "yoloe"
+    yolo:
+      type: "yolo"
+      model_path: "yolo11n.pt"  # Default: smallest/fastest model
+      confidence: 0.7
+    yolo_medium:
+      type: "yolo"
+      model_path: "yolo11m.pt"  # Medium model - balanced
       confidence: 0.5
-      track_thresh: 0.5
-      track_buffer: 30
-      match_thresh: 0.8
+    yolo_large:
+      type: "yolo"
+      model_path: "yolo11x.pt"  # Large model - most accurate
+      confidence: 0.5
 
 media:
   output_dir: "./output"

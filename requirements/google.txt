@@ -1,3 +1,8 @@
 -r base.txt
 google-generativeai>=0.3.0
 langchain-google-genai>=0.0.1
+google-generativeai==0.8.5
+langchain-google-genai==2.0.10
+google-ai-generativelanguage==0.6.15
+googleapis-common-protos==1.70.0
+proto-plus==1.26.1

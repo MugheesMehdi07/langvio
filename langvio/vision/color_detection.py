@@ -2,7 +2,7 @@
 Advanced color detection utility class
 """
 
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import cv2
 import numpy as np
@@ -87,7 +87,7 @@ class ColorDetector:
     ]
 
     @classmethod
-    def detect_color(
+    def detect_color(  # noqa: C901
         cls, image_region: np.ndarray, return_all: bool = False, threshold: float = 0.15
     ) -> Union[str, Dict[str, float]]:
         """
@@ -119,7 +119,7 @@ class ColorDetector:
             return "unknown" if not return_all else {}
 
         # Create a mask for each color range and count pixels
-        color_counts = {}
+        color_counts: Dict[str, float] = {}
         nonzero_pixels = np.count_nonzero(
             hsv_region[:, :, 0] >= 0
         )  # Total valid pixels
@@ -183,10 +183,12 @@ class ColorDetector:
         color_percentages = cls.detect_color(image_region, return_all=True)
 
         # Return the top colors
-        return [color for color, _ in list(color_percentages.items())[:max_colors]]
+        if isinstance(color_percentages, dict):
+            return [color for color, _ in list(color_percentages.items())[:max_colors]]
+        return []
 
     @classmethod
-    def get_color_profile(cls, image_region: np.ndarray) -> Dict[str, any]:
+    def get_color_profile(cls, image_region: np.ndarray) -> Dict[str, Any]:
         """
         Get a comprehensive color profile of the image region.
 
@@ -218,21 +220,24 @@ class ColorDetector:
 
         # Get dominant color
         dominant_color = "unknown"
-        if color_percentages:
+        if isinstance(color_percentages, dict) and color_percentages:
             dominant_color = max(color_percentages.items(), key=lambda x: x[1])[0]
 
         # Determine if multicolored (more than one color with significant percentage)
-        significant_colors = [c for c, p in color_percentages.items() if p >= 0.2]
-        is_multicolored = len(significant_colors) > 1
+        if isinstance(color_percentages, dict):
+            significant_colors = [c for c, p in color_percentages.items() if p >= 0.2]
+            is_multicolored = len(significant_colors) > 1
+        else:
+            is_multicolored = False
 
         # Compute average brightness and saturation
         try:
             hsv_region = cv2.cvtColor(image_region, cv2.COLOR_BGR2HSV)
-            avg_saturation = np.mean(hsv_region[:, :, 1])
-            avg_brightness = np.mean(hsv_region[:, :, 2])
+            avg_saturation = float(np.mean(hsv_region[:, :, 1]))  # type: ignore[arg-type]
+            avg_brightness = float(np.mean(hsv_region[:, :, 2]))  # type: ignore[arg-type]
         except (cv2.error, IndexError):
-            avg_saturation = 0
-            avg_brightness = 0
+            avg_saturation = 0.0
+            avg_brightness = 0.0
 
         return {
             "dominant_color": dominant_color,
@@ -255,7 +260,10 @@ class ColorDetector:
         """
         # Convert single BGR color to a 1x1 image
         pixel = np.array([[[bgr_color[0], bgr_color[1], bgr_color[2]]]], dtype=np.uint8)
-        return cls.detect_color(pixel)
+        result = cls.detect_color(pixel)
+        if isinstance(result, str):
+            return result
+        return "unknown"
 
     @classmethod
     def find_objects_by_color(cls, image: np.ndarray, target_color: str) -> np.ndarray:
@@ -283,7 +291,7 @@ class ColorDetector:
         for lower, upper, color_name in cls.COLOR_RANGES:
             if color_name == target_color:
                 mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
-                combined_mask = cv2.bitwise_or(combined_mask, mask)
+                combined_mask = cv2.bitwise_or(combined_mask, mask).astype(np.uint8)
 
         return combined_mask
 
@@ -321,51 +329,53 @@ class ColorDetector:
 
         # Add color bars
         y_offset = 60
-        for i, (color, percentage) in enumerate(profile["color_percentages"].items()):
-            # Draw color name and percentage
-            text = f"{color}: {percentage * 100:.1f}%"
-            cv2.putText(
-                vis_image,
-                text,
-                (10, y_offset),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 0),
-                1,
-            )
+        color_percentages = profile.get("color_percentages", {})
+        if isinstance(color_percentages, dict):
+            for i, (color, percentage) in enumerate(color_percentages.items()):
+                # Draw color name and percentage
+                text = f"{color}: {percentage * 100:.1f}%"
+                cv2.putText(
+                    vis_image,
+                    text,
+                    (10, y_offset),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 0, 0),
+                    1,
+                )
 
-            # Draw color bar
-            bar_width = int(percentage * 150)
+                # Draw color bar
+                bar_width = int(percentage * 150)
 
-            # Try to use actual color for visualization
-            try:
-                # Find a matching color range
-                for lower, upper, c_name in cls.COLOR_RANGES:
-                    if c_name == color:
-                        # Use the middle value of the range for visualization
-                        h = (lower[0] + upper[0]) // 2
-                        s = (lower[1] + upper[1]) // 2
-                        v = (lower[2] + upper[2]) // 2
+                # Try to use actual color for visualization
+                try:
+                    # Find a matching color range
+                    for lower, upper, c_name in cls.COLOR_RANGES:
+                        if c_name == color:
+                            # Use the middle value of the range for visualization
+                            h = (lower[0] + upper[0]) // 2
+                            s = (lower[1] + upper[1]) // 2
+                            v = (lower[2] + upper[2]) // 2
 
-                        # Convert HSV to BGR for display
-                        hsv_color = np.uint8([[[h, s, v]]])
-                        bgr_color = cv2.cvtColor(hsv_color, cv2.COLOR_HSV2BGR)[0][0]
-                        break
-                else:
-                    # Default color if no match found
+                            # Convert HSV to BGR for display
+                            hsv_color = np.array([[[h, s, v]]], dtype=np.uint8)
+                            bgr_color = cv2.cvtColor(hsv_color, cv2.COLOR_HSV2BGR)[0][0]
+                            break
+                    else:
+                        # Default color if no match found
+                        bgr_color = (0, 0, 0)
+                except (KeyError, ValueError, TypeError):
+                    # Fallback color
                     bgr_color = (0, 0, 0)
-            except (KeyError, ValueError, TypeError):
-                # Fallback color
-                bgr_color = (0, 0, 0)
 
-            cv2.rectangle(
-                vis_image,
-                (150, y_offset - 15),
-                (150 + bar_width, y_offset),
-                bgr_color.tolist(),
-                -1,
-            )
+                cv2.rectangle(
+                    vis_image,
+                    (150, y_offset - 15),
+                    (150 + bar_width, y_offset),
+                    bgr_color.tolist() if hasattr(bgr_color, "tolist") else bgr_color,
+                    -1,
+                )
 
-            y_offset += 30
+                y_offset += 30
 
         return vis_image

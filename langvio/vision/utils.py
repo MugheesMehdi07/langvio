@@ -5,7 +5,9 @@ Enhanced utilities for vision processing - imports from reorganized modules
 from collections import defaultdict, deque
 
 # Keep the complex temporal analysis classes here as they're vision-specific
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, DefaultDict
+
+# Type aliases for clarity
 
 # Import core detection utilities
 # Import spatial utilities
@@ -16,7 +18,7 @@ class TemporalObjectTracker:
 
     def __init__(self, max_history: int = 30):
         self.max_history = max_history
-        self.object_histories = defaultdict(
+        self.object_histories: DefaultDict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "positions": deque(maxlen=max_history),
                 "timestamps": deque(maxlen=max_history),
@@ -43,21 +45,21 @@ class TemporalObjectTracker:
 
             # Update position history
             center = det.get("center", (0, 0))
-            history["positions"].append(center)
-            history["timestamps"].append(timestamp)
+            history["positions"].append(center)  # type: ignore[union-attr]
+            history["timestamps"].append(timestamp)  # type: ignore[union-attr]
 
             # Update attributes (store latest)
-            history["attributes"].append(det.get("attributes", {}))
+            history["attributes"].append(det.get("attributes", {}))  # type: ignore[union-attr]
 
             # Update tracking metadata
-            if history["first_seen"] is None:
+            if history.get("first_seen") is None:
                 history["first_seen"] = timestamp
             history["last_seen"] = timestamp
-            history["total_appearances"] += 1
+            history["total_appearances"] = history.get("total_appearances", 0) + 1  # type: ignore[operator]
 
     def get_movement_patterns(self) -> Dict[str, Any]:
         """Analyze movement patterns across all tracked objects."""
-        patterns = {
+        patterns: Dict[str, Any] = {
             "stationary_objects": [],
             "moving_objects": [],
             "fast_moving_objects": [],
@@ -66,23 +68,23 @@ class TemporalObjectTracker:
         }
 
         for obj_key, history in self.object_histories.items():
-            if len(history["positions"]) < 3:
+            if len(history["positions"]) < 3:  # type: ignore[arg-type]
                 patterns["stationary_objects"].append(obj_key)
                 continue
 
             # Calculate movement metrics
-            positions = list(history["positions"])
+            positions = list(history["positions"])  # type: ignore[arg-type]
             movement_distance = self._calculate_total_movement(positions)
             avg_speed = self._calculate_average_speed(
-                positions, list(history["timestamps"])
+                positions, list(history["timestamps"])  # type: ignore[arg-type]
             )
             primary_direction = self._get_primary_direction(positions)
 
             # Categorize object movement
             if movement_distance < 50:  # Threshold for stationary
-                patterns["stationary_objects"].append(obj_key)
+                patterns["stationary_objects"].append(obj_key)  # type: ignore[attr-defined]
             elif avg_speed > 100:  # Threshold for fast movement
-                patterns["fast_moving_objects"].append(
+                patterns["fast_moving_objects"].append(  # type: ignore[attr-defined]
                     {
                         "object": obj_key,
                         "avg_speed": avg_speed,
@@ -90,7 +92,7 @@ class TemporalObjectTracker:
                     }
                 )
             else:
-                patterns["moving_objects"].append(
+                patterns["moving_objects"].append(  # type: ignore[attr-defined]
                     {
                         "object": obj_key,
                         "avg_speed": avg_speed,
@@ -100,7 +102,7 @@ class TemporalObjectTracker:
 
             # Track directional movements
             if primary_direction:
-                patterns["directional_movements"][primary_direction].append(obj_key)
+                patterns["directional_movements"][primary_direction].append(obj_key)  # type: ignore[index]
 
         return patterns
 
@@ -124,15 +126,17 @@ class TemporalObjectTracker:
                             "relationship": "co_occurring",
                             "overlap_ratio": overlap,
                             "duration": min(
-                                obj1_hist["last_seen"] - obj1_hist["first_seen"],
-                                obj2_hist["last_seen"] - obj2_hist["first_seen"],
+                                float(obj1_hist.get("last_seen", 0.0))
+                                - float(obj1_hist.get("first_seen", 0.0)),
+                                float(obj2_hist.get("last_seen", 0.0))
+                                - float(obj2_hist.get("first_seen", 0.0)),
                             ),
                         }
                     )
 
         return relationships
 
-    def _calculate_total_movement(self, positions: List[Tuple]) -> float:
+    def _calculate_total_movement(self, positions: List[Tuple[int, int]]) -> float:
         """Calculate total movement distance."""
         if len(positions) < 2:
             return 0
@@ -146,7 +150,7 @@ class TemporalObjectTracker:
         return total_distance
 
     def _calculate_average_speed(
-        self, positions: List[Tuple], timestamps: List[float]
+        self, positions: List[Tuple[int, int]], timestamps: List[float]
     ) -> float:
         """Calculate average speed in pixels per second."""
         if len(positions) < 2 or len(timestamps) < 2:
@@ -157,7 +161,7 @@ class TemporalObjectTracker:
 
         return total_distance / total_time if total_time > 0 else 0
 
-    def _get_primary_direction(self, positions: List[Tuple]) -> Optional[str]:
+    def _get_primary_direction(self, positions: List[Tuple[int, int]]) -> Optional[str]:
         """Get primary movement direction."""
         if len(positions) < 2:
             return None
@@ -176,29 +180,34 @@ class TemporalObjectTracker:
         else:
             return "down" if dy > 0 else "up"
 
-    def _calculate_temporal_overlap(self, hist1: Dict, hist2: Dict) -> float:
+    def _calculate_temporal_overlap(
+        self, hist1: Dict[str, Any], hist2: Dict[str, Any]
+    ) -> float:
         """Calculate temporal overlap ratio between two objects."""
+        first_seen1 = hist1.get("first_seen")
+        last_seen1 = hist1.get("last_seen")
+        first_seen2 = hist2.get("first_seen")
+        last_seen2 = hist2.get("last_seen")
+
         if not (
-            hist1["first_seen"]
-            and hist1["last_seen"]
-            and hist2["first_seen"]
-            and hist2["last_seen"]
+            first_seen1 is not None
+            and last_seen1 is not None
+            and first_seen2 is not None
+            and last_seen2 is not None
         ):
-            return 0
+            return 0.0
 
         # Calculate overlap period
-        overlap_start = max(hist1["first_seen"], hist2["first_seen"])
-        overlap_end = min(hist1["last_seen"], hist2["last_seen"])
+        overlap_start = max(first_seen1, first_seen2)
+        overlap_end = min(last_seen1, last_seen2)
 
         if overlap_start >= overlap_end:
-            return 0
+            return 0.0
 
         overlap_duration = overlap_end - overlap_start
-        total_duration = max(hist1["last_seen"], hist2["last_seen"]) - min(
-            hist1["first_seen"], hist2["first_seen"]
-        )
+        total_duration = max(last_seen1, last_seen2) - min(first_seen1, first_seen2)
 
-        return overlap_duration / total_duration if total_duration > 0 else 0
+        return overlap_duration / total_duration if total_duration > 0 else 0.0
 
 
 class SpatialRelationshipAnalyzer:
@@ -247,8 +256,8 @@ class SpatialRelationshipAnalyzer:
             return {}
 
         # Aggregate relationships across all frames
-        relation_counts = defaultdict(int)
-        object_pair_counts = defaultdict(int)
+        relation_counts: DefaultDict[str, int] = defaultdict(int)
+        object_pair_counts: DefaultDict[str, int] = defaultdict(int)
 
         for frame_rels in self.relationship_history.values():
             for rel in frame_rels:

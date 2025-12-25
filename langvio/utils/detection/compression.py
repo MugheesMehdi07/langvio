@@ -18,7 +18,7 @@ def compress_detections_for_output(
     Returns:
         Compressed detection list with essential fields only
     """
-    compressed = []
+    compressed: List[Dict[str, Any]] = []
 
     for det in detections:
         # Keep only essentials for GPT

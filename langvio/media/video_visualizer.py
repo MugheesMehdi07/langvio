@@ -16,7 +16,7 @@ class VideoVisualizer:
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-    def visualize_with_highlights(
+    def visualize_with_highlights(  # noqa: C901
         self,
         video_path: str,
         output_path: str,
@@ -35,7 +35,7 @@ class VideoVisualizer:
 
         try:
             # Create a lookup for highlighted objects by frame
-            highlighted_by_frame = {}
+            highlighted_by_frame: Dict[str, List[Dict[str, Any]]] = {}
 
             for obj in highlighted_objects:
                 frame_key = obj.get("frame_key")
@@ -58,14 +58,20 @@ class VideoVisualizer:
             fps = cap.get(cv2.CAP_PROP_FPS)
 
             # Create video writer
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            fourcc = cv2.VideoWriter.fourcc(*"mp4v")  # type: ignore[attr-defined]
             writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             # For tracking visualization - keep track of past positions
-            tracks = {}  # Dictionary mapping track_id to list of past positions
+            tracks: Dict[int, List[Tuple[int, int]]] = (
+                {}
+            )  # Dictionary mapping track_id to list of past positions
 
             # Process frames
             frame_idx = 0
+
+            # Store last known detections for interpolation (to prevent flickering)
+            last_known_detections: List[Dict[str, Any]] = []
+            last_known_highlighted_signatures: set = set()
 
             while cap.isOpened():
                 ret, frame = cap.read()
@@ -74,12 +80,27 @@ class VideoVisualizer:
 
                 # Check if we have detections for this frame
                 frame_key = str(frame_idx)
-                if frame_key in all_frame_detections:
-                    # Get current detections
-                    all_detections = all_frame_detections[frame_key]
+                all_detections = all_frame_detections.get(frame_key, [])
+
+                # If no detections for this frame, use last known detections to prevent flickering
+                if not all_detections and last_known_detections:
+                    all_detections = last_known_detections.copy()
+                    highlighted_signatures = last_known_highlighted_signatures.copy()
+                elif all_detections:
+                    # Update last known detections
+                    last_known_detections = []
+                    for det in all_detections:
+                        det_copy = det.copy()
+                        if "bbox" in det_copy:
+                            det_copy["bbox"] = det_copy["bbox"].copy()
+                        if "attributes" in det_copy:
+                            det_copy["attributes"] = det_copy["attributes"].copy()
+                        last_known_detections.append(det_copy)
 
                     # Get highlighted detections for this frame
-                    highlighted_detections = highlighted_by_frame.get(frame_key, [])
+                    highlighted_detections: List[Dict[str, Any]] = (
+                        highlighted_by_frame.get(frame_key, [])
+                    )
 
                     # Create set of highlighted detections for quick lookup
                     highlighted_signatures = set()
@@ -95,6 +116,10 @@ class VideoVisualizer:
                             )
                             highlighted_signatures.add(signature)
 
+                    last_known_highlighted_signatures = highlighted_signatures.copy()
+
+                # Process detections if we have any
+                if all_detections:
                     # Update tracks for visualization
                     for det in all_detections:
                         if "track_id" in det:
@@ -195,7 +220,7 @@ class VideoVisualizer:
 
         return (b, g, r)  # Return BGR for OpenCV
 
-    def _draw_single_detection(
+    def _draw_single_detection(  # noqa: C901
         self,
         image: np.ndarray,
         det: Dict[str, Any],

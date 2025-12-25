@@ -108,12 +108,12 @@ class ModelRegistry:
     def register_from_entrypoints(self) -> None:
         """Load and register processors from entry points"""
         try:
-            import importlib.metadata as metadata
+            import importlib.metadata as importlib_metadata
         except ImportError:
             # Python < 3.8
-            import importlib_metadata as metadata
+            import importlib_metadata  # type: ignore
 
-        for ep in metadata.entry_points(group="langvio.llm_processors"):
+        for ep in importlib_metadata.entry_points(group="langvio.llm_processors"):
             try:
                 processor_class = ep.load()
                 self.register_llm_processor(ep.name, processor_class)
@@ -121,7 +121,7 @@ class ModelRegistry:
                 # Log error and continue
                 print(f"Error loading LLM processor {ep.name}: {e}")
 
-        for ep in metadata.entry_points(group="langvio.vision_processors"):
+        for ep in importlib_metadata.entry_points(group="langvio.vision_processors"):
             try:
                 processor_class = ep.load()
                 self.register_vision_processor(ep.name, processor_class)

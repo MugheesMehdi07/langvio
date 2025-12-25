@@ -140,7 +140,7 @@ class YOLOWorldImageProcessor:
         query_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Create summary for image analysis"""
-        object_counts = {}
+        object_counts: Dict[str, int] = {}
         for det in detections:
             label = det["label"]
             object_counts[label] = object_counts.get(label, 0) + 1

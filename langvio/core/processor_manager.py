@@ -87,46 +87,119 @@ class ProcessorManager:
             sys.exit(1)
 
     def parse_query(self, query: str) -> Dict[str, Any]:
-        """Parse a natural language query into structured parameters"""
-        if not self.llm_processor:
-            raise ValueError("LLM processor not set")
+        """
+        Parse a natural language query into structured parameters.
 
-        return self.llm_processor.parse_query(query)
+        Args:
+            query: Natural language query string
+
+        Returns:
+            Dictionary containing parsed query parameters
+            (target_objects, task_type, etc.)
+
+        Raises:
+            ValueError: If LLM processor is not set
+        """
+        if not self.llm_processor:
+            error_msg = "LLM processor not set. Call set_llm_processor() first."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        self.logger.debug(f"Parsing query: {query[:100]}...")
+        parsed_params = self.llm_processor.parse_query(query)
+        self.logger.debug(
+            f"Parsed query parameters: {parsed_params.get('task_type', 'unknown')} task"
+        )
+        return parsed_params
 
     def process_media(
         self, media_path: str, query_params: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Process media file with vision processor"""
+        """
+        Process media file with vision processor.
+
+        Args:
+            media_path: Path to the media file (image or video)
+            query_params: Parsed query parameters from LLM
+
+        Returns:
+            Dictionary containing detection results
+
+        Raises:
+            ValueError: If vision processor is not set
+        """
         if not self.vision_processor:
-            raise ValueError("Vision processor not set")
+            error_msg = "Vision processor not set. Call set_vision_processor() first."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # Check media type
         is_video = is_video_file(media_path)
+        self.logger.info(f"Processing {'video' if is_video else 'image'}: {media_path}")
 
         if is_video:
             # For video processing, check if we need to adjust sample rate based on task
-            sample_rate = 5  # Default
-            if query_params.get("task_type") in ["tracking", "activity"]:
+            sample_rate = 5  # Default sample rate (process every 5th frame)
+            task_type = query_params.get("task_type", "")
+            if task_type in ["tracking", "activity"]:
                 # Use a more frequent sampling for tracking and activity detection
+                # to capture more temporal information
                 sample_rate = 2
+                self.logger.debug(
+                    f"Using higher sample rate ({sample_rate}) for {task_type} task"
+                )
 
             # Get all detections with YOLO-World + ByteTracker integration
-            return self.vision_processor.process_video(
+            self.logger.info(f"Processing video with sample_rate={sample_rate}")
+            detections = self.vision_processor.process_video(
                 media_path, query_params, sample_rate
             )
+            frame_count = len(detections.get("frame_detections", {}))
+            self.logger.info(
+                f"Video processing complete. "
+                f"Found {frame_count} frames with detections"
+            )
+            return detections
         else:
             # Get all detections with YOLO-World for image
-            return self.vision_processor.process_image(media_path, query_params)
+            self.logger.info("Processing image")
+            detections = self.vision_processor.process_image(media_path, query_params)
+            num_objects = len(detections.get("objects", []))
+            self.logger.info(f"Image processing complete. Found {num_objects} objects")
+            return detections
 
     def generate_explanation(self, query: str, detections: Dict[str, Any]) -> str:
-        """Generate explanation using LLM processor"""
+        """
+        Generate explanation using LLM processor.
+
+        Args:
+            query: Original user query
+            detections: Detection results from vision processor
+
+        Returns:
+            Natural language explanation of the detection results
+
+        Raises:
+            ValueError: If LLM processor is not set
+        """
         if not self.llm_processor:
-            raise ValueError("LLM processor not set")
+            error_msg = "LLM processor not set. Call set_llm_processor() first."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # Determine if this is a video based on detection structure
         is_video = "frame_detections" in detections
+        self.logger.info(
+            f"Generating explanation for {'video' if is_video else 'image'}"
+        )
 
-        return self.llm_processor.generate_explanation(query, detections, is_video)
+        explanation = self.llm_processor.generate_explanation(
+            query, detections, is_video
+        )
+        self.logger.debug(
+            f"Generated explanation length: {len(explanation)} characters"
+        )
+        return explanation
 
     def get_highlighted_objects(self):
         """Get highlighted objects from LLM processor"""

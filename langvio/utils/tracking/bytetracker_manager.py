@@ -3,8 +3,8 @@ ByteTracker integration for multi-object tracking
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
-import cv2
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ class ByteTrackerManager:
 
         # Tracking state
         self.track_id_count = 0
-        self.tracks = {}  # track_id -> track_data
-        self.lost_tracks = {}  # track_id -> track_data
+        self.tracks: Dict[int, Dict[str, Any]] = {}  # track_id -> track_data
+        self.lost_tracks: Dict[int, Dict[str, Any]] = {}  # track_id -> track_data
         self.frame_count = 0
 
         self.logger = logging.getLogger(__name__)
@@ -80,13 +80,13 @@ class ByteTrackerManager:
             det_confidences.append(det.get("confidence", 0))
             det_classes.append(det.get("class_id", 0))
 
-        det_boxes = np.array(det_boxes)
-        det_confidences = np.array(det_confidences)
-        det_classes = np.array(det_classes)
+        det_boxes_arr = np.array(det_boxes)
+        det_confidences_arr = np.array(det_confidences)
+        det_classes_arr = np.array(det_classes)
 
         # Perform tracking
         tracked_detections = self._associate_detections_to_tracks(
-            det_boxes, det_confidences, det_classes, valid_detections
+            det_boxes_arr, det_confidences_arr, det_classes_arr, valid_detections
         )
 
         # Update lost tracks
@@ -130,10 +130,10 @@ class ByteTrackerManager:
         if not track_boxes:
             return self._create_new_tracks(original_detections)
 
-        track_boxes = np.array(track_boxes)
+        track_boxes_arr = np.array(track_boxes)
 
         # Calculate IoU matrix
-        iou_matrix = self._calculate_iou_matrix(det_boxes, track_boxes)
+        iou_matrix = self._calculate_iou_matrix(det_boxes, track_boxes_arr)
 
         # Match detections to tracks
         matched_det_indices, matched_track_indices = self._match_detections_to_tracks(
