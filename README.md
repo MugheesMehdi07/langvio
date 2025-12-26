@@ -59,13 +59,7 @@ print(f"Annotated image saved to: {result['output_path']}")
 
 <div align="center">
 
-### 🎥 Watch Script Demo Video
-
-<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
-  <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/yTYJz2Pr7TE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
-
-[📺 Watch on YouTube](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
+[![Watch Script Demo](https://img.youtube.com/vi/yTYJz2Pr7TE/maxresdefault.jpg)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
 
 </div>
 
@@ -81,13 +75,7 @@ langvio --query "Find red objects" --media scene.jpg --config custom.yaml
 
 <div align="center">
 
-### 🎥 Watch CLI Demo Video
-
-<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
-  <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/f-JnZoHM4to" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
-
-[📺 Watch on YouTube](https://www.youtube.com/watch?v=f-JnZoHM4to)
+[![Watch CLI Demo](https://img.youtube.com/vi/f-JnZoHM4to/maxresdefault.jpg)](https://www.youtube.com/watch?v=f-JnZoHM4to)
 
 </div>
 
