@@ -31,7 +31,6 @@ Learn how to use Langvio's command-line interface to analyze images and videos d
 
 [![Watch CLI Demo](https://img.youtube.com/vi/f-JnZoHM4to/maxresdefault.jpg)](https://www.youtube.com/watch?v=f-JnZoHM4to)
 
-*Click the image above to watch the CLI demo on YouTube*
 
 ---
 
@@ -43,7 +42,7 @@ Discover how to integrate Langvio into your Python applications with comprehensi
 
 [![Watch Script Demo](https://img.youtube.com/vi/yTYJz2Pr7TE/maxresdefault.jpg)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
 
-*Click the image above to watch the Script demo on YouTube*
+
 
 </div>
 
