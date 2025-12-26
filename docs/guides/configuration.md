@@ -22,15 +22,25 @@ pipeline = langvio.create_pipeline(config_path="my_config.yaml")
 ### Available Models
 
 **Vision Models:**
-- `yolo_world_v2_s` - YOLO-World small (fastest, good accuracy)
-- `yolo_world_v2_m` - YOLO-World medium (balanced speed/accuracy, default)
-- `yolo_world_v2_l` - YOLO-World large (better accuracy)
-- `yolo_world_v2_x` - YOLO-World extra-large (best accuracy, slower)
+- `yolo_world_v2_s` - YOLO-World v2 small (fastest, good accuracy)
+- `yolo_world_v2_m` - YOLO-World v2 medium (balanced speed/accuracy, recommended default)
+- `yolo_world_v2_l` - YOLO-World v2 large (better accuracy)
+- `yolo_world_v2x` - YOLO-World v2 extra-large (best accuracy, slower)
+- `yolo11n` - YOLO11 nano (alias to YOLO-World v2 small, fastest)
+- `yolo` - YOLO11 alias (alias to YOLO-World v2 small)
+- `yoloe` - YOLOe alias (alias to YOLO-World v2 small)
+- `yoloe_medium` - YOLOe medium (alias to YOLO-World v2 medium)
+- `yoloe_large` - YOLOe large (alias to YOLO-World v2 large)
+
+**Note:** All vision models use YOLO-World v2 under the hood. The aliases (yolo11n, yoloe, etc.) map to YOLO-World v2 models for flexible object detection without predefined classes.
 
 **Language Models:**
-- `gpt-3.5` - OpenAI GPT-3.5 Turbo (fast, cost-effective)
-- `gpt-4` - OpenAI GPT-4 Turbo (best reasoning)
-- `gemini` - Google Gemini Pro (free tier available, default)
+- `gpt-4o-mini` - OpenAI GPT-4o Mini (default, fast, cost-effective)
+- `gpt-3` or `gpt-3.5` - OpenAI GPT-3.5 Turbo (fast, cost-effective)
+- `gpt-4` - OpenAI GPT-4.1 Mini (best reasoning)
+- `gpt-4.1-mini` - OpenAI GPT-4.1 Mini (latest model)
+- `gpt-4.1-nano` - OpenAI GPT-4.1 Nano (smallest, fastest)
+- `gemini` - Google Gemini 2.0 Flash (free tier available)
 
 ## Configuration File
 
@@ -39,7 +49,7 @@ Create a `config.yaml` file:
 ```yaml
 # Language Model Settings
 llm:
-  default: "gemini"
+  default: "gpt-4o-mini"  # Default model
   models:
     gemini:
       model_name: "gemini-2.0-flash"
@@ -47,15 +57,21 @@ llm:
         temperature: 0.2
         max_tokens: 1024
     
+    gpt-4o-mini:
+      model_name: "gpt-4o-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
+    
     gpt-4:
-      model_name: "gpt-4-turbo"
+      model_name: "gpt-4.1-mini"
       model_kwargs:
         temperature: 0.1
         max_tokens: 2048
 
 # Vision Model Settings
 vision:
-  default: "yolo_world_v2_m"
+  default: "yolo11n"  # Fastest default, or use "yolo_world_v2_m" for balanced
   models:
     yolo_world_v2_m:
       type: "yolo_world"
@@ -72,6 +88,12 @@ vision:
       track_thresh: 0.5
       track_buffer: 30
       match_thresh: 0.8
+    
+    yolo11n:  # Alias for YOLO-World v2 small
+      type: "yolo"
+      model_path: "yolo11n.pt"
+      confidence: 0.8
+      model_type: "yolo"
 
 # Output Settings
 media:
@@ -95,8 +117,8 @@ logging:
 ### For Speed (Real-time Applications)
 ```python
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-3.5",           # Faster LLM
-    vision_name="yolo_world_v2_s"  # Fastest vision model
+    llm_name="gpt-4o-mini",       # Faster LLM
+    vision_name="yolo11n"          # Fastest vision model (or yolo_world_v2_s)
 )
 ```
 
@@ -112,7 +134,7 @@ pipeline = langvio.create_pipeline(
 ```python
 pipeline = langvio.create_pipeline(
     llm_name="gemini",            # Google's free tier
-    vision_name="yolo_world_v2_m" # Good balance
+    vision_name="yolo11n"          # Fastest model (or yolo_world_v2_m for balance)
 )
 ```
 

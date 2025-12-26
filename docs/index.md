@@ -2,7 +2,7 @@
 
 Welcome to **Langvio** - a powerful Python framework that connects large language models (LLMs) with computer vision models to enable natural language visual analysis.
 
-**Version:** 0.0.1 | **Python:** 3.8+ | **License:** MIT
+**Version:** 0.0.5 | **Python:** 3.8+ | **License:** MIT
 
 ## What is Langvio?
 

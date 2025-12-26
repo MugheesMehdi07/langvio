@@ -9,7 +9,7 @@ Creates and configures a Langvio pipeline.
 **Parameters:**
 - `config_path` (str, optional): Path to YAML configuration file
 - `llm_name` (str, optional): LLM processor name ("gpt-3.5", "gpt-4", "gemini")
-- `vision_name` (str, optional): Vision processor name ("yolo_world_v2_s", "yolo_world_v2_m", "yolo_world_v2_l", "yolo_world_v2_x")
+- `vision_name` (str, optional): Vision processor name ("yolo_world_v2_s", "yolo_world_v2_m", "yolo_world_v2_l", "yolo_world_v2x", "yolo11n", "yolo", "yoloe", "yoloe_medium", "yoloe_large")
 
 **Returns:**
 - `Pipeline`: Configured pipeline object
@@ -311,8 +311,8 @@ except Exception as e:
 ## Performance Guidelines
 
 ### For Speed
-- Use `vision_name="yolo_world_v2_s"` (fastest)
-- Use `llm_name="gpt-3.5"` or `llm_name="gemini"`
+- Use `vision_name="yolo11n"` or `vision_name="yolo_world_v2_s"` (fastest)
+- Use `llm_name="gpt-4o-mini"` or `llm_name="gpt-3.5"` or `llm_name="gemini"`
 - Lower confidence thresholds
 - Process fewer video frames (higher sample_rate)
 
@@ -337,6 +337,6 @@ GOOGLE_API_KEY=your_google_key
 # Optional
 CUDA_VISIBLE_DEVICES=0
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-LANGVIO_DEFAULT_LLM=gemini
-LANGVIO_DEFAULT_VISION=yolo_world_v2_m
+LANGVIO_DEFAULT_LLM=gpt-4o-mini
+LANGVIO_DEFAULT_VISION=yolo11n
 ```

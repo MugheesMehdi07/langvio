@@ -17,6 +17,34 @@
 
 ---
 
+## 🎥 Video Demos
+
+Watch Langvio in action with these step-by-step demonstrations:
+
+<div align="center">
+
+### 📺 CLI Demo: Command-Line Interface Tutorial
+
+**Langvio CLI Demo - Natural Language Computer Vision from Terminal**
+
+Learn how to use Langvio's command-line interface to analyze images and videos directly from your terminal.
+
+[![Watch CLI Demo](https://img.shields.io/badge/YouTube-Watch%20CLI%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=f-JnZoHM4to)
+
+---
+
+### 💻 Script Demo: Python API Tutorial
+
+**Langvio Script Demo - Building Vision Analysis Applications with Python**
+
+Discover how to integrate Langvio into your Python applications with comprehensive examples.
+
+[![Watch Script Demo](https://img.shields.io/badge/YouTube-Watch%20Script%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
+
+</div>
+
+---
+
 ## ✨ What is Langvio?
 
 Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by state-of-the-art vision models and language models.
@@ -229,14 +257,22 @@ graph TD
 ### Vision Models
 - **YOLO-World v2** (small, medium, large, extra-large)
   - `yolo_world_v2_s` - Small (fastest)
-  - `yolo_world_v2_m` - Medium (balanced, default)
+  - `yolo_world_v2_m` - Medium (balanced, recommended)
   - `yolo_world_v2_l` - Large (most accurate)
-  - `yolo_world_v2_x` - Extra-large (highest accuracy)
+  - `yolo_world_v2x` - Extra-large (highest accuracy)
+- **Aliases** (all map to YOLO-World v2):
+  - `yolo11n`, `yolo`, `yoloe` - Fastest (map to small)
+  - `yoloe_medium` - Balanced (maps to medium)
+  - `yoloe_large` - Accurate (maps to large)
 - Automatic model selection based on performance needs
 
 ### Language Models
-- **OpenAI**: GPT-3.5 Turbo (`gpt-3.5`), GPT-4 Turbo (`gpt-4`)
-- **Google**: Gemini Pro (`gemini`)
+- **OpenAI**: 
+  - `gpt-4o-mini` - Default (fast, cost-effective)
+  - `gpt-3` or `gpt-3.5` - GPT-3.5 Turbo (fast)
+  - `gpt-4` - GPT-4.1 Mini (best reasoning)
+  - `gpt-4.1-mini`, `gpt-4.1-nano` - Latest models
+- **Google**: `gemini` - Gemini 2.0 Flash (free tier available)
 - Extensible architecture for adding more providers
 
 ## 🛠️ Configuration
@@ -246,15 +282,20 @@ graph TD
 ```yaml
 # config.yaml
 llm:
-  default: "gemini"
+  default: "gpt-4o-mini"  # Default model
   models:
+    gpt-4o-mini:
+      model_name: "gpt-4o-mini"
+      model_kwargs:
+        temperature: 0.1
+        max_tokens: 2048
     gemini:
       model_name: "gemini-2.0-flash"
       model_kwargs:
         temperature: 0.2
 
 vision:
-  default: "yolo_world_v2_m"
+  default: "yolo11n"  # Fastest default, or "yolo_world_v2_m" for balanced
   models:
     yolo_world_v2_m:
       type: "yolo_world"
@@ -355,7 +396,7 @@ pipeline = langvio.create_pipeline()  # Uses best available model
 # Manual model selection for specific needs
 pipeline = langvio.create_pipeline(
     vision_name="yolo_world_v2_l",  # High accuracy
-    llm_name="gpt-4"                # Advanced reasoning
+    llm_name="gpt-4"                # Advanced reasoning (or gpt-4o-mini for speed)
 )
 ```
 

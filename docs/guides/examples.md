@@ -349,14 +349,14 @@ if __name__ == '__main__':
 ```python
 # For real-time applications
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-3.5",      # Faster LLM
-    vision_name="yolo"       # Fastest vision model
+    llm_name="gpt-4o-mini",  # Faster LLM
+    vision_name="yolo11n"    # Fastest vision model
 )
 
 # Optimize for accuracy
 pipeline = langvio.create_pipeline(
     llm_name="gpt-4",
-    vision_name="yoloe_large"
+    vision_name="yolo_world_v2_l"  # Large model for best accuracy
 )
 ```
 
@@ -366,7 +366,7 @@ import gc
 import torch
 
 def process_large_dataset(file_list, query):
-    pipeline = langvio.create_pipeline(vision_name="yolo")  # Lighter model
+    pipeline = langvio.create_pipeline(vision_name="yolo11n")  # Lighter model
     
     results = []
     for i, filepath in enumerate(file_list):
