@@ -17,37 +17,6 @@
 
 ---
 
-## 🎥 Video Demos
-
-Watch Langvio in action with these step-by-step demonstrations:
-
-<div align="center">
-
-### 📺 CLI Demo: Command-Line Interface Tutorial
-
-**Langvio CLI Demo - Natural Language Computer Vision from Terminal**
-
-Learn how to use Langvio's command-line interface to analyze images and videos directly from your terminal.
-
-[![Watch CLI Demo](https://img.youtube.com/vi/f-JnZoHM4to/maxresdefault.jpg)](https://www.youtube.com/watch?v=f-JnZoHM4to)
-
-
----
-
-### 💻 Script Demo: Python API Tutorial
-
-**Langvio Script Demo - Building Vision Analysis Applications with Python**
-
-Discover how to integrate Langvio into your Python applications with comprehensive examples.
-
-[![Watch Script Demo](https://img.youtube.com/vi/yTYJz2Pr7TE/maxresdefault.jpg)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
-
-
-
-</div>
-
----
-
 ## ✨ What is Langvio?
 
 Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by state-of-the-art vision models and language models.
@@ -65,6 +34,8 @@ Langvio bridges the gap between **human language** and **computer vision**. Ask 
 - **🔧 Extensible**: Easy to add new models and capabilities
 
 ## 🎬 See It In Action
+
+### Python API Example
 
 ```python
 import langvio
@@ -85,6 +56,28 @@ print(result['explanation'])
 # View the annotated result
 print(f"Annotated image saved to: {result['output_path']}")
 ```
+
+<div align="center">
+
+[![Watch Script Demo](https://img.youtube.com/vi/yTYJz2Pr7TE/maxresdefault.jpg)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
+
+</div>
+
+### Command-Line Interface Example
+
+```bash
+# Basic usage
+langvio --query "Count the cars" --media image.jpg
+
+# With custom configuration
+langvio --query "Find red objects" --media scene.jpg --config custom.yaml
+```
+
+<div align="center">
+
+[![Watch CLI Demo](https://img.youtube.com/vi/f-JnZoHM4to/maxresdefault.jpg)](https://www.youtube.com/watch?v=f-JnZoHM4to)
+
+</div>
 
 ## 🔧 Installation
 
