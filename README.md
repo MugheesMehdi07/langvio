@@ -29,7 +29,9 @@ Watch Langvio in action with these step-by-step demonstrations:
 
 Learn how to use Langvio's command-line interface to analyze images and videos directly from your terminal.
 
-[![Watch CLI Demo](https://img.shields.io/badge/YouTube-Watch%20CLI%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=f-JnZoHM4to)
+[![Watch CLI Demo](https://img.youtube.com/vi/f-JnZoHM4to/maxresdefault.jpg)](https://www.youtube.com/watch?v=f-JnZoHM4to)
+
+*Click the image above to watch the CLI demo on YouTube*
 
 ---
 
@@ -39,7 +41,9 @@ Learn how to use Langvio's command-line interface to analyze images and videos d
 
 Discover how to integrate Langvio into your Python applications with comprehensive examples.
 
-[![Watch Script Demo](https://img.shields.io/badge/YouTube-Watch%20Script%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
+[![Watch Script Demo](https://img.youtube.com/vi/yTYJz2Pr7TE/maxresdefault.jpg)](https://www.youtube.com/watch?v=yTYJz2Pr7TE)
+
+*Click the image above to watch the Script demo on YouTube*
 
 </div>
 

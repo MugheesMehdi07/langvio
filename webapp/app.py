@@ -8,6 +8,7 @@ import os
 import time
 import uuid
 import subprocess
+from pathlib import Path
 from flask import (
     Flask,
     flash,
@@ -64,6 +65,19 @@ def create_langvio_pipeline():
         for model_key in config.config["vision"]["models"]:
             if model_key.startswith(("yolo_world", "yoloe", "yolo")):
                 config.config["vision"]["models"][model_key]["confidence"] = 0.5
+                # Improve tracking stability to reduce flickering
+                # Increase track_buffer to handle occlusions better
+                if "track_buffer" in config.config["vision"]["models"][model_key]:
+                    config.config["vision"]["models"][model_key]["track_buffer"] = max(
+                        config.config["vision"]["models"][model_key].get("track_buffer", 70),
+                        90  # Increase buffer to reduce track ID switches
+                    )
+                # Slightly increase match_thresh for more stable matching
+                if "match_thresh" in config.config["vision"]["models"][model_key]:
+                    config.config["vision"]["models"][model_key]["match_thresh"] = max(
+                        config.config["vision"]["models"][model_key].get("match_thresh", 0.6),
+                        0.7  # Higher threshold = more conservative matching = less flickering
+                    )
 
 
         # Set visualization options
@@ -75,17 +89,43 @@ def create_langvio_pipeline():
             "show_attributes": True,  # Show attributes
             "show_confidence": False,  # Hide confidence to reduce clutter
         }
-
-        # Try to use the best available model
+        
+        openai_models = ["gpt-4", "gpt-3.5", "gpt-4o-mini", "gpt-4.1-mini"]
+        selected_llm = None
+        
+        for llm_name in openai_models:
+            try:
+                # Try to create pipeline with this LLM
+                test_pipeline = create_pipeline(llm_name=llm_name)
+                # If successful, use this model
+                selected_llm = llm_name
+                logger.info(f"Selected OpenAI model: {llm_name}")
+                break
+            except Exception as e:
+                error_msg = str(e)
+                # If rate limited, try next model
+                if "429" in error_msg or "rate_limit" in error_msg.lower() or "rate limit" in error_msg.lower():
+                    logger.warning(f"Model {llm_name} is rate-limited, trying next model...")
+                    continue
+                # For other errors, also try next model
+                logger.warning(f"Model {llm_name} failed: {error_msg[:100]}, trying next model...")
+                continue
+        
+        if not selected_llm:
+            # If all models failed, use the first one anyway (will show error later)
+            selected_llm = openai_models[0]
+            logger.warning(f"All OpenAI models failed, defaulting to {selected_llm}")
+        
         for model in ["yolo_world_v2_m", "yolo_world_v2_s", "yolo_world_v2_l", "yolo_world_v2_x","yoloe_large", "yoloe", "yolo"]:
             if model in config.config["vision"]["models"]:
-                pipeline = create_pipeline(vision_name=model)
-                logger.info(f"Created pipeline with model: {model}")
+                # Use OpenAI for LLM
+                pipeline = create_pipeline(vision_name=model, llm_name=selected_llm)
+                logger.info(f"Created pipeline with vision model: {model} and LLM: {selected_llm}")
                 return pipeline
 
-        # Fallback to default
-        pipeline = create_pipeline()
-        logger.info("Created pipeline with default model")
+        # Fallback to default (with OpenAI LLM)
+        pipeline = create_pipeline(llm_name=selected_llm)
+        logger.info(f"Created pipeline with default vision model and LLM: {selected_llm}")
         return pipeline
     except Exception as e:
         logger.error(f"Error creating pipeline: {e}")
@@ -96,6 +136,9 @@ def create_langvio_pipeline():
 pipeline = create_langvio_pipeline()
 
 def ensure_browser_safe_video(input_path):
+    if imageio_ffmpeg is None:
+        print("[Warning] imageio_ffmpeg not available, skipping video re-encoding")
+        return input_path
     output_path = input_path.replace(".mp4", "_browser.mp4")
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     cmd = [ffmpeg_path, "-i", input_path, "-vcodec", "libx264", "-acodec", "aac", output_path]
@@ -242,27 +285,50 @@ def get_object_counts_from_detections(detections, is_video_file):
     object_counts = {}
 
     if is_video_file:
-        # For videos, look in summary -> object_analysis or frame_detections
-        summary = detections.get("summary", {})
-        object_analysis = summary.get("object_analysis", {})
-
-        if object_analysis.get("object_characteristics"):
-            # Use object characteristics data
-            for obj_type, chars in object_analysis["object_characteristics"].items():
-                object_counts[obj_type] = chars.get("total_instances", 0)
-        else:
-            # Fallback: count from frame detections
-            frame_detections = detections.get("frame_detections", {})
-            from collections import Counter
-
-            all_objects = Counter()
-
-            for frame_key, frame_dets in frame_detections.items():
-                for det in frame_dets:
-                    if "label" in det:
-                        all_objects[det["label"]] += 1
-
-            object_counts = dict(all_objects.most_common())
+        frame_detections = detections.get("frame_detections", {})
+        from collections import defaultdict, Counter
+        frame_count_distributions = defaultdict(list)
+        
+        for frame_key, frame_dets in frame_detections.items():
+            # Count unique track_ids per label in this frame
+            frame_counts = defaultdict(set)
+            for det in frame_dets:
+                if "label" not in det:
+                    continue
+                label = det["label"]
+                track_id = det.get("track_id") or det.get("object_id") or f"{frame_key}_{det.get('id', 'unknown')}"
+                frame_counts[label].add(track_id)
+            
+            # Store the count for this frame for each label
+            for label, track_set in frame_counts.items():
+                frame_count_distributions[label].append(len(track_set))
+        
+        # Use a robust counting method for each object type
+        object_counts = {}
+        for label, counts in frame_count_distributions.items():
+            if not counts:
+                continue
+            
+            count_freq = Counter(counts)
+            max_count = max(counts)
+            mode_count = count_freq.most_common(1)[0][0]
+            
+            
+            if count_freq[max_count] >= 2:
+                # Max count appears multiple times - use it (reliable)
+                object_counts[label] = max_count
+            elif max_count > mode_count * 1.5:
+                # Max is significantly higher than mode - likely accurate despite appearing once
+                # This handles cases where objects appear together but tracking is inconsistent
+                object_counts[label] = max_count
+            else:
+                # Find the highest count that appears in at least 2 frames
+                consistent_count = mode_count  # Default to mode
+                for count in sorted(count_freq.keys(), reverse=True):
+                    if count_freq[count] >= 2:
+                        consistent_count = count
+                        break
+                object_counts[label] = consistent_count
     else:
         # For images, look in summary -> object_distribution -> by_type
         summary = detections.get("summary", {})
