@@ -467,11 +467,44 @@ isort langvio/
 - **📦 [PyPI Package](https://pypi.org/project/langvio/)**
 - **📖 [Documentation](https://langvio.readthedocs.io/)**
 - **🐛 [Issue Tracker](https://github.com/MugheesMehdi07/langvio/issues)**
-- **💬 [Discussions](https://github.com/MugheesMehdi07/langvio/discussions)**
 
-## 📄 License
+## 📄 MIT License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+Copyright (c) 2025 LangVio
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+### Usage and License Notices
+
+This project utilizes certain datasets, models, APIs, and algorithms that are subject to their respective original licenses and terms of use. Users must comply with all terms and conditions of these original licenses, including but not limited to:
+
+- **OpenAI Terms of Use**: This project uses OpenAI's GPT models (GPT-3.5, GPT-4, GPT-4o-mini, etc.) via the OpenAI API. Users must comply with [OpenAI's Terms of Use](https://openai.com/policies/terms-of-use) and [Usage Policies](https://openai.com/policies/usage-policies) when using OpenAI models through this software.
+
+- **Google Gemini Terms of Service**: This project uses Google's Gemini models (Gemini Pro, Gemini 2.0 Flash) via the Google AI API. Users must comply with [Google's Terms of Service](https://ai.google.dev/terms) and [Gemini API Terms](https://ai.google.dev/terms) when using Gemini models through this software.
+
+- **YOLO World License**: This project uses YOLO-World v2 models developed by Ultralytics. Users must comply with the [Ultralytics YOLO License](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) (AGPL-3.0) and any additional terms specified by Ultralytics for YOLO-World models.
+
+- **ByteTracker License**: This project uses the ByteTracker algorithm for multi-object tracking. Users must comply with the original ByteTracker license terms as specified in the [ByteTracker repository](https://github.com/ifzhang/ByteTrack).
+
+This project does not impose any additional constraints beyond those stipulated in the original licenses. Furthermore, users are reminded to ensure that their use of the datasets, models, APIs, and algorithms is in compliance with all applicable laws and regulations.
+
+For the full license text, see the [LICENSE](LICENSE) file.
 
 ## 🙏 Acknowledgments
 
