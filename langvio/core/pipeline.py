@@ -127,7 +127,7 @@ class Pipeline:
             # The LLM synthesizes the detection results into natural language
             self.logger.debug("Step 3: Generating explanation with LLM")
             explanation = self.processor_manager.generate_explanation(
-                query, all_detections
+                query, all_detections, media_path=media_path
             )
 
             # Step 4: Get highlighted objects from the LLM processor

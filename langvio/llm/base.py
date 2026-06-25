@@ -149,8 +149,19 @@ class BaseLLMProcessor(Processor):
         query: str,
         detections: Dict[str, List[Dict[str, Any]]],
         is_video: bool = False,
+        media_path: Optional[str] = None,
     ) -> str:
-        """Generate an explanation based on detection results."""
+        """Generate an explanation based on detection results.
+
+        Args:
+            query: Original user query
+            detections: Detection results from the vision processor
+            is_video: Whether the media is a video
+            media_path: Optional path to the source media. Most processors
+                explain from ``detections`` and ignore this, but
+                video-native backends (e.g. TwelveLabs Pegasus) can use it to
+                analyse the footage directly.
+        """
         self.logger.info("Generating explanation for detection results")
 
         # Ensure processor is initialized

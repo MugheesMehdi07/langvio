@@ -88,6 +88,23 @@ def register_llm_processors(registry: ModelRegistry) -> None:
         except Exception as e:
             logger.warning(f"Failed to register Google Gemini processors: {e}")
 
+    # Register TwelveLabs Pegasus processor if available
+    if is_package_available("twelvelabs"):
+        try:
+            from langvio.llm.twelvelabs import PegasusProcessor
+
+            registry.register_llm_processor(
+                "pegasus",
+                PegasusProcessor,
+                model_name="pegasus1.5",
+                model_kwargs={"max_tokens": 2048},
+            )
+
+            llm_providers_found = True
+            logger.info("Registered TwelveLabs Pegasus LLM processor")
+        except Exception as e:
+            logger.warning(f"Failed to register TwelveLabs Pegasus processor: {e}")
+
     # If no LLM providers are available, log an error but DO NOT register a fallback
     if not llm_providers_found:
         error_msg = (

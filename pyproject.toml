@@ -52,8 +52,12 @@ google = [
     "langchain-google-genai>=2.0.0",
 ]
 
+twelvelabs = [
+    "twelvelabs>=1.2.8",
+]
+
 all-llm = [
-    "langvio[openai,google]",
+    "langvio[openai,google,twelvelabs]",
 ]
 webapp = [
     "flask>=2.0.0",
