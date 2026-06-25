@@ -58,6 +58,13 @@ llm:
         temperature: 0.1
         max_tokens: 2048
 
+    # TwelveLabs Pegasus: video-native understanding (server-side, no local CV).
+    # Opt-in; requires pip install langvio[twelvelabs] and TWELVELABS_API_KEY.
+    pegasus:
+      model_name: "pegasus1.5"
+      model_kwargs:
+        max_tokens: 2048
+
 vision:
   default: "yolo11n"  # Changed to fastest nano model
   models:

@@ -29,9 +29,12 @@ setup(
             "google-generativeai>=0.3.0,<1.0.0",
             "langchain-google-genai>=2.0.0",
         ],
+        "twelvelabs": [
+            "twelvelabs>=1.2.8",
+        ],
         # Grouped providers
         "all-llm": [
-            "langvio[openai,google]",
+            "langvio[openai,google,twelvelabs]",
         ],
         # Development tools
         "dev": [

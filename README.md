@@ -98,6 +98,9 @@ pip install langvio[openai]
 # For Google Gemini models
 pip install langvio[google]
 
+# For TwelveLabs Pegasus (video-native understanding, no local CV)
+pip install langvio[twelvelabs]
+
 # For all supported providers
 pip install langvio[all-llm]
 
@@ -122,6 +125,9 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 # For Google Gemini  
 GOOGLE_API_KEY=your_google_api_key_here
+
+# For TwelveLabs Pegasus (free key at https://twelvelabs.io)
+TWELVELABS_API_KEY=your_twelvelabs_api_key_here
 ```
 
 3. **Langvio automatically loads** these environment variables!
@@ -167,6 +173,22 @@ cd webapp
 python app.py
 
 # Visit http://localhost:5000 in your browser
+```
+
+### Video Understanding with TwelveLabs Pegasus
+
+```python
+# Pegasus analyzes the video server-side -- no local CV pipeline needed.
+pipeline = langvio.create_pipeline(llm_name="pegasus")
+result = pipeline.process(
+    query="What happens in this video and who appears in it?",
+    media_path="clip.mp4",
+)
+print(result["explanation"])
+
+# Or call Pegasus directly on a public URL or TwelveLabs asset id:
+processor = langvio.registry.get_llm_processor("pegasus")
+print(processor.analyze_video("https://example.com/clip.mp4", "Summarize this video."))
 ```
 
 ## 🎯 Examples
@@ -269,6 +291,11 @@ graph TD
   - `gpt-4` - GPT-4.1 Mini (best reasoning)
   - `gpt-4.1-mini`, `gpt-4.1-nano` - Latest models
 - **Google**: `gemini` - Gemini 2.0 Flash (free tier available)
+- **TwelveLabs**: `pegasus` - Pegasus 1.5 video-understanding model. Analyzes
+  the video itself **server-side** and answers in natural language, with no
+  local computer-vision pipeline required. Best for video queries; opt-in via
+  `pip install langvio[twelvelabs]` and a `TWELVELABS_API_KEY`. Grab a free key
+  at [twelvelabs.io](https://twelvelabs.io) (generous free tier).
 - Extensible architecture for adding more providers
 
 ## 🛠️ Configuration

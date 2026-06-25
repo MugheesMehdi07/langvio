@@ -4,7 +4,7 @@ Manages LLM and vision processor lifecycle and coordination
 
 import logging
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from langvio.utils.file_utils import is_video_file
 
@@ -168,13 +168,17 @@ class ProcessorManager:
             self.logger.info(f"Image processing complete. Found {num_objects} objects")
             return detections
 
-    def generate_explanation(self, query: str, detections: Dict[str, Any]) -> str:
+    def generate_explanation(
+        self, query: str, detections: Dict[str, Any], media_path: Optional[str] = None
+    ) -> str:
         """
         Generate explanation using LLM processor.
 
         Args:
             query: Original user query
             detections: Detection results from vision processor
+            media_path: Optional path to the source media, passed through to
+                video-native LLM backends (e.g. TwelveLabs Pegasus)
 
         Returns:
             Natural language explanation of the detection results
@@ -194,7 +198,7 @@ class ProcessorManager:
         )
 
         explanation = self.llm_processor.generate_explanation(
-            query, detections, is_video
+            query, detections, is_video, media_path=media_path
         )
         self.logger.debug(
             f"Generated explanation length: {len(explanation)} characters"
