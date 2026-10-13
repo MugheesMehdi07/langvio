@@ -349,13 +349,13 @@ if __name__ == '__main__':
 ```python
 # For real-time applications
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-4o-mini",  # Faster LLM
+    llm_name="qwen",         # Smallest, fastest VLM (3B)
     vision_name="yolo11n"    # Fastest vision model
 )
 
 # Optimize for accuracy
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-4",
+    llm_name="qwen-7b",
     vision_name="yolo_world_v2_l"  # Large model for best accuracy
 )
 ```

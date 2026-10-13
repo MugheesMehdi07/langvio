@@ -2,7 +2,7 @@
 langvio: Connect language models to vision models for natural language visual analysis
 """
 
-__version__ = "0.0.5"
+__version__ = "0.1.0"
 
 # === Imports ===
 
@@ -22,6 +22,7 @@ from langvio.core.registry import ModelRegistry
 from langvio.llm.base import BaseLLMProcessor
 from langvio.llm.factory import register_llm_processors
 from langvio.vision.base import BaseVisionProcessor
+from langvio.vision.qwen_vlm import QwenVisionProcessor
 from langvio.vision.yolo_world.detector import YOLOWorldProcessor
 
 # === Initialization ===
@@ -59,7 +60,19 @@ if torch.cuda.is_available():
 # Initialize model registry
 registry = ModelRegistry()
 
-# Register YOLO-World vision processors
+# Register Qwen2.5-VL vision processors (default). They share weights with the
+# qwen LLM processors, so the model is only loaded once.
+_vlm_vision_mapping = {
+    "qwen_vlm": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "qwen_vlm_3b": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "qwen_vlm_7b": "Qwen/Qwen2.5-VL-7B-Instruct",
+}
+for proc_name, model_name in _vlm_vision_mapping.items():
+    registry.register_vision_processor(
+        proc_name, QwenVisionProcessor, model_name=model_name
+    )
+
+# Legacy YOLO-World vision processors (require ultralytics)
 registry.register_vision_processor(
     "yolo_world_v2_s", YOLOWorldProcessor, model_name="yolov8s-worldv2", confidence=0.5
 )
@@ -96,72 +109,8 @@ for proc_name, (model_name, confidence) in _config_processor_mapping.items():
 # Register LLM processors
 register_llm_processors(registry)
 
-# Register config-based LLM processors as aliases (if OpenAI is available)
-# These are additional GPT models that may be in config but not registered by factory
-try:
-    import importlib.util
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    if importlib.util.find_spec("langchain_openai") is not None:
-        from langvio.llm.openai import OpenAIProcessor
-
-        # Register additional GPT models from config
-        _config_llm_mapping = {
-            "gpt-4.1-mini": ("gpt-4.1-mini", {"temperature": 0.2, "max_tokens": 1024}),
-            "gpt-4.1-mini-latest": (
-                "gpt-4.1-mini-2025-04-14",
-                {"temperature": 0.2, "max_tokens": 1024},
-            ),
-            "gpt-4.1-nano": ("gpt-4.1-nano", {"temperature": 0.2, "max_tokens": 1024}),
-            "gpt-4.1-nano-latest": (
-                "gpt-4.1-nano-2025-04-14",
-                {"temperature": 0.2, "max_tokens": 1024},
-            ),
-            "gpt-4o-mini": ("gpt-4o-mini", {"temperature": 0.2, "max_tokens": 1024}),
-            "gpt-4o-mini-latest": (
-                "gpt-4o-mini-2024-07-18",
-                {"temperature": 0.2, "max_tokens": 1024},
-            ),
-            "gpt-5-nano": ("gpt-5-nano", {"temperature": 0.1, "max_tokens": 2048}),
-            "gpt-5-nano-latest": (
-                "gpt-5-nano-2025-08-07",
-                {"temperature": 0.1, "max_tokens": 2048},
-            ),
-            "gpt-3": (
-                "gpt-3.5-turbo",
-                {"temperature": 0.0, "max_tokens": 1024},
-            ),  # Alias for gpt-3.5
-        }
-
-        registered_count = 0
-        for proc_name, (model_name, model_kwargs) in _config_llm_mapping.items():
-            # Only register if not already registered
-            if proc_name not in registry.list_llm_processors():
-                registry.register_llm_processor(
-                    proc_name,
-                    OpenAIProcessor,
-                    model_name=model_name,
-                    model_kwargs=model_kwargs,
-                )
-                registered_count += 1
-
-        if registered_count > 0:
-            logger.debug(
-                f"Registered {registered_count} additional config-based LLM processors"
-            )
-    else:
-        logger.debug(
-            "langchain_openai not available, "
-            "skipping config-based LLM processor registration"
-        )
-except Exception as e:
-    # Log the error for debugging
-    import logging
-
-    logger = logging.getLogger(__name__)
-    logger.debug(f"Failed to register config-based LLM processors: {e}")
+# The local VLM (Qwen2.5-VL) aliases are registered by register_llm_processors()
+# above; there are no cloud-provider config aliases to register here anymore.
 
 
 # === Pipeline Creator ===
@@ -174,7 +123,8 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa:
     Args:
         config_path: Path to a configuration file
         llm_name: Name of LLM processor to use
-        vision_name: Name of vision processor to use (default: "yoloe")
+        vision_name: Name of vision processor to use (default: config's
+            vision.default, "qwen_vlm")
 
     Returns:
         A configured Pipeline instance
@@ -210,7 +160,7 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa:
 
             if valid_processors:
                 # Try preferred processors first
-                preferred = ["yolo_world_v2_m", "yolo_world_v2_s", "yolo_world_v2_l"]
+                preferred = ["qwen_vlm", "qwen_vlm_3b", "qwen_vlm_7b"]
                 for proc_name in preferred + [
                     v for v in valid_processors if v not in preferred
                 ]:
@@ -241,11 +191,9 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa:
         except Exception:
             if len(registry.list_llm_processors()) == 0:
                 error_msg = (
-                    "ERROR: No LLM providers are installed. "
-                    "Please install at least one provider:\n"
-                    "- For OpenAI: pip install langvio[openai]\n"
-                    "- For Google Gemini: pip install langvio[google]\n"
-                    "- For all providers: pip install langvio[all-llm]"
+                    "ERROR: No LLM processor is available. "
+                    "Please install the local VLM backend:\n"
+                    "- pip install langvio[vlm]"
                 )
                 print(error_msg, file=sys.stderr)
                 sys.exit(1)

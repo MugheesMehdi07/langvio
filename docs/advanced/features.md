@@ -175,13 +175,13 @@ Choose models based on your needs:
 # Speed-optimized
 pipeline = langvio.create_pipeline(
     vision_name="yolo_world_v2_s",
-    llm_name="gpt-3.5"
+    llm_name="qwen"
 )
 
 # Accuracy-optimized
 pipeline = langvio.create_pipeline(
     vision_name="yolo_world_v2_l",
-    llm_name="gpt-4"
+    llm_name="qwen-7b"
 )
 ```
 

@@ -26,15 +26,15 @@ class TestInit(unittest.TestCase):
                     "models": {"yolo11n": {}, "yolo_world_v2_m": {}}
                 },
                 "llm": {
-                    "default": "gpt-3.5",
-                    "models": {"gpt-3.5": {}}
+                    "default": "qwen",
+                    "models": {"qwen": {}}
                 }
             }
             mock_pipeline_class.return_value = mock_pipeline
             
             with patch('langvio.registry') as mock_registry:
                 mock_registry.list_vision_processors.return_value = {"yolo11n": MagicMock()}
-                mock_registry.list_llm_processors.return_value = {"gpt-3.5": MagicMock()}
+                mock_registry.list_llm_processors.return_value = {"qwen": MagicMock()}
                 
                 result = langvio.create_pipeline()
                 self.assertIsNotNone(result)
@@ -57,20 +57,20 @@ class TestInit(unittest.TestCase):
                     "default": "yolo11n",
                     "models": {"yolo11n": {}}
                 },
-                "llm": {"default": "gpt-3.5", "models": {"gpt-3.5": {}}}
+                "llm": {"default": "qwen", "models": {"qwen": {}}}
             }
             mock_pipeline_class.return_value = mock_pipeline
             
             with patch('langvio.registry') as mock_registry:
                 mock_registry.list_vision_processors.return_value = {"yolo11n": MagicMock()}
-                mock_registry.list_llm_processors.return_value = {"gpt-3.5": MagicMock()}
+                mock_registry.list_llm_processors.return_value = {"qwen": MagicMock()}
                 
                 # Mock set_vision_processor and set_llm_processor to not raise
                 mock_pipeline.set_vision_processor = MagicMock()
                 mock_pipeline.set_llm_processor = MagicMock()
                 
-                result = langvio.create_pipeline(llm_name="gpt-3.5")
-                mock_pipeline.set_llm_processor.assert_called_once_with("gpt-3.5")
+                result = langvio.create_pipeline(llm_name="qwen")
+                mock_pipeline.set_llm_processor.assert_called_once_with("qwen")
 
     def test_create_pipeline_fallback_vision(self):
         """Test create_pipeline fallback vision processor selection"""
@@ -82,8 +82,8 @@ class TestInit(unittest.TestCase):
                     "models": {"yolo11n": {}, "yolo_world_v2_m": {}}
                 },
                 "llm": {
-                    "default": "gpt-3.5",
-                    "models": {"gpt-3.5": {}}
+                    "default": "qwen",
+                    "models": {"qwen": {}}
                 }
             }
             mock_pipeline_class.return_value = mock_pipeline
@@ -93,7 +93,7 @@ class TestInit(unittest.TestCase):
                     "yolo11n": MagicMock(),
                     "yolo_world_v2_m": MagicMock()
                 }
-                mock_registry.list_llm_processors.return_value = {"gpt-3.5": MagicMock()}
+                mock_registry.list_llm_processors.return_value = {"qwen": MagicMock()}
                 
                 # Mock set_vision_processor to succeed
                 mock_pipeline.set_vision_processor = MagicMock()

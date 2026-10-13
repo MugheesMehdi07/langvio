@@ -1,5 +1,10 @@
 """
-Factory for LLM processor registration and creation
+Factory for LLM processor registration and creation.
+
+langvio uses a Qwen-VL Vision Language Model as its language layer. By default
+it is reached over an OpenAI-compatible API with an API key (OpenRouter); the
+same processor can run the weights in-process instead with
+``LANGVIO_BACKEND=local`` plus ``pip install langvio[vlm]``.
 """
 
 import importlib.util
@@ -10,95 +15,73 @@ from langvio.core.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
+def _gen_kwargs() -> dict:
+    """Fresh copy per registration - processors may mutate their own kwargs."""
+    return {"temperature": 0.2, "max_new_tokens": 1024}
+
+
+# Registry name -> (model id, default generation kwargs). ``model_name`` is the
+# HuggingFace repo id used by the local backend; with the API backend (the
+# default) the model is chosen by api_model / QWEN_API_MODEL instead, so these
+# names are aliases for the same processor.
+_VLM_MODELS = {
+    "qwen": ("Qwen/Qwen2.5-VL-3B-Instruct", _gen_kwargs()),
+    "qwen-3b": ("Qwen/Qwen2.5-VL-3B-Instruct", _gen_kwargs()),
+    "qwen-7b": ("Qwen/Qwen2.5-VL-7B-Instruct", _gen_kwargs()),
+    "qwen2-vl-7b": ("Qwen/Qwen2-VL-7B-Instruct", _gen_kwargs()),
+}
+
 
 def register_llm_processors(registry: ModelRegistry) -> None:
     """
     Register available LLM processors with the registry.
-    This function performs lazy loading to avoid unnecessary imports.
-    If no LLM providers are available, it will log an error but NOT register a fallback.
+
+    A single Qwen-VL processor is registered under several aliases. Registration
+    itself is backend-agnostic and never loads a model; the backend is resolved
+    when the processor is initialized. Only the local backend needs
+    'transformers', so its absence is an error solely when local is requested.
 
     Args:
         registry: The model registry to register processors with
     """
-    llm_providers_found = False
+    from langvio.llm.qwen_api import resolve_backend
 
-    # Register OpenAI processor if available
-    if is_package_available("langchain_openai"):
-        try:
-            from langvio.llm.openai import OpenAIProcessor
-
-            # Register GPT-3.5 model
-            registry.register_llm_processor(
-                "gpt-3.5",
-                OpenAIProcessor,
-                model_name="gpt-3.5-turbo",
-                model_kwargs={"temperature": 0.2},
-            )
-
-            # Register GPT-4 model
-            registry.register_llm_processor(
-                "gpt-4",
-                OpenAIProcessor,
-                model_name="gpt-4-turbo",
-                model_kwargs={"temperature": 0.2},
-            )
-
-            registry.register_llm_processor(
-                "gpt-4.1-mini",
-                OpenAIProcessor,
-                model_name="gpt-4.1-mini",
-                model_kwargs={"temperature": 0.2},
-            )
-
-            registry.register_llm_processor(
-                "gpt-4o-mini",
-                OpenAIProcessor,
-                model_name="gpt-4o-mini",
-                model_kwargs={"temperature": 0.2},
-            )
-
-            llm_providers_found = True
-            logger.info("Registered OpenAI LLM processors")
-        except Exception as e:
-            logger.warning(f"Failed to register OpenAI processors: {e}")
-
-    # Register Google Gemini processor if available
-    if is_package_available("langchain_google_genai"):
-        try:
-            from langvio.llm.google import GeminiProcessor
-
-            # # Register Gemini Pro model
-            registry.register_llm_processor(
-                "gemini",
-                GeminiProcessor,
-                model_name="gemini-pro",
-                model_kwargs={"temperature": 0.2},
-            )
-
-            # Set as default if available
-            registry.register_llm_processor(
-                "default",
-                GeminiProcessor,
-                model_name="gemini-pro",
-                model_kwargs={"temperature": 0.2},
-            )
-
-            llm_providers_found = True
-            logger.info("Registered Google Gemini LLM processors")
-        except Exception as e:
-            logger.warning(f"Failed to register Google Gemini processors: {e}")
-
-    # If no LLM providers are available, log an error but DO NOT register a fallback
-    if not llm_providers_found:
+    backend = resolve_backend({})
+    if backend == "local" and not is_package_available("transformers"):
         error_msg = (
-            "ERROR: No LLM providers are installed. "
-            "Please install at least one provider:\n"
-            "- For OpenAI: pip install langvio[openai]\n"
-            "- For Google Gemini: pip install langvio[google]\n"
-            "- For all providers: pip install langvio[all-llm]"
+            "ERROR: The local VLM backend is not installed.\n"
+            "Please install it with:\n"
+            "  pip install langvio[vlm]\n"
+            "(this pulls in 'transformers' and 'accelerate'),\n"
+            "or unset LANGVIO_BACKEND and set OPENROUTER_API_KEY to use the "
+            "hosted Qwen API instead."
         )
         logger.error(error_msg)
-        # print(error_msg, file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        from langvio.llm.qwen_vlm import VLMProcessor
+
+        for name, (model_name, model_kwargs) in _VLM_MODELS.items():
+            registry.register_llm_processor(
+                name,
+                VLMProcessor,
+                model_name=model_name,
+                model_kwargs=model_kwargs,
+            )
+
+        # Default processor: the small, most accessible model.
+        registry.register_llm_processor(
+            "default",
+            VLMProcessor,
+            model_name=_VLM_MODELS["qwen"][0],
+            model_kwargs=_VLM_MODELS["qwen"][1],
+        )
+
+        logger.info(f"Registered Qwen-VL LLM processors (backend: {backend})")
+    except Exception as e:
+        error_msg = f"ERROR: Failed to register the Qwen-VL processor: {e}"
+        logger.error(error_msg)
         sys.exit(1)
 
 

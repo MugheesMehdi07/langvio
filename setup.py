@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="langvio",
-    version="0.0.5",
+    version="0.1.0",
     description="Connect language models to vision models for natural language visual analysis",
     author="Mughees Mehdi",
     author_email="mugheesmehdi@gmail.com",
@@ -18,20 +18,19 @@ setup(
         "pyyaml>=6.0.3",
         "python-dotenv>=1.2.1",
         "tqdm>=4.67.1",
+        "scipy>=1.10.0",
+        "requests>=2.31.0",
     ],
     extras_require={
-        # Individual providers
-        "openai": [
-            "openai>=1.0.0",
-            "langchain-openai>=0.0.1",
-        ],
-        "google": [
-            "google-generativeai>=0.3.0,<1.0.0",
-            "langchain-google-genai>=2.0.0",
+        # Local Vision Language Model backend (Qwen2.5-VL via HuggingFace)
+        "vlm": [
+            "transformers>=4.49.0",
+            "accelerate>=0.26.0",
+            "qwen-vl-utils>=0.0.8",
         ],
         # Grouped providers
         "all-llm": [
-            "langvio[openai,google]",
+            "langvio[vlm]",
         ],
         # Development tools
         "dev": [
@@ -46,6 +45,7 @@ setup(
         "webapp": [
             "flask>=2.0.0",
             "werkzeug>=2.0.0",
+            "imageio-ffmpeg>=0.4.9",
         ],
     },
     entry_points={
@@ -53,14 +53,12 @@ setup(
             "langvio=langvio.cli:main",
         ],
     },
-    python_requires=">=3.8,<3.13",
+    python_requires=">=3.10,<3.13",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",

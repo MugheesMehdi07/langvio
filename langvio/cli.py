@@ -8,6 +8,7 @@ import os
 import sys
 
 from langvio import create_pipeline
+from langvio.llm.qwen_api import DEFAULT_API_KEY_ENV
 from langvio.utils.file_utils import is_image_file, is_video_file
 from langvio.utils.logging import setup_logging
 
@@ -31,6 +32,23 @@ def main():
     parser.add_argument("--vision", "-v", help="Vision processor to use")
     parser.add_argument("--output", "-o", help="Output directory for processed media")
     parser.add_argument(
+        "--api-key",
+        help="Qwen API key (defaults to OPENROUTER_API_KEY / QWEN_API_KEY)",
+    )
+    parser.add_argument(
+        "--api-model",
+        help="Hosted Qwen-VL model id, e.g. qwen/qwen3-vl-8b-instruct",
+    )
+    parser.add_argument(
+        "--api-base-url",
+        help="OpenAI-compatible endpoint (defaults to OpenRouter)",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["api", "local", "auto"],
+        help="Run Qwen-VL over the API (default) or with local weights",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -47,6 +65,18 @@ def main():
     setup_logging({"level": args.log_level, "file": args.log_file})
 
     logger = logging.getLogger(__name__)
+
+    # CLI flags map onto the env vars the Qwen backend already reads, so they
+    # take precedence over .env (which was loaded when langvio was imported).
+    for value, env_var in (
+        (args.api_key, DEFAULT_API_KEY_ENV),
+        (args.api_key, "QWEN_API_KEY"),
+        (args.api_model, "QWEN_API_MODEL"),
+        (args.api_base_url, "QWEN_API_BASE_URL"),
+        (args.backend, "LANGVIO_BACKEND"),
+    ):
+        if value:
+            os.environ[env_var] = value
 
     # List models if requested
     if args.list_models:
@@ -85,11 +115,28 @@ def main():
         print("\nExplanation: {}".format(result["explanation"]))
         print("\nDetection summary:")
 
-        # Count detections by label
+        # Count detections by label. The detections payload can take a few
+        # shapes (per-frame mapping, or a single {"objects": [...], "summary":
+        # {...}} dict), so walk it defensively and count anything with a label.
         counts = {}
-        for frame_dets in result["detections"].values():
-            for det in frame_dets:
-                label = det["label"]
+
+        def _iter_objects(container):
+            if isinstance(container, dict):
+                if isinstance(container.get("objects"), list):
+                    yield from container["objects"]
+                else:
+                    for value in container.values():
+                        yield from _iter_objects(value)
+            elif isinstance(container, list):
+                for item in container:
+                    if isinstance(item, dict) and "label" in item:
+                        yield item
+                    else:
+                        yield from _iter_objects(item)
+
+        for det in _iter_objects(result.get("detections", {})):
+            label = det.get("label")
+            if label is not None:
                 counts[label] = counts.get(label, 0) + 1
 
         for label, count in counts.items():

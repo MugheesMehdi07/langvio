@@ -31,10 +31,10 @@ class ProcessorManager:
         if processor_name not in registry.list_llm_processors():
             error_msg = (
                 f"ERROR: LLM processor '{processor_name}' not found. "
-                "You may need to install additional dependencies:\n"
-                "- For OpenAI: pip install langvio[openai]\n"
-                "- For Google Gemini: pip install langvio[google]\n"
-                "- For all providers: pip install langvio[all-llm]"
+                "Available processors are the local VLM aliases "
+                "(qwen, qwen-3b, qwen-7b, qwen2-vl-7b). "
+                "If none are registered, install the backend with:\n"
+                "- pip install langvio[vlm]"
             )
             self.logger.error(error_msg)
             print(error_msg, file=sys.stderr)
@@ -107,6 +107,7 @@ class ProcessorManager:
 
         self.logger.debug(f"Parsing query: {query[:100]}...")
         parsed_params = self.llm_processor.parse_query(query)
+        parsed_params.setdefault("query", query)
         self.logger.debug(
             f"Parsed query parameters: {parsed_params.get('task_type', 'unknown')} task"
         )

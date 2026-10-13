@@ -176,8 +176,10 @@ class VisualizationManager:
         import cv2
 
         try:
-            # Extract data from results
-            frame_detections = video_results.get("frame_detections", {})
+            # Prefer dense, interpolated per-frame boxes when the processor has them
+            frame_detections = video_results.get(
+                "render_detections"
+            ) or video_results.get("frame_detections", {})
             summary = video_results.get("summary", {})
 
             if not frame_detections:
@@ -226,8 +228,9 @@ class VisualizationManager:
                 frame_key = str(frame_idx)
                 current_detections = frame_detections.get(frame_key, [])
 
-                # If no detections for this frame, use last known detections to prevent flickering
-                if not current_detections and last_known_detections:
+                # Hold last detections only for frames that were never analysed;
+                # an explicit empty list means "nothing here".
+                if frame_key not in frame_detections and last_known_detections:
                     current_detections = last_known_detections
                 elif current_detections:
                     # Update last known detections
@@ -325,7 +328,9 @@ class VisualizationManager:
         default_color = viz_config.get("box_color", [0, 255, 0])
         highlight_color = [0, 0, 255]  # Red for highlighted objects
         text_color = viz_config.get("text_color", [255, 255, 255])
-        thickness = viz_config.get("line_thickness", 2)
+        # Sizes below are tuned for ~720p; scale them for higher resolutions.
+        scale = max(1.0, frame.shape[1] / 1280)
+        thickness = max(1, int(round(viz_config.get("line_thickness", 2) * scale)))
 
         for det in detections:
             if "bbox" not in det:
@@ -366,20 +371,30 @@ class VisualizationManager:
 
                 # Draw label background
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = 0.5
-                text_size = cv2.getTextSize(label, font, font_scale, 1)[0]
+                font_scale = 0.5 * scale
+                font_thickness = max(1, int(round(scale)))
+                pad = int(5 * scale)
+                text_size = cv2.getTextSize(label, font, font_scale, font_thickness)[0]
 
                 # Draw background rectangle
                 cv2.rectangle(
                     frame,
-                    (x1, y1 - text_size[1] - 5),
+                    (x1, y1 - text_size[1] - pad),
                     (x1 + text_size[0], y1),
                     color,
                     -1,
                 )
 
                 # Draw text
-                cv2.putText(frame, label, (x1, y1 - 5), font, font_scale, text_color, 1)
+                cv2.putText(
+                    frame,
+                    label,
+                    (x1, y1 - pad),
+                    font,
+                    font_scale,
+                    text_color,
+                    font_thickness,
+                )
 
             except Exception:
                 continue  # Skip problematic detections
@@ -395,62 +410,70 @@ class VisualizationManager:
         # Semi-transparent overlay background
         overlay = frame.copy()
 
+        # Layout constants are tuned for ~720p; scale them for higher resolutions.
+        s = max(1.0, width / 1280)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        line_h = int(25 * s)
+        margin = int(10 * s)
+
         # Top-left stats panel
         if overlay_info["lines"]:
-            panel_height = len(overlay_info["lines"]) * 25 + 20
-            cv2.rectangle(overlay, (10, 10), (300, panel_height), (0, 0, 0), -1)
+            panel_height = len(overlay_info["lines"]) * line_h + 2 * margin
+            cv2.rectangle(
+                overlay, (margin, margin), (int(300 * s), panel_height), (0, 0, 0), -1
+            )
 
-            y_offset = 30
+            y_offset = margin + int(20 * s)
             for line in overlay_info["lines"]:
                 cv2.putText(
                     overlay,
                     line,
-                    (15, y_offset),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
+                    (margin + int(5 * s), y_offset),
+                    font,
+                    0.6 * s,
                     (255, 255, 255),
-                    2,
+                    max(1, int(2 * s)),
                 )
-                y_offset += 25
+                y_offset += line_h
 
         # Bottom-left insights panel
         insights = overlay_info.get("insights", [])
         if insights:
-            # Calculate panel dimensions
-            max_text_width = max(len(insight) for insight in insights) * 8
-            panel_width = min(max_text_width + 20, width - 20)
-            panel_height = len(insights) * 25 + 20
-            panel_y = height - panel_height - 10
+            display = [i[:50] + "..." if len(i) > 50 else i for i in insights]
+            text_w = max(
+                cv2.getTextSize(t, font, 0.5 * s, max(1, int(s)))[0][0] for t in display
+            )
+            panel_width = min(text_w + 3 * margin, width - margin)
+            panel_height = len(display) * line_h + 2 * margin
+            panel_y = height - panel_height - margin
 
             cv2.rectangle(
-                overlay, (10, panel_y), (panel_width, height - 10), (0, 0, 0), -1
+                overlay, (margin, panel_y), (panel_width, height - margin), (0, 0, 0), -1
             )
 
-            y_offset = panel_y + 20
-            for insight in insights:
-                # Truncate long insights
-                display_insight = insight[:50] + "..." if len(insight) > 50 else insight
+            y_offset = panel_y + int(20 * s)
+            for text in display:
                 cv2.putText(
                     overlay,
-                    display_insight,
-                    (15, y_offset),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 255, 255),
-                    1,  # Yellow text
+                    text,
+                    (margin + int(5 * s), y_offset),
+                    font,
+                    0.5 * s,
+                    (0, 255, 255),  # Yellow text
+                    max(1, int(s)),
                 )
-                y_offset += 25
+                y_offset += line_h
 
         # Top-right timestamp
         timestamp = f"Time: {frame_idx / fps:.1f}s"
         cv2.putText(
             overlay,
             timestamp,
-            (width - 150, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
+            (width - int(150 * s), int(30 * s)),
+            font,
+            0.6 * s,
             (255, 255, 255),
-            2,
+            max(1, int(2 * s)),
         )
 
         # Blend overlay with original frame (60% transparency)

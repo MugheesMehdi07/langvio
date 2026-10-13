@@ -29,7 +29,7 @@ class TestPipeline(unittest.TestCase):
         """Test loading configuration from file"""
         config_content = """
 llm:
-  default: "gemini"
+  default: "qwen"
 """
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(config_content)
@@ -37,7 +37,7 @@ llm:
 
         try:
             self.pipeline.load_config(temp_path)
-            self.assertEqual(self.pipeline.config.config["llm"]["default"], "gemini")
+            self.assertEqual(self.pipeline.config.config["llm"]["default"], "qwen")
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)

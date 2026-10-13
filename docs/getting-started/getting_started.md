@@ -9,29 +9,29 @@ Langvio connects language models to computer vision for natural language visual 
 pip install langvio
 ```
 
-### 2. Install with LLM Provider
-Choose your preferred language model:
+### 2. Install the Vision Language Model
+Langvio uses a local Qwen2.5-VL Vision Language Model (VLM):
 
 ```bash
-# For OpenAI models (GPT-3.5, GPT-4)
-pip install langvio[openai]
+# Install the local VLM support
+pip install langvio[vlm]
 
-# For Google Gemini models
-pip install langvio[google]
-
-# For all supported providers
+# Equivalent alias
 pip install langvio[all-llm]
 ```
 
-### 3. Set up API Keys
-Create a `.env` file in your project directory:
+> **Note:** The first run downloads several GB of model weights from HuggingFace. A GPU is recommended; CPU works but is significantly slower.
+
+### 3. Environment Setup (Optional)
+No API keys are required - Qwen2.5-VL runs entirely on your machine. You can optionally create a `.env` file to customize behavior:
 
 ```env
-# For OpenAI
-OPENAI_API_KEY=your_openai_api_key_here
+# Optional: HuggingFace cache location and token (for gated models)
+HF_HOME=/path/to/hf/cache
+HF_TOKEN=your_hf_token
 
-# For Google Gemini
-GOOGLE_API_KEY=your_google_api_key_here
+# Optional: choose the default local model
+LANGVIO_DEFAULT_LLM=qwen
 ```
 
 ## Your First Analysis
@@ -116,24 +116,24 @@ Each analysis returns:
 
 ### Common Issues
 
-**No LLM provider error**: 
+**No VLM installed error**: 
 ```bash
-# Install an LLM provider
-pip install langvio[openai]  # or
-pip install langvio[google]  # or
+# Install the local Vision Language Model support
+pip install langvio[vlm]  # or
 pip install langvio[all-llm]
 ```
 
-**Missing API Key**: 
-- Set `OPENAI_API_KEY` or `GOOGLE_API_KEY` in your `.env` file
-- Or export as environment variable: `export OPENAI_API_KEY=your_key`
+**Slow first run / large download**: 
+- The first run downloads several GB of Qwen2.5-VL weights from HuggingFace
+- Optionally set `HF_HOME` to control the cache location, and `HF_TOKEN` for gated models
+- A GPU is recommended; CPU works but is significantly slower
 
 **CUDA/GPU issues**: 
 - Langvio automatically falls back to CPU if GPU isn't available
 - To force CPU: `CUDA_VISIBLE_DEVICES=""`
 
 **Model download**: 
-- YOLO-World models download automatically on first use (may take a few minutes)
+- YOLO-World and Qwen2.5-VL models download automatically on first use (the VLM weights are several GB and may take a while)
 - Ensure you have internet connection and sufficient disk space
 
 **Memory issues**: 
@@ -143,7 +143,7 @@ pip install langvio[all-llm]
 
 **Import errors**: 
 - Ensure all dependencies are installed: `pip install langvio[all-llm]`
-- Check Python version (3.8+ required)
+- Check Python version (3.10+ required)
 
 ## Testing
 

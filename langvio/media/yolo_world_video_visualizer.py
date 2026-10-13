@@ -93,13 +93,18 @@ class YOLOWorldVideoVisualizer:
                 if not ret:
                     break
 
-                # Get detections for this frame
+                # Get detections for this frame. The video processor writes an
+                # entry per analysed frame (possibly with an empty objects list
+                # when nothing was detected), so key presence tells us whether
+                # the frame was analysed or skipped by sample_rate.
+                frame_was_analysed = frame_count in frame_detections
                 current_detections = frame_detections.get(frame_count, [])
 
-                # If no detections for this frame, use interpolated detections from last known frame
-                if not current_detections and last_known_frame_detections:
-                    # Use last known detections to prevent flickering
-                    # Create deep copies to avoid modifying original data
+                # Only interpolate for frames the processor actually skipped.
+                # An analysed-but-empty frame means tracked objects left the
+                # scene — honour that and drop the boxes rather than freezing
+                # the last known positions.
+                if not frame_was_analysed and last_known_frame_detections:
                     current_detections = []
                     for det in last_known_frame_detections:
                         interpolated_det = det.copy()

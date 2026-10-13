@@ -69,21 +69,35 @@ class Config:
                 # Fallback default configuration if file doesn't exist
                 self.config = {
                     "llm": {
-                        "default": "gemini",
+                        "default": "qwen",
                         "models": {
-                            "gemini": {
-                                "model_name": "gemini-pro",
-                                "model_kwargs": {"temperature": 0.2},
+                            "qwen": {
+                                "model_name": "Qwen/Qwen2.5-VL-3B-Instruct",
+                                "model_kwargs": {
+                                    "temperature": 0.2,
+                                    "max_new_tokens": 1024,
+                                },
                             },
-                            "gpt": {
-                                "model_name": "gpt-3.5-turbo",
-                                "model_kwargs": {"temperature": 0.0},
+                            "qwen-7b": {
+                                "model_name": "Qwen/Qwen2.5-VL-7B-Instruct",
+                                "model_kwargs": {
+                                    "temperature": 0.2,
+                                    "max_new_tokens": 1024,
+                                },
                             },
                         },
                     },
                     "vision": {
-                        "default": "yolo_world_v2_m",  # YOLO-World medium as default
+                        "default": "qwen_vlm",
                         "models": {
+                            "qwen_vlm": {
+                                "type": "vlm",
+                                "model_name": "Qwen/Qwen2.5-VL-3B-Instruct",
+                                "confidence": 0.9,
+                                "max_image_size": 1024,
+                                "max_new_tokens": 1024,
+                                "max_video_frames": 24,
+                            },
                             "yolo_world_v2_s": {  # small model – fastest
                                 "type": "yolo_world",
                                 "model_name": "yolov8s-worldv2",
@@ -240,12 +254,11 @@ class Config:
         if env_default_llm and "llm" in self.config:
             # Map common aliases to actual model names (matching factory registrations)
             llm_alias_map = {
-                "openai": "gpt-3.5",  # Default OpenAI model
-                "gpt": "gpt-3.5",
-                "gpt-3": "gpt-3.5",  # Map gpt-3 config key to gpt-3.5 registry name
-                "gpt-3.5": "gpt-3.5",
-                "gpt-4": "gpt-4.1-mini",
-                "gemini": "gemini",
+                "vlm": "qwen",
+                "qwen": "qwen",
+                "qwen-3b": "qwen-3b",
+                "qwen-7b": "qwen-7b",
+                "qwen2-vl-7b": "qwen2-vl-7b",
             }
 
             # Use mapped name if available, otherwise use the env value directly

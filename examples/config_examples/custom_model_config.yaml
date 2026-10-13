@@ -1,17 +1,19 @@
 # Custom langvio configuration
 
 llm:
-  default: "langchain_openai"
+  default: "qwen"
   models:
-    langchain_openai:
-      type: "langchain"
-      model_name: "gpt-4-turbo"
-      temperature: 0.1
+    qwen:
+      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"
+      model_kwargs:
+        temperature: 0.2
+        max_new_tokens: 1024
 
-    openai_basic:
-      type: "openai"
-      model_name: "gpt-3.5-turbo"
-      temperature: 0.0
+    qwen-7b:
+      model_name: "Qwen/Qwen2.5-VL-7B-Instruct"
+      model_kwargs:
+        temperature: 0.2
+        max_new_tokens: 1024
 
 vision:
   default: "yolo"

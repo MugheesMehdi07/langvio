@@ -11,7 +11,7 @@ import langvio
 
 # Use specific models
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-4",           # OpenAI GPT-4
+    llm_name="qwen-7b",         # Local Qwen2.5-VL 7B model
     vision_name="yoloe_large"   # YOLOe large model
 )
 
@@ -34,40 +34,39 @@ pipeline = langvio.create_pipeline(config_path="my_config.yaml")
 
 **Note:** All vision models use YOLO-World v2 under the hood. The aliases (yolo11n, yoloe, etc.) map to YOLO-World v2 models for flexible object detection without predefined classes.
 
-**Language Models:**
-- `gpt-4o-mini` - OpenAI GPT-4o Mini (default, fast, cost-effective)
-- `gpt-3` or `gpt-3.5` - OpenAI GPT-3.5 Turbo (fast, cost-effective)
-- `gpt-4` - OpenAI GPT-4.1 Mini (best reasoning)
-- `gpt-4.1-mini` - OpenAI GPT-4.1 Mini (latest model)
-- `gpt-4.1-nano` - OpenAI GPT-4.1 Nano (smallest, fastest)
-- `gemini` - Google Gemini 2.0 Flash (free tier available)
+**Language Models (local Qwen2.5-VL Vision Language Model):**
+- `qwen` or `qwen-3b` - Qwen/Qwen2.5-VL-3B-Instruct (default, smallest, fastest)
+- `qwen-7b` - Qwen/Qwen2.5-VL-7B-Instruct (larger, best reasoning)
+- `qwen2-vl-7b` - Qwen/Qwen2-VL-7B-Instruct (previous-generation 7B model)
+
+**Note:** All language models run locally via HuggingFace transformers - no API keys required. The first run downloads several GB of weights; a GPU is recommended, though CPU works but is slower.
 
 ## Configuration File
 
 Create a `config.yaml` file:
 
 ```yaml
-# Language Model Settings
+# Language Model Settings (local Qwen2.5-VL)
 llm:
-  default: "gpt-4o-mini"  # Default model
+  default: "qwen"  # Default model
   models:
-    gemini:
-      model_name: "gemini-2.0-flash"
-      model_kwargs:
-        temperature: 0.2
-        max_tokens: 1024
-    
-    gpt-4o-mini:
-      model_name: "gpt-4o-mini"
+    qwen:
+      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"
       model_kwargs:
         temperature: 0.1
-        max_tokens: 2048
-    
-    gpt-4:
-      model_name: "gpt-4.1-mini"
+        max_new_tokens: 1024
+
+    qwen-7b:
+      model_name: "Qwen/Qwen2.5-VL-7B-Instruct"
       model_kwargs:
         temperature: 0.1
-        max_tokens: 2048
+        max_new_tokens: 2048
+
+    qwen2-vl-7b:
+      model_name: "Qwen/Qwen2-VL-7B-Instruct"
+      model_kwargs:
+        temperature: 0.1
+        max_new_tokens: 2048
 
 # Vision Model Settings
 vision:
@@ -117,7 +116,7 @@ logging:
 ### For Speed (Real-time Applications)
 ```python
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-4o-mini",       # Faster LLM
+    llm_name="qwen",              # Smallest, fastest VLM (3B)
     vision_name="yolo11n"          # Fastest vision model (or yolo_world_v2_s)
 )
 ```
@@ -125,15 +124,15 @@ pipeline = langvio.create_pipeline(
 ### For Accuracy (Research/Analysis)
 ```python
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-4",
+    llm_name="qwen-7b",
     vision_name="yolo_world_v2_l"  # Large model for best accuracy
 )
 ```
 
-### For Cost Optimization
+### For Resource Efficiency
 ```python
 pipeline = langvio.create_pipeline(
-    llm_name="gemini",            # Google's free tier
+    llm_name="qwen",              # Smaller weights, lower memory
     vision_name="yolo11n"          # Fastest model (or yolo_world_v2_m for balance)
 )
 ```
@@ -185,19 +184,19 @@ pipeline.config.config["media"]["output_dir"] = "/custom/output/path"
 
 ## Environment Variables
 
-Set these in your `.env` file or environment:
+No API keys are required - Qwen2.5-VL runs locally. Set these in your `.env` file or environment if you want to customize behavior:
 
 ```env
-# Required: LLM API Keys
-OPENAI_API_KEY=your_openai_key
-GOOGLE_API_KEY=your_google_key
+# Optional: HuggingFace cache location and token (for gated models)
+HF_HOME=/path/to/hf/cache
+HF_TOKEN=your_hf_token
 
 # Optional: Performance Settings
 CUDA_VISIBLE_DEVICES=0          # Use specific GPU
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # Optional: Model Settings (override defaults)
-LANGVIO_DEFAULT_LLM=gemini
+LANGVIO_DEFAULT_LLM=qwen
 LANGVIO_DEFAULT_VISION=yolo_world_v2_m
 ```
 
@@ -211,7 +210,7 @@ langvio --query "Count cars" --media parking.jpg
 langvio --query "Find red objects" --media scene.jpg --config my_config.yaml
 
 # Specify models
-langvio --query "Analyze video" --media traffic.mp4 --llm gpt-4 --vision yolo_world_v2_l
+langvio --query "Analyze video" --media traffic.mp4 --llm qwen-7b --vision yolo_world_v2_l
 
 # Set output directory
 langvio --query "Count people" --media crowd.jpg --output ./results
@@ -270,7 +269,7 @@ class MyVisionAnalyzer:
 1. **Start with defaults** and adjust based on your needs
 2. **Use YOLO-World v2 models** - they offer flexible object detection without predefined classes
 3. **Model selection**: Use `yolo_world_v2_s` for speed, `yolo_world_v2_l` for accuracy
-4. **Gemini is free** for personal use, GPT-4 for best results
+4. **Qwen runs locally** - use `qwen` (3B) for speed and lower memory, `qwen-7b` for best results
 5. **Lower confidence values** detect more objects but may have false positives
 6. **Increase line thickness** for better visibility in high-resolution images
 7. **Disable attributes** for faster processing if not needed

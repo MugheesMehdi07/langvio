@@ -8,7 +8,7 @@ Creates and configures a Langvio pipeline.
 
 **Parameters:**
 - `config_path` (str, optional): Path to YAML configuration file
-- `llm_name` (str, optional): LLM processor name ("gpt-3.5", "gpt-4", "gemini")
+- `llm_name` (str, optional): LLM processor name ("qwen"/"qwen-3b" (default), "qwen-7b", "qwen2-vl-7b")
 - `vision_name` (str, optional): Vision processor name ("yolo_world_v2_s", "yolo_world_v2_m", "yolo_world_v2_l", "yolo_world_v2x", "yolo11n", "yolo", "yoloe", "yoloe_medium", "yoloe_large")
 
 **Returns:**
@@ -21,7 +21,7 @@ pipeline = langvio.create_pipeline()
 
 # With specific models
 pipeline = langvio.create_pipeline(
-    llm_name="gpt-4",
+    llm_name="qwen-7b",
     vision_name="yolo_world_v2_l"
 )
 
@@ -66,7 +66,7 @@ Change the language model processor.
 
 **Example:**
 ```python
-pipeline.set_llm_processor("gpt-4")
+pipeline.set_llm_processor("qwen-7b")
 ```
 
 ### `Pipeline.set_vision_processor(processor_name)`
@@ -106,7 +106,7 @@ Get media processing configuration.
 from langvio.config import Config
 
 config = Config("my_config.yaml")
-llm_settings = config.get_llm_config("gpt-4")
+llm_settings = config.get_llm_config("qwen")
 ```
 
 ## Result Structure
@@ -201,7 +201,7 @@ langvio --query "QUERY" --media "FILE_PATH"
 langvio -q "Count cars" -m parking.jpg
 
 # With specific models
-langvio -q "Find red objects" -m scene.jpg -l gpt-4 -v yolo_world_v2_l
+langvio -q "Find red objects" -m scene.jpg -l qwen-7b -v yolo_world_v2_l
 
 # With config file
 langvio -q "Analyze traffic" -m traffic.mp4 -c config.yaml
@@ -275,10 +275,12 @@ langvio --list-models
 
 ### Common Errors
 
-**Missing API Key:**
+**VLM initialization failed:**
 ```python
 # Error: LLM processor initialization failed
-# Solution: Set OPENAI_API_KEY or GOOGLE_API_KEY in .env file
+# Solution: Install the VLM extra (pip install langvio[vlm]) and ensure the
+#           Qwen2.5-VL weights finished downloading. Optionally set HF_HOME /
+#           HF_TOKEN for the HuggingFace cache and gated models.
 ```
 
 **File Not Found:**
@@ -312,31 +314,34 @@ except Exception as e:
 
 ### For Speed
 - Use `vision_name="yolo11n"` or `vision_name="yolo_world_v2_s"` (fastest)
-- Use `llm_name="gpt-4o-mini"` or `llm_name="gpt-3.5"` or `llm_name="gemini"`
+- Use `llm_name="qwen"` / `llm_name="qwen-3b"` (smallest, fastest VLM)
+- Run on a GPU when available
 - Lower confidence thresholds
 - Process fewer video frames (higher sample_rate)
 
 ### For Accuracy  
 - Use `vision_name="yolo_world_v2_l"` (most accurate)
-- Use `llm_name="gpt-4"` (best reasoning)
+- Use `llm_name="qwen-7b"` (best reasoning)
 - Higher confidence thresholds
 - Process more video frames (lower sample_rate)
 
-### For Cost Optimization
-- Use `llm_name="gemini"` (free tier available)
+### For Resource Efficiency
+- Use `llm_name="qwen"` / `llm_name="qwen-3b"` (smaller weights, lower memory)
 - Use batch processing for multiple files
 - Cache results when possible
 
 ## Environment Variables
 
+No API keys are required - Qwen2.5-VL runs locally.
+
 ```env
-# Required
-OPENAI_API_KEY=your_openai_key
-GOOGLE_API_KEY=your_google_key
+# Optional: HuggingFace cache location and token (for gated models)
+HF_HOME=/path/to/hf/cache
+HF_TOKEN=your_hf_token
 
 # Optional
 CUDA_VISIBLE_DEVICES=0
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-LANGVIO_DEFAULT_LLM=gpt-4o-mini
+LANGVIO_DEFAULT_LLM=qwen
 LANGVIO_DEFAULT_VISION=yolo11n
 ```

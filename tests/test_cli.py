@@ -27,6 +27,27 @@ class TestCLI(unittest.TestCase):
         if self.test_video and os.path.exists(self.test_video):
             os.unlink(self.test_video)
 
+    @patch.dict(os.environ, {"OPENROUTER_API_KEY": "from-dotenv"})
+    @patch('langvio.cli.list_available_models')
+    @patch('langvio.cli.setup_logging')
+    def test_api_flags_override_environment(self, mock_logging, mock_list):
+        """--api-key / --api-model / --backend override .env values"""
+        argv = [
+            'langvio', '-q', 'x', '-m', 'x.jpg', '--list-models', '--api-key', 'from-cli',
+            '--api-model', 'qwen/qwen3-vl-8b-instruct', '--backend', 'api',
+        ]
+        with patch('langvio.cli.sys.argv', argv):
+            self.assertEqual(main(), 0)
+
+        from langvio.llm.qwen_api import api_settings, resolve_backend
+
+        settings = api_settings({})
+        self.assertEqual(settings["api_key"], "from-cli")
+        self.assertEqual(settings["model"], "qwen/qwen3-vl-8b-instruct")
+        self.assertEqual(resolve_backend({}), "api")
+        for var in ("QWEN_API_KEY", "QWEN_API_MODEL", "LANGVIO_BACKEND"):
+            os.environ.pop(var, None)
+
     @patch('langvio.cli.sys.argv', ['langvio', '--list-models'])
     @patch('langvio.cli.list_available_models')
     @patch('langvio.cli.setup_logging')
@@ -44,7 +65,7 @@ class TestCLI(unittest.TestCase):
     @patch('langvio.registry')
     def test_list_available_models(self, mock_registry):
         """Test list_available_models function"""
-        mock_registry.list_llm_processors.return_value = {"gpt-3.5": MagicMock(), "gemini": MagicMock()}
+        mock_registry.list_llm_processors.return_value = {"qwen": MagicMock(), "qwen-7b": MagicMock()}
         mock_registry.list_vision_processors.return_value = {"yolo11n": MagicMock()}
         
         # Capture stdout
@@ -57,7 +78,7 @@ class TestCLI(unittest.TestCase):
         
         self.assertIn("Available LLM Processors", output)
         self.assertIn("Available Vision Processors", output)
-        self.assertIn("gpt-3.5", output)
+        self.assertIn("qwen", output)
         self.assertIn("yolo11n", output)
 
     @patch('langvio.cli.sys.argv', ['langvio', '--query', 'test', '--media', 'nonexistent.jpg'])
@@ -188,7 +209,7 @@ class TestCLI(unittest.TestCase):
                 vision_name=None
             )
 
-    @patch('langvio.cli.sys.argv', ['langvio', '--query', 'test', '--media', 'test.jpg', '--llm', 'gpt-3.5', '--vision', 'yolo11n'])
+    @patch('langvio.cli.sys.argv', ['langvio', '--query', 'test', '--media', 'test.jpg', '--llm', 'qwen', '--vision', 'yolo11n'])
     @patch('langvio.cli.setup_logging')
     @patch('langvio.cli.create_pipeline')
     @patch('langvio.cli.is_image_file', return_value=True)
@@ -210,11 +231,11 @@ class TestCLI(unittest.TestCase):
         mock_pipeline.config.config = {"media": {"output_dir": "./output"}}
         mock_create_pipeline.return_value = mock_pipeline
         
-        with patch('langvio.cli.sys.argv', ['langvio', '--query', 'test', '--media', self.test_image, '--llm', 'gpt-3.5', '--vision', 'yolo11n']):
+        with patch('langvio.cli.sys.argv', ['langvio', '--query', 'test', '--media', self.test_image, '--llm', 'qwen', '--vision', 'yolo11n']):
             result = main()
             mock_create_pipeline.assert_called_once_with(
                 config_path=None,
-                llm_name='gpt-3.5',
+                llm_name='qwen',
                 vision_name='yolo11n'
             )
 

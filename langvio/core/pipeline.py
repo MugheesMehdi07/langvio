@@ -184,7 +184,9 @@ class Pipeline:
             "query": query,
             "media_path": media_path,
             "timestamp": datetime.now().isoformat(),
-            "detections": all_detections,
+            "detections": {
+                k: v for k, v in all_detections.items() if k != "render_detections"
+            },
         }
 
         # Write to JSON file

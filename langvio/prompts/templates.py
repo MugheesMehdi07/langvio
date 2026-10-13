@@ -43,7 +43,9 @@ Answer the user's question directly in simple, natural language.
 - Be conversational and helpful, like explaining to a friend
 - Don't mention technical terms like "object_ids", "zones", "confidence scores",
   or "detection results"
-- For videos, focus on what happens throughout the video, not frame-by-frame analysis
+- For videos, give one general summary of the whole video in 2-4 sentences of plain
+  prose. Never mention frames, keyframes, images or timestamps, never describe the
+  video frame by frame, and do not use bullet points or lists
 - For counting in videos, report the total unique objects seen, not boundary crossings
 
 HIGHLIGHT_OBJECTS:

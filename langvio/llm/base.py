@@ -23,6 +23,7 @@ from langvio.utils.llm_utils import (
     format_video_summary,
     parse_explanation_response,
     process_image_detections_and_format_summary,
+    to_general_video_summary,
 )
 
 
@@ -227,7 +228,7 @@ class BaseLLMProcessor(Processor):
                         ].strip()
 
                     self._highlighted_objects = []
-                    return explanation_text
+                    return to_general_video_summary(explanation_text)
                 else:
                     # For images, use the existing parsing with highlighting
                     explanation_text, highlight_objects = parse_explanation_response(

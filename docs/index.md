@@ -2,7 +2,7 @@
 
 Welcome to **Langvio** - a powerful Python framework that connects large language models (LLMs) with computer vision models to enable natural language visual analysis.
 
-**Version:** 0.0.5 | **Python:** 3.8+ | **License:** MIT
+**Version:** 0.1.0 | **Python:** 3.10+ | **License:** MIT
 
 ## What is Langvio?
 
@@ -19,7 +19,7 @@ Langvio bridges the gap between natural language understanding and computer visi
 Query visual content using everyday language - no computer vision expertise required.
 
 ### 🤖 **Multi-Modal Integration** 
-Seamlessly connects leading LLMs (OpenAI GPT, Google Gemini) with state-of-the-art vision models (YOLO-World v2).
+Seamlessly connects a local Qwen2.5-VL Vision Language Model (VLM) with state-of-the-art vision models (YOLO-World v2).
 
 ### 📊 **Rich Analysis Capabilities**
 - Object detection and identification
@@ -120,7 +120,7 @@ graph LR
 
 ### Core Components
 
-- **LLM Processors**: Parse queries and generate explanations (OpenAI GPT, Google Gemini)
+- **LLM Processors**: Parse queries and generate explanations (local Qwen2.5-VL Vision Language Model)
 - **Vision Processors**: Perform object detection and analysis using YOLO-World v2
 - **ByteTracker**: Multi-object tracking system for video analysis with boundary crossing detection
 - **Media Processors**: Handle visualization and output generation with tracking trails
@@ -134,27 +134,26 @@ graph LR
 # Basic installation
 pip install langvio
 
-# With OpenAI support
-pip install langvio[openai]
+# With the local Qwen2.5-VL Vision Language Model
+pip install langvio[vlm]
 
-# With Google Gemini support  
-pip install langvio[google]
-
-# With all LLM providers
+# Equivalent alias for the VLM extra
 pip install langvio[all-llm]
 ```
 
+> **Note:** The first run downloads several GB of model weights from HuggingFace. A GPU is recommended; CPU works but is significantly slower.
+
 ### Environment Setup
 
-Create a `.env` file in your project directory:
+No API keys are required - the Qwen2.5-VL model runs entirely locally. You can optionally create a `.env` file in your project directory to customize behavior:
 
 ```bash
-# Required: LLM API Keys (at least one)
-OPENAI_API_KEY=your_openai_key
-GOOGLE_API_KEY=your_google_key
+# Optional: HuggingFace cache location and token (for gated models)
+HF_HOME=/path/to/hf/cache
+HF_TOKEN=your_hf_token
 
 # Optional: Default model selection
-LANGVIO_DEFAULT_LLM=gemini
+LANGVIO_DEFAULT_LLM=qwen
 LANGVIO_DEFAULT_VISION=yolo_world_v2_m
 
 # Optional: Performance settings

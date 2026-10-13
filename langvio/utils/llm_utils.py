@@ -28,6 +28,8 @@ def process_image_detections_and_format_summary(  # noqa: C901
 
     if not objects:
         summary_text = "No objects detected in the image"
+        if summary_info.get("scene_description"):
+            summary_text += f"\nScene Description: {summary_info['scene_description']}"
         return summary_text, {}
 
     # Build detection map from objects
@@ -43,6 +45,10 @@ def process_image_detections_and_format_summary(  # noqa: C901
 
     # Header
     summary_parts.append("# Image Analysis Summary")
+
+    scene = summary_info.get("scene_description")
+    if scene:
+        summary_parts.append(f"Scene Description: {scene}")
 
     # Basic info from summary
     image_info = summary_info.get("image_info", {})
@@ -161,10 +167,26 @@ def format_video_summary(  # noqa: C901
                 f"Primary Objects: {', '.join(video_info['primary_objects'][:5])}"
             )
 
-    # === YOLO-WORLD + BYTETRACKER COUNTING RESULTS (PRIORITY SECTION) ===
+    scene = summary.get("scene_description")
+    if scene:
+        summary_parts.append("\n## 🎬 SCENE DESCRIPTION (from keyframes)")
+        summary_parts.append(scene)
+
+    # === OBJECT COUNTING RESULTS (PRIORITY SECTION) ===
     counting = summary.get("counting_analysis", {})
     if counting:
-        summary_parts.append("\n## 🎯 YOLO-WORLD OBJECT COUNTING ANALYSIS")
+        summary_parts.append("\n## 🎯 OBJECT COUNTING ANALYSIS")
+        peak = counting.get("max_simultaneous", {})
+        estimated = counting.get("estimated_objects", {})
+        for obj_type, n in estimated.items():
+            summary_parts.append(
+                f"**{obj_type.upper()} COUNT:** about {n} distinct in the video "
+                f"(up to {peak.get(obj_type, 0)} visible at the same time)"
+            )
+        if estimated:
+            summary_parts.append(
+                "Report exactly these counts; do not invent or add up other totals."
+            )
         summary_parts.append(
             f"**BOUNDARY CROSSINGS:** {counting.get('total_crossings', 0)} total events"
         )
@@ -407,15 +429,47 @@ def format_video_summary(  # noqa: C901
         f"**Analysis Coverage:** {processing_info.get('frames_analyzed', 0)}/"
         f"{processing_info.get('total_frames', 0)} frames"
     )
-    summary_parts.append(
-        f"**YOLO-World Enhanced:** "
-        f"{'✅ YES' if processing_info.get('yolo_world_enabled') else '❌ NO'}"
+    detector = processing_info.get("detector") or (
+        "YOLO-World" if processing_info.get("yolo_world_enabled") else "unknown"
     )
+    summary_parts.append(f"**Detector:** {detector}")
     summary_parts.append(
         f"**Analysis Type:** {processing_info.get('analysis_type', 'unknown').upper()}"
     )
 
     return "\n".join(summary_parts)
+
+
+_FRAME_PHRASE = re.compile(
+    r"\s*\b(across|in|throughout|over|between)\s+(the\s+|all\s+|different\s+|"
+    r"various\s+|these\s+)?(key)?frames\b",
+    re.IGNORECASE,
+)
+_FRAME_WORD = re.compile(r"\b(key)?frames?\b", re.IGNORECASE)
+
+
+def to_general_video_summary(text: str) -> str:
+    """
+    Turn a video explanation into plain prose without frame-by-frame content.
+
+    Small local models often ignore the "no frame-by-frame" instruction, so
+    bullet lists and sentences referencing frames are removed here.
+    """
+    # Split inline bullet lists ("... summary: - Frame 1: ... - Frame 2: ...").
+    segments = re.split(r"(?:^|\s)(?:[-•*]|\d+[.)])\s+", text.strip())
+    sentences: List[str] = []
+    for segment in segments:
+        sentences.extend(re.split(r"(?<=[.!?])\s+", segment.strip()))
+
+    kept = []
+    for sentence in sentences:
+        sentence = _FRAME_PHRASE.sub("", sentence).strip()
+        if not sentence or sentence.endswith(":") or _FRAME_WORD.search(sentence):
+            continue
+        kept.append(sentence)
+
+    cleaned = " ".join(kept).strip()
+    return cleaned or text.strip()
 
 
 def analyze_frame_activity(

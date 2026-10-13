@@ -12,6 +12,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 
+# A developer's .env may hold an API key; tests must never call the real API.
+os.environ["LANGVIO_BACKEND"] = "local"
+
 
 @pytest.fixture
 def temp_dir():
@@ -40,11 +43,11 @@ def sample_config():
     """Sample configuration dictionary"""
     return {
         "llm": {
-            "default": "gemini",
+            "default": "qwen",
             "models": {
-                "gemini": {
-                    "model_name": "gemini-pro",
-                    "model_kwargs": {"temperature": 0.2},
+                "qwen": {
+                    "model_name": "Qwen/Qwen2.5-VL-3B-Instruct",
+                    "model_kwargs": {"temperature": 0.2, "max_new_tokens": 1024},
                 }
             },
         },

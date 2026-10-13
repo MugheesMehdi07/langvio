@@ -52,10 +52,10 @@ class TestConfig(unittest.TestCase):
         # Create a temporary config file
         config_content = """
 llm:
-  default: "gemini"
+  default: "qwen"
   models:
-    gemini:
-      model_name: "gemini-pro"
+    qwen:
+      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"
       model_kwargs:
         temperature: 0.3
 """
@@ -65,16 +65,16 @@ llm:
 
         try:
             config = Config(config_path=temp_path)
-            llm_config = config.get_llm_config("gemini")
+            llm_config = config.get_llm_config("qwen")
             self.assertEqual(llm_config["model_kwargs"]["temperature"], 0.3)
         finally:
             os.unlink(temp_path)
 
-    @patch.dict(os.environ, {"LANGVIO_DEFAULT_LLM": "gemini"})
+    @patch.dict(os.environ, {"LANGVIO_DEFAULT_LLM": "qwen"})
     def test_environment_override_llm(self):
         """Test that environment variable overrides default LLM"""
         config = Config()
-        self.assertEqual(config.config["llm"]["default"], "gemini")
+        self.assertEqual(config.config["llm"]["default"], "qwen")
 
     @patch.dict(os.environ, {"LANGVIO_DEFAULT_VISION": "yolo11n"})
     def test_environment_override_vision(self):

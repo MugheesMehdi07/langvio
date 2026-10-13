@@ -167,6 +167,13 @@
                     </tbody>
                 </table>
 
+                {% if image_stats.scene_description %}
+                <div class="mt-3">
+                    <h6>Scene Description:</h6>
+                    <p class="mb-0"><small>{{ image_stats.scene_description }}</small></p>
+                </div>
+                {% endif %}
+
                 {% if image_stats.notable_patterns %}
                 <div class="mt-3">
                     <h6>Notable Patterns:</h6>
@@ -214,14 +221,21 @@
                             <td>{{ video_stats.frames_analyzed }} / {{ video_stats.total_frames }}</td>
                         </tr>
                         {% endif %}
-                        {% if video_stats.yolo_world_enabled is defined %}
+                        {% if video_stats.detector %}
                         <tr>
-                            <td><strong>Enhanced Analysis</strong></td>
-                            <td>{{ "✅ YOLO-World" if video_stats.yolo_world_enabled else "❌ Basic" }}</td>
+                            <td><strong>Detector</strong></td>
+                            <td>{{ video_stats.detector }}</td>
                         </tr>
                         {% endif %}
                     </tbody>
                 </table>
+
+                {% if video_stats.scene_description %}
+                <div class="mt-3">
+                    <h6>Scene Description:</h6>
+                    <p class="mb-0"><small>{{ video_stats.scene_description }}</small></p>
+                </div>
+                {% endif %}
 
                 {% if video_stats.primary_objects %}
                 <div class="mt-3">
@@ -240,11 +254,22 @@
         {% if video_stats.counting %}
         <div class="card mb-4 stats-card">
             <div class="card-header">
-                <i class="fas fa-calculator"></i> YOLO-World Counting Analysis
+                <i class="fas fa-calculator"></i> Counting Analysis
             </div>
             <div class="card-body">
                 <table class="stats-table">
                     <tbody>
+                        {% for obj_type, n in video_stats.counting.estimated_objects.items() %}
+                        <tr>
+                            <td><strong>{{ obj_type|title }} (distinct, estimated)</strong></td>
+                            <td>{{ n }}
+                                <small class="text-muted">({{ video_stats.counting.unique_objects.get(obj_type, 0) }} raw tracks incl. brief)</small></td>
+                        </tr>
+                        <tr>
+                            <td><strong>{{ obj_type|title }} (max at once)</strong></td>
+                            <td>{{ video_stats.counting.max_simultaneous.get(obj_type, 0) }}</td>
+                        </tr>
+                        {% endfor %}
                         <tr>
                             <td><strong>Total Crossings</strong></td>
                             <td>{{ video_stats.counting.total_crossings }}</td>
@@ -553,8 +578,8 @@
                                 <li><strong>Media Type:</strong> {{ "Video" if is_video else "Image" }}</li>
                                 <li><strong>Processing Time:</strong> {{ processing_time }}s</li>
                                 <li><strong>Objects Highlighted:</strong> {{ highlighted_objects_count }}</li>
-                                {% if is_video and video_stats.yolo_world_enabled is defined %}
-                                <li><strong>YOLO-World Enhanced:</strong> {{ "Yes" if video_stats.yolo_world_enabled else "No" }}</li>
+                                {% if is_video and video_stats.detector %}
+                                <li><strong>Detector:</strong> {{ video_stats.detector }}</li>
                                 {% endif %}
                             </ul>
                         </div>

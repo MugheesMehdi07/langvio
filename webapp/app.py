@@ -90,40 +90,33 @@ def create_langvio_pipeline():
             "show_confidence": False,  # Hide confidence to reduce clutter
         }
         
-        openai_models = ["gpt-4", "gpt-3.5", "gpt-4o-mini", "gpt-4.1-mini"]
+        vlm_models = ["qwen", "qwen-3b", "qwen-7b", "qwen2-vl-7b"]
         selected_llm = None
-        
-        for llm_name in openai_models:
+
+        for llm_name in vlm_models:
             try:
-                # Try to create pipeline with this LLM
-                test_pipeline = create_pipeline(llm_name=llm_name)
-                # If successful, use this model
+                # Try to create pipeline with this local VLM
+                create_pipeline(llm_name=llm_name)
                 selected_llm = llm_name
-                logger.info(f"Selected OpenAI model: {llm_name}")
+                logger.info(f"Selected VLM: {llm_name}")
                 break
             except Exception as e:
                 error_msg = str(e)
-                # If rate limited, try next model
-                if "429" in error_msg or "rate_limit" in error_msg.lower() or "rate limit" in error_msg.lower():
-                    logger.warning(f"Model {llm_name} is rate-limited, trying next model...")
-                    continue
-                # For other errors, also try next model
                 logger.warning(f"Model {llm_name} failed: {error_msg[:100]}, trying next model...")
                 continue
-        
+
         if not selected_llm:
             # If all models failed, use the first one anyway (will show error later)
-            selected_llm = openai_models[0]
-            logger.warning(f"All OpenAI models failed, defaulting to {selected_llm}")
-        
-        for model in ["yolo_world_v2_m", "yolo_world_v2_s", "yolo_world_v2_l", "yolo_world_v2_x","yoloe_large", "yoloe", "yolo"]:
+            selected_llm = vlm_models[0]
+            logger.warning(f"All VLM models failed, defaulting to {selected_llm}")
+
+        for model in ["qwen_vlm", "qwen_vlm_3b", "qwen_vlm_7b"]:
             if model in config.config["vision"]["models"]:
-                # Use OpenAI for LLM
                 pipeline = create_pipeline(vision_name=model, llm_name=selected_llm)
                 logger.info(f"Created pipeline with vision model: {model} and LLM: {selected_llm}")
                 return pipeline
 
-        # Fallback to default (with OpenAI LLM)
+        # Fallback to default vision model with the local VLM
         pipeline = create_pipeline(llm_name=selected_llm)
         logger.info(f"Created pipeline with default vision model and LLM: {selected_llm}")
         return pipeline
@@ -189,6 +182,7 @@ def extract_image_stats(detections):
 
     # Notable patterns
     stats["notable_patterns"] = summary.get("notable_patterns", [])
+    stats["scene_description"] = summary.get("scene_description", "")
 
     return stats
 
@@ -224,7 +218,13 @@ def extract_video_stats(detections):
             "flow_direction": counting.get("flow_direction", "unknown"),
             "by_object_type": counting.get("by_object_type", {}),
             "most_active_type": counting.get("most_active_type", None),
+            "estimated_objects": counting.get("estimated_objects", {}),
+            "max_simultaneous": counting.get("max_simultaneous", {}),
+            "confirmed_objects": counting.get("confirmed_objects", {}),
+            "unique_objects": counting.get("unique_objects", {}),
         }
+
+    stats["scene_description"] = summary.get("scene_description", "")
 
     # Speed analysis
     speed = summary.get("speed_analysis", {})
@@ -275,7 +275,9 @@ def extract_video_stats(detections):
     if processing_info:
         stats["frames_analyzed"] = processing_info.get("frames_analyzed", 0)
         stats["total_frames"] = processing_info.get("total_frames", 0)
-        stats["yolo_world_enabled"] = processing_info.get("yolo_world_enabled", False)
+        stats["detector"] = processing_info.get("detector") or (
+            "YOLO-World" if processing_info.get("yolo_world_enabled") else "Basic"
+        )
 
     return stats
 
@@ -283,6 +285,12 @@ def extract_video_stats(detections):
 def get_object_counts_from_detections(detections, is_video_file):
     """Extract object counts from the new detection format"""
     object_counts = {}
+
+    estimated = detections.get("summary", {}).get("counting_analysis", {}).get(
+        "estimated_objects"
+    )
+    if is_video_file and estimated:
+        return dict(sorted(estimated.items(), key=lambda kv: kv[1], reverse=True))
 
     if is_video_file:
         frame_detections = detections.get("frame_detections", {})
@@ -446,13 +454,11 @@ def process_media():
                 # For videos, get a sample from frame detections
                 frame_detections = detections.get("frame_detections", {})
                 if frame_detections:
-                    # Get objects from the first few frames
-                    sample_frames = list(frame_detections.keys())[:3]
                     seen_objects = set()
 
-                    for frame_key in sample_frames:
+                    for frame_key in sorted(frame_detections.keys(), key=int):
                         for det in frame_detections[frame_key]:
-                            obj_signature = f"{det.get('label', 'unknown')}_{det.get('object_id', 'unknown')}"
+                            obj_signature = f"{det.get('label', 'unknown')}_{det.get('track_id', det.get('object_id', 'unknown'))}"
                             if obj_signature not in seen_objects:
                                 detailed_objects.append(
                                     {

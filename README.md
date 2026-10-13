@@ -4,7 +4,7 @@
 
 ![Langvio Logo](https://img.shields.io/badge/Langvio-Vision%20%2B%20Language-blue?style=for-the-badge&logo=python)
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI version](https://badge.fury.io/py/langvio.svg)](https://badge.fury.io/py/langvio)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://langvio.readthedocs.io/)
@@ -27,7 +27,7 @@ Langvio bridges the gap between **human language** and **computer vision**. Ask 
 - **🎥 Multi-Modal Support**: Works with both images and videos
 - **🚀 Powered by YOLO-World v2**: Fast, accurate object detection without predefined classes
 - **📹 ByteTracker Integration**: Advanced multi-object tracking for video analysis with boundary crossing detection
-- **🤖 LLM Integration**: Supports OpenAI GPT and Google Gemini for intelligent explanations
+- **🤖 Local VLM Integration**: Uses a local Vision Language Model (Qwen2.5-VL) for query parsing and intelligent explanations — no API keys required
 - **📊 Advanced Analytics**: Object counting, speed estimation, spatial relationships, temporal tracking
 - **🎨 Visual Output**: Generates annotated images/videos with detection highlights and tracking trails
 - **🌐 Web Interface**: Includes a Flask web app for easy interaction
@@ -87,44 +87,41 @@ langvio --query "Find red objects" --media scene.jpg --config custom.yaml
 pip install langvio
 ```
 
-### With LLM Provider Support
+### With the Local VLM Backend
 
-Choose your preferred language model provider:
+langvio uses a local Vision Language Model (Qwen2.5-VL) as its language layer —
+no API keys, no cloud calls. Install the backend:
 
 ```bash
-# For OpenAI models (GPT-3.5, GPT-4)
-pip install langvio[openai]
+# Local VLM (Qwen2.5-VL via HuggingFace transformers)
+pip install langvio[vlm]
 
-# For Google Gemini models
-pip install langvio[google]
-
-# For all supported providers
+# Equivalent grouped extra
 pip install langvio[all-llm]
 
 # For development
 pip install langvio[dev]
 ```
 
+The first run downloads the model weights from HuggingFace (a few GB). A CUDA
+GPU is strongly recommended; CPU works but is slow.
+
 ### Environment Setup
 
-1. **Create a `.env` file** for your API keys:
+No API keys are required. Optionally create a `.env` file to point HuggingFace at
+a custom cache or provide a token for gated models:
 
 ```bash
 # Copy the template
 cp .env.template .env
 ```
 
-2. **Add your API keys** to `.env`:
-
 ```env
-# For OpenAI
-OPENAI_API_KEY=your_openai_api_key_here
-
-# For Google Gemini  
-GOOGLE_API_KEY=your_google_api_key_here
+# Optional
+# HF_HOME=/path/to/hf-cache
+# HF_TOKEN=your_huggingface_token_here
+LANGVIO_DEFAULT_LLM=qwen
 ```
-
-3. **Langvio automatically loads** these environment variables!
 
 ## 🚀 Quick Start
 
@@ -242,7 +239,7 @@ graph TD
 
 ### Core Components
 
-- **🧠 LLM Processor**: Parses queries and generates explanations (OpenAI, Google Gemini)
+- **🧠 VLM Processor**: Parses queries and generates explanations (local Qwen2.5-VL)
 - **👁️ Vision Processor**: Detects objects and attributes using YOLO-World v2
 - **📹 ByteTracker**: Multi-object tracking system for video analysis with boundary crossing detection
 - **🎨 Media Processor**: Creates visualizations and handles I/O
@@ -262,14 +259,12 @@ graph TD
   - `yoloe_large` - Accurate (maps to large)
 - Automatic model selection based on performance needs
 
-### Language Models
-- **OpenAI**: 
-  - `gpt-4o-mini` - Default (fast, cost-effective)
-  - `gpt-3` or `gpt-3.5` - GPT-3.5 Turbo (fast)
-  - `gpt-4` - GPT-4.1 Mini (best reasoning)
-  - `gpt-4.1-mini`, `gpt-4.1-nano` - Latest models
-- **Google**: `gemini` - Gemini 2.0 Flash (free tier available)
-- Extensible architecture for adding more providers
+### Language Models (local VLM)
+- **Qwen2.5-VL** (run locally, no API keys):
+  - `qwen` / `qwen-3b` - Default, `Qwen/Qwen2.5-VL-3B-Instruct` (smallest, fastest)
+  - `qwen-7b` - `Qwen/Qwen2.5-VL-7B-Instruct` (higher quality)
+  - `qwen2-vl-7b` - `Qwen/Qwen2-VL-7B-Instruct`
+- Extensible architecture for adding more local models
 
 ## 🛠️ Configuration
 
@@ -278,17 +273,18 @@ graph TD
 ```yaml
 # config.yaml
 llm:
-  default: "gpt-4o-mini"  # Default model
+  default: "qwen"  # Local Qwen2.5-VL
   models:
-    gpt-4o-mini:
-      model_name: "gpt-4o-mini"
-      model_kwargs:
-        temperature: 0.1
-        max_tokens: 2048
-    gemini:
-      model_name: "gemini-2.0-flash"
+    qwen:
+      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"
       model_kwargs:
         temperature: 0.2
+        max_new_tokens: 1024
+    qwen-7b:
+      model_name: "Qwen/Qwen2.5-VL-7B-Instruct"
+      model_kwargs:
+        temperature: 0.2
+        max_new_tokens: 1024
 
 vision:
   default: "yolo11n"  # Fastest default, or "yolo_world_v2_m" for balanced
@@ -392,7 +388,7 @@ pipeline = langvio.create_pipeline()  # Uses best available model
 # Manual model selection for specific needs
 pipeline = langvio.create_pipeline(
     vision_name="yolo_world_v2_l",  # High accuracy
-    llm_name="gpt-4"                # Advanced reasoning (or gpt-4o-mini for speed)
+    llm_name="qwen-7b"              # Higher-quality VLM (or "qwen" for speed)
 )
 ```
 
@@ -494,9 +490,7 @@ SOFTWARE.
 
 This project utilizes certain datasets, models, APIs, and algorithms that are subject to their respective original licenses and terms of use. Users must comply with all terms and conditions of these original licenses, including but not limited to:
 
-- **OpenAI Terms of Use**: This project uses OpenAI's GPT models (GPT-3.5, GPT-4, GPT-4o-mini, etc.) via the OpenAI API. Users must comply with [OpenAI's Terms of Use](https://openai.com/policies/terms-of-use) and [Usage Policies](https://openai.com/policies/usage-policies) when using OpenAI models through this software.
-
-- **Google Gemini Terms of Service**: This project uses Google's Gemini models (Gemini Pro, Gemini 2.0 Flash) via the Google AI API. Users must comply with [Google's Terms of Service](https://ai.google.dev/terms) and [Gemini API Terms](https://ai.google.dev/terms) when using Gemini models through this software.
+- **Qwen (Tongyi Qianwen) License**: This project uses Alibaba Cloud's Qwen2.5-VL / Qwen2-VL models, run locally via HuggingFace transformers. Users must comply with the [Qwen license terms](https://github.com/QwenLM/Qwen2.5-VL/blob/main/LICENSE) published on the respective HuggingFace model cards.
 
 - **YOLO World License**: This project uses YOLO-World v2 models developed by Ultralytics. Users must comply with the [Ultralytics YOLO License](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) (AGPL-3.0) and any additional terms specified by Ultralytics for YOLO-World models.
 
@@ -510,8 +504,8 @@ For the full license text, see the [LICENSE](LICENSE) file.
 
 - **Ultralytics** for the amazing YOLO-World v2 models
 - **ByteTracker** algorithm for robust multi-object tracking
-- **LangChain** for LLM integration framework
-- **OpenAI** and **Google** for language model APIs
+- **LangChain** for the LLM integration framework
+- **Alibaba Cloud / Qwen** and **HuggingFace** for the local Vision Language Model
 - **OpenCV** for computer vision utilities
 
 ---
