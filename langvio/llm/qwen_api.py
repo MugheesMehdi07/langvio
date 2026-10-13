@@ -1,17 +1,18 @@
 """
 Remote Qwen-VL backend over an OpenAI-compatible chat completions API.
 
-This is langvio's default backend: it runs the whole pipeline (query parsing,
+This is langvio's default backend whenever an API key is configured: it runs the whole pipeline (query parsing,
 grounding, scene description, explanation) against a hosted Qwen-VL model, so
 nothing is downloaded locally. Works with any OpenAI-compatible endpoint:
 OpenRouter (default), Alibaba Model Studio / DashScope, the Hugging Face
 router or a self-hosted vLLM server.
 
 Backend selection (``resolve_backend``):
-    * ``LANGVIO_BACKEND`` env var ("api" / "local") wins if set;
-    * otherwise the processor's ``backend`` setting, which defaults to "api";
-    * "local" opts into the in-process weights (needs ``langvio[vlm]``);
-    * "auto" keeps the older behaviour: API when a key is configured, else local.
+    * ``LANGVIO_BACKEND`` env var ("api" / "local" / "auto") wins if set;
+    * otherwise the processor's ``backend`` setting, which defaults to "auto":
+      the API when a key is configured, else the in-process weights (needs
+      ``langvio[vlm]``);
+    * "api" / "local" force one backend regardless of the key.
 """
 
 import base64
@@ -64,7 +65,7 @@ def api_settings(config: Dict[str, Any]) -> Dict[str, Any]:
 def resolve_backend(config: Dict[str, Any]) -> str:
     """Return "api" or "local" for a processor config (see module docstring)."""
     choice = (
-        os.environ.get("LANGVIO_BACKEND") or config.get("backend") or "api"
+        os.environ.get("LANGVIO_BACKEND") or config.get("backend") or "auto"
     ).lower()
     if choice in ("api", "local"):
         return choice

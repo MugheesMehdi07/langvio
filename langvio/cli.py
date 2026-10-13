@@ -46,7 +46,8 @@ def main():
     parser.add_argument(
         "--backend",
         choices=["api", "local", "auto"],
-        help="Run Qwen-VL over the API (default) or with local weights",
+        help="Run Qwen-VL over the API or with local weights "
+        "(default: auto - API if a key is set, else local)",
     )
     parser.add_argument(
         "--log-level",

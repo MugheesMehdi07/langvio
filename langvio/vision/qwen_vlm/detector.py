@@ -60,7 +60,7 @@ class QwenVisionProcessor(BaseVisionProcessor):
         scene_description: bool = True,
         scene_frames: int = 4,
         nms_iou: float = 0.6,
-        backend: str = "api",
+        backend: str = "auto",
         bbox_format: str = "auto",
         api_concurrency: int = 2,
         **kwargs,
@@ -82,9 +82,9 @@ class QwenVisionProcessor(BaseVisionProcessor):
             scene_description: Whether to ask the VLM for a scene description.
             scene_frames: Keyframes shown to the VLM for the video description.
             nms_iou: Same-label boxes overlapping more than this are merged.
-            backend: "api" (default, hosted Qwen-VL), "local" (in-process
-                weights, needs ``langvio[vlm]``) or "auto" (API if a key is
-                configured, else local). ``LANGVIO_BACKEND`` overrides it.
+            backend: "auto" (default: hosted Qwen-VL if an API key is
+                configured, else local weights), "api" or "local" (in-process
+                weights, needs ``langvio[vlm]``). ``LANGVIO_BACKEND`` overrides it.
             bbox_format: Grounding coordinate space: "auto", "pixel" or
                 "norm1000" (0-1000 grid, Qwen3 and later).
             api_concurrency: Parallel keyframe requests with the API backend.

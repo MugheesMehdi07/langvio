@@ -1,14 +1,15 @@
 """
 Factory for LLM processor registration and creation.
 
-langvio uses a Qwen-VL Vision Language Model as its language layer. By default
-it is reached over an OpenAI-compatible API with an API key (OpenRouter); the
-same processor can run the weights in-process instead with
-``LANGVIO_BACKEND=local`` plus ``pip install langvio[vlm]``.
+langvio uses a Qwen-VL Vision Language Model as its language layer. When an
+API key (OpenRouter) is configured it is reached over an OpenAI-compatible API;
+without one the same processor runs the weights in-process, which needs
+``pip install langvio[vlm]``. ``LANGVIO_BACKEND=api|local`` forces either.
 """
 
 import importlib.util
 import logging
+import os
 import sys
 
 from langvio.core.registry import ModelRegistry
@@ -47,17 +48,38 @@ def register_llm_processors(registry: ModelRegistry) -> None:
     from langvio.llm.qwen_api import resolve_backend
 
     backend = resolve_backend({})
+    # Local because no key was found, rather than because the user asked for it.
+    fell_back = (
+        backend == "local"
+        and os.environ.get("LANGVIO_BACKEND", "auto").lower() == "auto"
+    )
     if backend == "local" and not is_package_available("transformers"):
-        error_msg = (
-            "ERROR: The local VLM backend is not installed.\n"
-            "Please install it with:\n"
-            "  pip install langvio[vlm]\n"
-            "(this pulls in 'transformers' and 'accelerate'),\n"
-            "or unset LANGVIO_BACKEND and set OPENROUTER_API_KEY to use the "
-            "hosted Qwen API instead."
-        )
+        if fell_back:
+            error_msg = (
+                "ERROR: No API key found (OPENROUTER_API_KEY / QWEN_API_KEY), so "
+                "langvio tried to run Qwen-VL locally, but the local VLM backend "
+                "is not installed. Either:\n"
+                "  - set OPENROUTER_API_KEY in your environment / .env file "
+                "(get one at https://openrouter.ai/keys), or\n"
+                "  - pip install langvio[vlm]  to run the model on this machine."
+            )
+        else:
+            error_msg = (
+                "ERROR: The local VLM backend is not installed.\n"
+                "Please install it with:\n"
+                "  pip install langvio[vlm]\n"
+                "(this pulls in 'transformers' and 'accelerate'),\n"
+                "or unset LANGVIO_BACKEND and set OPENROUTER_API_KEY to use the "
+                "hosted Qwen API instead."
+            )
         logger.error(error_msg)
         sys.exit(1)
+    if fell_back:
+        logger.warning(
+            "No API key found (OPENROUTER_API_KEY / QWEN_API_KEY): running "
+            "Qwen-VL locally. The first run downloads the model weights from "
+            "HuggingFace (several GB); a GPU is strongly recommended."
+        )
 
     try:
         from langvio.llm.qwen_vlm import VLMProcessor

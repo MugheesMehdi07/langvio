@@ -16,12 +16,12 @@ def test_bbox_space_by_model_family():
     assert bbox_space("qwen/qwen3-vl-30b-a3b-instruct", "pixel") == "pixel"
 
 
-def test_resolve_backend_defaults_to_api(monkeypatch):
-    """The API backend is the default, with or without a key configured."""
+def test_resolve_backend_defaults_to_auto(monkeypatch):
+    """By default the API is used when a key is configured, else local weights."""
     monkeypatch.delenv("LANGVIO_BACKEND", raising=False)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("QWEN_API_KEY", raising=False)
-    assert resolve_backend({}) == "api"
+    assert resolve_backend({}) == "local"
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
     assert resolve_backend({}) == "api"
 
@@ -144,3 +144,34 @@ def test_api_grounding_scales_norm1000_boxes():
             Image.new("RGB", (2000, 1000)), {"target_objects": ["person"]}
         )
     assert detections[0]["bbox"] == [200, 200, 600, 600]
+
+
+def test_register_without_key_or_vlm_extra_exits(monkeypatch):
+    """No key and no transformers: exit with a message naming both fixes."""
+    import pytest
+
+    from langvio.llm import factory
+
+    monkeypatch.delenv("LANGVIO_BACKEND", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("QWEN_API_KEY", raising=False)
+    monkeypatch.setattr(factory, "is_package_available", lambda name: False)
+    with pytest.raises(SystemExit):
+        factory.register_llm_processors(None)
+
+
+def test_register_without_key_falls_back_to_local(monkeypatch, caplog):
+    """No key with transformers installed: register for local and warn."""
+    from unittest.mock import MagicMock
+
+    from langvio.llm import factory
+
+    monkeypatch.delenv("LANGVIO_BACKEND", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("QWEN_API_KEY", raising=False)
+    monkeypatch.setattr(factory, "is_package_available", lambda name: True)
+    registry = MagicMock()
+    with caplog.at_level("WARNING", logger="langvio.llm.factory"):
+        factory.register_llm_processors(registry)
+    assert registry.register_llm_processor.called
+    assert "running Qwen-VL locally" in caplog.text

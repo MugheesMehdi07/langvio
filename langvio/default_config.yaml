@@ -1,11 +1,12 @@
 # Default langvio configuration
 # Note: API keys must be provided through environment variables, never here.
 #
-# Backend: every qwen processor below talks to a hosted Qwen-VL model over an
-# OpenAI-compatible API (the default, backend: "api") and needs
-# OPENROUTER_API_KEY (or QWEN_API_KEY) set in your environment / .env file.
-# Set backend: "local" (or LANGVIO_BACKEND=local) to download the weights and
-# run them in-process instead - that needs `pip install langvio[vlm]`.
+# Backend (default "auto"): when OPENROUTER_API_KEY (or QWEN_API_KEY) is set in
+# your environment / .env file, every qwen processor below talks to a hosted
+# Qwen-VL model over an OpenAI-compatible API. Without a key langvio downloads
+# the weights and runs them in-process instead - that needs
+# `pip install langvio[vlm]`. Set backend: "api" / "local" (or
+# LANGVIO_BACKEND=api / local) to force one regardless of the key.
 #
 # API options per model entry: api_model, api_base_url, api_key_env,
 # api_extra_body, api_timeout, api_max_retries; or env QWEN_API_MODEL /
