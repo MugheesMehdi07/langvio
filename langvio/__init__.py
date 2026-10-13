@@ -159,11 +159,10 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa:
             ]
 
             if valid_processors:
-                # Try preferred processors first
+                # Only fall back to Qwen-VL processors; other detectors (YOLO)
+                # are used solely when requested by name.
                 preferred = ["qwen_vlm", "qwen_vlm_3b", "qwen_vlm_7b"]
-                for proc_name in preferred + [
-                    v for v in valid_processors if v not in preferred
-                ]:
+                for proc_name in [p for p in preferred if p in valid_processors]:
                     try:
                         pipeline.set_vision_processor(proc_name)
                         vision_set = True
@@ -173,11 +172,9 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa:
 
             if not vision_set:
                 error_msg = (
-                    f"ERROR: No valid vision processor found. "
-                    f"Registered processors: {list(available_vision)}\n"
-                    f"Config processors: {list(config_vision_models)}\n"
-                    f"Please ensure at least one vision processor is "
-                    f"both registered and configured."
+                    "ERROR: Could not set up the Qwen-VL vision processor "
+                    "(qwen_vlm). Set OPENROUTER_API_KEY for the hosted Qwen API, "
+                    "or pip install langvio[vlm] to run it locally."
                 )
                 print(error_msg, file=sys.stderr)
                 sys.exit(1)
@@ -191,8 +188,9 @@ def create_pipeline(config_path=None, llm_name=None, vision_name=None):  # noqa:
         except Exception:
             if len(registry.list_llm_processors()) == 0:
                 error_msg = (
-                    "ERROR: No LLM processor is available. "
-                    "Please install the local VLM backend:\n"
+                    "ERROR: No Qwen-VL LLM processor is available. Set "
+                    "OPENROUTER_API_KEY for the hosted Qwen API, or install the "
+                    "local backend:\n"
                     "- pip install langvio[vlm]"
                 )
                 print(error_msg, file=sys.stderr)

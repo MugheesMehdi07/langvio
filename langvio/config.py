@@ -300,19 +300,23 @@ class Config:
         # Override default vision model from environment variable
         env_vision = os.getenv("LANGVIO_DEFAULT_VISION")
         if env_vision:
-            # Normalize the environment variable value
-            env_vision_lower = env_vision.lower().replace("_", "-").replace(" ", "-")
+            # Model keys mix "_" and "-" (qwen_vlm, yolo11n), so try the value
+            # as given and then each normalized spelling.
+            lowered = env_vision.strip().lower().replace(" ", "_")
+            candidates = [
+                env_vision,
+                lowered,
+                lowered.replace("-", "_"),
+                lowered.replace("_", "-"),
+            ]
+            models = self.config.get("vision", {}).get("models", {})
+            match = next((name for name in candidates if name in models), None)
 
-            # Check if the value exists in config
-            if (
-                "vision" in self.config
-                and "models" in self.config["vision"]
-                and env_vision_lower in self.config["vision"]["models"]
-            ):
-                self.config["vision"]["default"] = env_vision_lower
+            if match:
+                self.config["vision"]["default"] = match
                 logger.info(
                     f"Overriding default vision model from environment: "
-                    f"{env_vision} -> {env_vision_lower}"
+                    f"{env_vision} -> {match}"
                 )
             else:
                 available_models = list(

@@ -5,6 +5,7 @@ Updated to handle the new Langvio result format
 
 import logging
 import os
+import sys
 import time
 import uuid
 import subprocess
@@ -19,15 +20,19 @@ from flask import (
     url_for,
 )
 from werkzeug.utils import secure_filename
-# for video re-encoding import imageio_ffmpeg
-import imageio_ffmpeg
-os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
-import imageio_ffmpeg
-print(imageio_ffmpeg.get_ffmpeg_exe())
 
-# Import langvio
-from langvio import create_pipeline
-from langvio.config import Config
+# Video re-encoding uses the ffmpeg binary bundled with imageio-ffmpeg.
+import imageio_ffmpeg
+
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+
+# Use the langvio package from this repository, not an older copy installed in
+# site-packages (pre-0.1.0 releases expect OpenAI/Gemini providers).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+
+import langvio  # noqa: E402
+from langvio import create_pipeline  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
@@ -53,72 +58,32 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["RESULTS_FOLDER"] = RESULTS_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB max-limit
 
+# Qwen-VL handles both the language and the vision layer. The backend (hosted
+# API with OPENROUTER_API_KEY, else local weights via langvio[vlm]) is chosen
+# by langvio itself; see LANGVIO_BACKEND in .env.template.
+LLM_NAME = os.environ.get("LANGVIO_DEFAULT_LLM", "qwen")
+VISION_NAME = os.environ.get("LANGVIO_DEFAULT_VISION", "qwen_vlm")
+
 
 # Initialize Langvio pipeline once
 def create_langvio_pipeline():
     try:
-        # Create config with good defaults
-        config = Config()
+        pipeline = create_pipeline(llm_name=LLM_NAME, vision_name=VISION_NAME)
 
-        # Higher confidence for better visualization
-        # Automatically set confidence for any YOLO-based model
-        for model_key in config.config["vision"]["models"]:
-            if model_key.startswith(("yolo_world", "yoloe", "yolo")):
-                config.config["vision"]["models"][model_key]["confidence"] = 0.5
-                # Improve tracking stability to reduce flickering
-                # Increase track_buffer to handle occlusions better
-                if "track_buffer" in config.config["vision"]["models"][model_key]:
-                    config.config["vision"]["models"][model_key]["track_buffer"] = max(
-                        config.config["vision"]["models"][model_key].get("track_buffer", 70),
-                        90  # Increase buffer to reduce track ID switches
-                    )
-                # Slightly increase match_thresh for more stable matching
-                if "match_thresh" in config.config["vision"]["models"][model_key]:
-                    config.config["vision"]["models"][model_key]["match_thresh"] = max(
-                        config.config["vision"]["models"][model_key].get("match_thresh", 0.6),
-                        0.7  # Higher threshold = more conservative matching = less flickering
-                    )
-
-
-        # Set visualization options
-        config.config["media"]["output_dir"] = app.config["RESULTS_FOLDER"]
-        config.config["media"]["visualization"] = {
+        # Results go to the webapp's folder, with web-friendly visualization.
+        pipeline.config.config["media"]["output_dir"] = app.config["RESULTS_FOLDER"]
+        pipeline.config.config["media"]["visualization"] = {
             "box_color": [0, 120, 255],  # Orange boxes
             "text_color": [255, 255, 255],  # White text
             "line_thickness": 2,  # Line thickness
             "show_attributes": True,  # Show attributes
             "show_confidence": False,  # Hide confidence to reduce clutter
         }
-        
-        vlm_models = ["qwen", "qwen-3b", "qwen-7b", "qwen2-vl-7b"]
-        selected_llm = None
 
-        for llm_name in vlm_models:
-            try:
-                # Try to create pipeline with this local VLM
-                create_pipeline(llm_name=llm_name)
-                selected_llm = llm_name
-                logger.info(f"Selected VLM: {llm_name}")
-                break
-            except Exception as e:
-                error_msg = str(e)
-                logger.warning(f"Model {llm_name} failed: {error_msg[:100]}, trying next model...")
-                continue
-
-        if not selected_llm:
-            # If all models failed, use the first one anyway (will show error later)
-            selected_llm = vlm_models[0]
-            logger.warning(f"All VLM models failed, defaulting to {selected_llm}")
-
-        for model in ["qwen_vlm", "qwen_vlm_3b", "qwen_vlm_7b"]:
-            if model in config.config["vision"]["models"]:
-                pipeline = create_pipeline(vision_name=model, llm_name=selected_llm)
-                logger.info(f"Created pipeline with vision model: {model} and LLM: {selected_llm}")
-                return pipeline
-
-        # Fallback to default vision model with the local VLM
-        pipeline = create_pipeline(llm_name=selected_llm)
-        logger.info(f"Created pipeline with default vision model and LLM: {selected_llm}")
+        logger.info(
+            f"Created langvio {langvio.__version__} pipeline "
+            f"(LLM: {LLM_NAME}, vision: {VISION_NAME})"
+        )
         return pipeline
     except Exception as e:
         logger.error(f"Error creating pipeline: {e}")
@@ -543,10 +508,12 @@ def result_file(filename):
 
 
 if __name__ == "__main__":
-    # Check if pipeline was created successfully
     if pipeline is None:
-        logger.error(
-            "Failed to initialize Langvio pipeline. Check if Langvio is installed correctly."
+        raise SystemExit(
+            "Failed to initialize the langvio pipeline. Set OPENROUTER_API_KEY in "
+            ".env for the hosted Qwen API, or pip install 'langvio[vlm]' to run "
+            "Qwen-VL locally."
         )
-    else:
-        app.run(debug=True, host="0.0.0.0", port=5001)
+    # No reloader: it would start a second process and build the pipeline
+    # (and load the local model) twice.
+    app.run(debug=True, host="0.0.0.0", port=5001, use_reloader=False)

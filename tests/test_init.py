@@ -72,36 +72,47 @@ class TestInit(unittest.TestCase):
                 result = langvio.create_pipeline(llm_name="qwen")
                 mock_pipeline.set_llm_processor.assert_called_once_with("qwen")
 
+    def _fallback_mock_pipeline(self, vision_models):
+        mock_pipeline = MagicMock()
+        mock_pipeline.config.config = {
+            "vision": {
+                "default": "invalid_model",
+                "models": {name: {} for name in vision_models},
+            },
+            "llm": {"default": "qwen", "models": {"qwen": {}}},
+        }
+        return mock_pipeline
+
     def test_create_pipeline_fallback_vision(self):
-        """Test create_pipeline fallback vision processor selection"""
-        with patch('langvio.Pipeline') as mock_pipeline_class:
-            mock_pipeline = MagicMock()
-            mock_pipeline.config.config = {
-                "vision": {
-                    "default": "invalid_model",
-                    "models": {"yolo11n": {}, "yolo_world_v2_m": {}}
-                },
-                "llm": {
-                    "default": "qwen",
-                    "models": {"qwen": {}}
-                }
-            }
-            mock_pipeline_class.return_value = mock_pipeline
-            
+        """Fallback picks a Qwen-VL processor, not a YOLO detector"""
+        vision_models = ["yolo11n", "qwen_vlm", "yolo_world_v2_m"]
+        mock_pipeline = self._fallback_mock_pipeline(vision_models)
+        with patch('langvio.Pipeline', return_value=mock_pipeline):
             with patch('langvio.registry') as mock_registry:
                 mock_registry.list_vision_processors.return_value = {
-                    "yolo11n": MagicMock(),
-                    "yolo_world_v2_m": MagicMock()
+                    name: MagicMock() for name in vision_models
                 }
                 mock_registry.list_llm_processors.return_value = {"qwen": MagicMock()}
-                
-                # Mock set_vision_processor to succeed
-                mock_pipeline.set_vision_processor = MagicMock()
-                
-                result = langvio.create_pipeline()
-                # Should have tried to set a vision processor
-                self.assertGreaterEqual(mock_pipeline.set_vision_processor.call_count, 0)
 
+                langvio.create_pipeline()
+
+        mock_pipeline.set_vision_processor.assert_called_once_with("qwen_vlm")
+
+    def test_create_pipeline_fallback_vision_skips_yolo(self):
+        """Without a Qwen-VL processor, the fallback exits rather than using YOLO"""
+        vision_models = ["yolo11n", "yolo_world_v2_m"]
+        mock_pipeline = self._fallback_mock_pipeline(vision_models)
+        with patch('langvio.Pipeline', return_value=mock_pipeline):
+            with patch('langvio.registry') as mock_registry:
+                mock_registry.list_vision_processors.return_value = {
+                    name: MagicMock() for name in vision_models
+                }
+                mock_registry.list_llm_processors.return_value = {"qwen": MagicMock()}
+
+                with self.assertRaises(SystemExit):
+                    langvio.create_pipeline()
+
+        mock_pipeline.set_vision_processor.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

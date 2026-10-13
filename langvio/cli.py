@@ -17,19 +17,20 @@ def main():
     """Main entry point for the langvio CLI"""
     # Parse arguments
     parser = argparse.ArgumentParser(
-        description="langvio: Connect LLMs with video models"
+        description="langvio: natural language analysis of images and videos "
+        "with Qwen-VL"
     )
 
-    # Required arguments
-    parser.add_argument("--query", "-q", required=True, help="Natural language query")
-    parser.add_argument(
-        "--media", "-m", required=True, help="Path to image or video file"
-    )
+    # Required unless --list-models is given
+    parser.add_argument("--query", "-q", help="Natural language query")
+    parser.add_argument("--media", "-m", help="Path to image or video file")
 
     # Optional arguments
     parser.add_argument("--config", "-c", help="Path to configuration file")
-    parser.add_argument("--llm", "-l", help="LLM processor to use")
-    parser.add_argument("--vision", "-v", help="Vision processor to use")
+    parser.add_argument("--llm", "-l", help="Qwen LLM processor to use (default: qwen)")
+    parser.add_argument(
+        "--vision", "-v", help="Vision processor to use (default: qwen_vlm)"
+    )
     parser.add_argument("--output", "-o", help="Output directory for processed media")
     parser.add_argument(
         "--api-key",
@@ -61,6 +62,8 @@ def main():
     )
 
     args = parser.parse_args()
+    if not args.list_models and not (args.query and args.media):
+        parser.error("the following arguments are required: --query/-q, --media/-m")
 
     # Set up logging
     setup_logging({"level": args.log_level, "file": args.log_file})
