@@ -12,6 +12,12 @@ Query: {query}
 Respond with VALID JSON ONLY containing these fields:
 - target_objects: List of specific object types to look for
   (e.g., ["person", "car", "dog"])
+- target_description: When the user means only some objects of a type, the full
+  phrase that singles them out, keeping every qualifier (appearance, clothing,
+  accessories, color, action, location), e.g. "person wearing glasses",
+  "red car", "man holding a phone". Use "" when every object of the type counts
+  (e.g. "count the cars"). Ignore how results should be shown ("draw boxes",
+  "highlight", "track", "show me"): that is not part of the description.
 - count_objects: true if user wants to count something, false otherwise
 - task_type: One of "identification", "counting", "verification", "analysis"
 - attributes: List of attribute filters like [{{"attribute": "color", "value": "red"}}]
@@ -47,6 +53,8 @@ Answer the user's question directly in simple, natural language.
   prose. Never mention frames, keyframes, images or timestamps, never describe the
   video frame by frame, and do not use bullet points or lists
 - For counting in videos, report the total unique objects seen, not boundary crossings
+- If they asked for specific objects (e.g. "the person wearing glasses"), talk only
+  about the ones that matched; if none matched, say so plainly
 
 HIGHLIGHT_OBJECTS:
 List the objects that should be highlighted: ["obj_0", "obj_1", "obj_2"]
@@ -93,11 +101,23 @@ Parsing example:
 User: "Count the cars in this parking lot"
 Response: {
   "target_objects": ["car"],
+  "target_description": "",
   "count_objects": true,
   "task_type": "counting",
   "attributes": [],
   "spatial_relations": [],
   "custom_instructions": "focus on parking lot vehicles"
+}
+
+User: "Track the woman in the red jacket"
+Response: {
+  "target_objects": ["person"],
+  "target_description": "woman in a red jacket",
+  "count_objects": false,
+  "task_type": "tracking",
+  "attributes": [{"attribute": "color", "value": "red"}],
+  "spatial_relations": [],
+  "custom_instructions": ""
 }
 
 Explanation examples:

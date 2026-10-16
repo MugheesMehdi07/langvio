@@ -60,6 +60,12 @@ vision:
       scene_frames: 4
       nms_iou: 0.6
       api_concurrency: 4       # Parallel keyframe requests (API backend)
+      optical_flow: true       # Follow boxes between keyframes with optical flow (CPU only)
+      flow_size: 640           # Longest side of the frames used for optical flow
+      auto_vocabulary: true    # No objects named in the query: suggest consistent label names per video (1 extra call)
+      repetition_min_run: 5    # Drop runs of this many edge-to-edge VLM boxes (0 = off)
+      match_views: 2           # "person wearing glasses": crops per tracked object shown to the VLM
+      match_batch_size: 12     # Tracked objects checked per extra VLM call
 
     qwen_vlm_3b:
       type: "vlm"

@@ -122,6 +122,7 @@ class BaseLLMProcessor(Processor):
         """Ensure all required fields exist in the parsed query."""
         defaults = {
             "target_objects": [],
+            "target_description": "",
             "count_objects": False,
             "task_type": "identification",
             "attributes": [],
@@ -175,6 +176,7 @@ class BaseLLMProcessor(Processor):
             # Use fallback parsed query with basic defaults
             parsed_query = {
                 "target_objects": [],
+                "target_description": "",
                 "count_objects": False,
                 "task_type": "identification",
                 "attributes": [],

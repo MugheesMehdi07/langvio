@@ -4,7 +4,7 @@ Enhanced utility functions for LLM processing with YOLO-World + ByteTracker inte
 
 import json
 import re
-from typing import Any, Counter, Dict, List, Tuple
+from typing import Any, Counter, Dict, List, Optional, Tuple
 
 
 def process_image_detections_and_format_summary(  # noqa: C901
@@ -26,8 +26,11 @@ def process_image_detections_and_format_summary(  # noqa: C901
     objects = detections.get("objects", [])
     summary_info = detections.get("summary", {})
 
+    match_note = _query_match_note(summary_info.get("query_match"))
     if not objects:
         summary_text = "No objects detected in the image"
+        if match_note:
+            summary_text += f"\n{match_note}"
         if summary_info.get("scene_description"):
             summary_text += f"\nScene Description: {summary_info['scene_description']}"
         return summary_text, {}
@@ -49,6 +52,8 @@ def process_image_detections_and_format_summary(  # noqa: C901
     scene = summary_info.get("scene_description")
     if scene:
         summary_parts.append(f"Scene Description: {scene}")
+    if match_note:
+        summary_parts.append(match_note)
 
     # Basic info from summary
     image_info = summary_info.get("image_info", {})
@@ -129,6 +134,27 @@ def process_image_detections_and_format_summary(  # noqa: C901
     return "\n".join(summary_parts), detection_map
 
 
+def _query_match_note(match: Optional[Dict[str, Any]]) -> str:
+    """Tell the explanation which objects fit a descriptive query."""
+    if not match:
+        return ""
+    description = match.get("description", "")
+    matched = match.get("matched")
+    if matched is None:
+        return (
+            f'The user asked about "{description}", but the objects could not be '
+            "checked against that description; the results below cover every "
+            "detected object, so do not claim which of them match."
+        )
+    if not matched:
+        return f'No detected object matches "{description}". Say that none was found.'
+    of = f" of {match['candidates']} detected" if match.get("candidates") else ""
+    return (
+        f'{matched}{of} matched "{description}". Everything below describes only '
+        "the matching objects; the others were left out."
+    )
+
+
 def format_video_summary(  # noqa: C901
     video_results: Dict[str, Any], parsed_query: Dict[str, Any]
 ) -> str:
@@ -171,6 +197,11 @@ def format_video_summary(  # noqa: C901
     if scene:
         summary_parts.append("\n## 🎬 SCENE DESCRIPTION (from keyframes)")
         summary_parts.append(scene)
+
+    match_note = _query_match_note(summary.get("query_match"))
+    if match_note:
+        summary_parts.append("\n## REQUESTED OBJECTS")
+        summary_parts.append(match_note)
 
     # === OBJECT COUNTING RESULTS (PRIORITY SECTION) ===
     counting = summary.get("counting_analysis", {})

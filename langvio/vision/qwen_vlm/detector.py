@@ -19,9 +19,10 @@ import math
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
+import numpy as np
 from PIL import Image
 
 from langvio.llm.qwen_api import QwenAPIClient, bbox_space, resolve_backend
@@ -31,6 +32,8 @@ from langvio.utils.detection import (
     compress_detections_for_output,
 )
 from langvio.vision.base import BaseVisionProcessor
+from langvio.vision.qwen_vlm import matching
+from langvio.vision.qwen_vlm.propagation import propagate_tracks
 from langvio.vision.qwen_vlm.summary import build_image_summary, build_video_summary
 from langvio.vision.qwen_vlm.tracking import SparseTracker, interpolate_tracks, iou
 
@@ -43,6 +46,29 @@ _BBOX_PATTERN = re.compile(
 )
 
 _GENERIC_TARGETS = {"object", "objects", "thing", "things", "item", "items"}
+
+# Scene parts the VLM tends to "detect" when asked for every object.
+_NOT_OBJECTS = {
+    "wall",
+    "floor",
+    "ceiling",
+    "window",
+    "road",
+    "ground",
+    "sky",
+    "grass",
+    "room",
+    "building",
+    "hair",
+    "face",
+    "head",
+    "hand",
+    "shirt",
+    "clothing",
+    "shadow",
+    "light",
+    "background",
+}
 
 
 class QwenVisionProcessor(BaseVisionProcessor):
@@ -89,7 +115,9 @@ class QwenVisionProcessor(BaseVisionProcessor):
                 "norm1000" (0-1000 grid, Qwen3 and later).
             api_concurrency: Parallel keyframe requests with the API backend.
             **kwargs: Extra config (tracker settings, api_model, api_base_url,
-                api_key_env, api_extra_body, api_timeout).
+                api_key_env, api_extra_body, api_timeout, optical_flow,
+                flow_size, auto_vocabulary, repetition_min_run, match_views,
+                match_batch_size).
         """
         config = {
             "model_name": model_name,
@@ -166,7 +194,12 @@ class QwenVisionProcessor(BaseVisionProcessor):
         self._ensure_model()
         if self.api_client is not None:
             output = self.api_client.chat(
-                [{"role": "user", "content": self.api_client.user_content(images, text)}],
+                [
+                    {
+                        "role": "user",
+                        "content": self.api_client.user_content(images, text),
+                    }
+                ],
                 max_tokens=max_new_tokens,
                 temperature=0.0,
             )
@@ -197,7 +230,7 @@ class QwenVisionProcessor(BaseVisionProcessor):
                 do_sample=False,
                 repetition_penalty=1.05,
             )
-        trimmed = generated[:, inputs["input_ids"].shape[1]:]
+        trimmed = generated[:, inputs["input_ids"].shape[1] :]
         output = self.hf_processor.batch_decode(
             trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )[0]
@@ -211,7 +244,10 @@ class QwenVisionProcessor(BaseVisionProcessor):
             )
         else:
             size = images[0].size if images else (1, 1)
-        if bbox_space(self.model_name, str(self.config.get("bbox_format", "auto"))) == "norm1000":
+        if (
+            bbox_space(self.model_name, str(self.config.get("bbox_format", "auto")))
+            == "norm1000"
+        ):
             size = (1000, 1000)
         return output, size
 
@@ -229,7 +265,19 @@ class QwenVisionProcessor(BaseVisionProcessor):
         # "output [] if none" escape hatch makes it return empty lists far more
         # often. Re-benchmark before changing it.
         targets = self._targets(query_params)
-        if targets:
+        description = query_params.get("ground_description")
+        if targets and description:
+            # Images only: one call does the finding and the picking.
+            task = (
+                f"Locate only the objects matching this description: "
+                f'"{description}". Leave out other {", ".join(targets)} '
+                "objects that do not match it."
+            )
+            names = (
+                "Label each box with the plain object name "
+                f"({', '.join(targets)}), not the description."
+            )
+        elif targets:
             task = (
                 "Locate every instance of the following objects in the image: "
                 f"{', '.join(targets)}."
@@ -241,6 +289,14 @@ class QwenVisionProcessor(BaseVisionProcessor):
                 "animals and other salient objects)."
             )
             names = "Use short, common, singular nouns as labels."
+            hints = query_params.get("label_hints") or []
+            if hints:
+                # Steer naming only: restricting to these would miss anything
+                # absent from the frames the hints were drawn from.
+                names = (
+                    "Use short, common, singular nouns as labels, reusing these "
+                    f"names where they fit: {', '.join(hints)}."
+                )
         return (
             f"{task} Include small, distant and "
             "partially occluded ones, one box per individual. Output their bbox "
@@ -262,9 +318,16 @@ class QwenVisionProcessor(BaseVisionProcessor):
         )
         self.logger.debug(f"Qwen grounding output: {text}")
 
-        return self._parse_boxes(
+        detections = self._parse_boxes(
             text, orig_w / input_w, orig_h / input_h, orig_w, orig_h
         )
+        # Scene parts (wall, hair, window...) only when the user asked for them.
+        targets = {t.lower() for t in self._targets(query_params)}
+        return [
+            d
+            for d in detections
+            if d["label"] not in _NOT_OBJECTS or d["label"] in targets
+        ]
 
     def _describe_scene(
         self, images: List[Image.Image], query_params: Dict[str, Any], is_video: bool
@@ -274,9 +337,7 @@ class QwenVisionProcessor(BaseVisionProcessor):
         query = query_params.get("query", "")
         focus = f' The user asked: "{query}".' if query else ""
         if is_video:
-            intro = (
-                f"These {len(images)} frames are sampled in order from one video."
-            )
+            intro = f"These {len(images)} frames are sampled in order from one video."
             ask = (
                 "Describe the video as one continuous scene: the setting and what "
                 "happens overall (who/what is present, actions, movement). Never "
@@ -303,6 +364,44 @@ class QwenVisionProcessor(BaseVisionProcessor):
             self.logger.warning(f"Scene description failed: {e}")
             return ""
 
+    def _discover_vocabulary(self, images: List[Image.Image]) -> List[str]:
+        """Ask once which object kinds a video shows.
+
+        Without named targets the VLM picks different labels for the same
+        objects on every keyframe, which fragments tracks. Passing one shared
+        list as naming hints keeps labels consistent for the cost of a single
+        extra call per video. The list comes from a few sampled frames, so it
+        must never restrict what is grounded.
+        """
+        prompt = (
+            f"These {len(images)} frames are sampled from one video. List the "
+            "kinds of distinct, countable physical objects visible: people, "
+            "vehicles, animals and other salient objects. Do not list surfaces, "
+            "rooms or parts of objects (wall, floor, ceiling, window, road, "
+            "hair, face, clothing). Answer only with a JSON list of at most "
+            f"{int(self.config.get('vocabulary_size', 8))} short, common, "
+            'singular nouns, most important first, e.g. ["person", "car"].'
+        )
+        try:
+            text, _ = self._generate(images, prompt, 100)
+        except Exception as e:
+            self.logger.warning(f"Object vocabulary discovery failed: {e}")
+            return []
+        parsed = self._try_parse_json(text)
+        if not isinstance(parsed, list):
+            return []
+        vocab: List[str] = []
+        for item in parsed:
+            name = str(item).strip().lower()
+            if (
+                name
+                and name not in vocab
+                and name not in _GENERIC_TARGETS
+                and name not in _NOT_OBJECTS
+            ):
+                vocab.append(name)
+        return vocab[: int(self.config.get("vocabulary_size", 8))]
+
     # ------------------------------------------------------------------ #
     # Box parsing
     # ------------------------------------------------------------------ #
@@ -327,21 +426,33 @@ class QwenVisionProcessor(BaseVisionProcessor):
             for m in _BBOX_PATTERN.finditer(text):
                 raw.append(([float(v) for v in m.groups()[:4]], m.group(5) or "object"))
 
-        detections: List[Dict[str, Any]] = []
-        confidence = float(self.config.get("confidence", 0.9))
-        min_side = max(4, int(0.004 * max(width, height)))
+        boxes: List[Tuple[List[int], str]] = []
         for bbox, label in raw:
             try:
                 x1, y1, x2, y2 = (float(v) for v in bbox)
             except (TypeError, ValueError):
                 continue
-            x1 = int(max(0, min(width - 1, x1 * scale_x)))
-            y1 = int(max(0, min(height - 1, y1 * scale_y)))
-            x2 = int(max(0, min(width, x2 * scale_x)))
-            y2 = int(max(0, min(height, y2 * scale_y)))
+            boxes.append(
+                (
+                    [
+                        int(max(0, min(width - 1, x1 * scale_x))),
+                        int(max(0, min(height - 1, y1 * scale_y))),
+                        int(max(0, min(width, x2 * scale_x))),
+                        int(max(0, min(height, y2 * scale_y))),
+                    ],
+                    label.strip().lower() or "object",
+                )
+            )
+        boxes = self._drop_repetition_runs(
+            boxes, width, height, int(self.config.get("repetition_min_run", 5))
+        )
+
+        detections: List[Dict[str, Any]] = []
+        confidence = float(self.config.get("confidence", 0.9))
+        min_side = max(4, int(0.004 * max(width, height)))
+        for (x1, y1, x2, y2), label in boxes:
             if x2 - x1 < min_side or y2 - y1 < min_side:
                 continue
-            label = label.strip().lower() or "object"
             detections.append(
                 {
                     "label": label,
@@ -354,7 +465,83 @@ class QwenVisionProcessor(BaseVisionProcessor):
         return self._drop_group_boxes(detections)
 
     @staticmethod
-    def _nms(detections: List[Dict[str, Any]], threshold: float) -> List[Dict[str, Any]]:
+    def _drop_repetition_runs(  # noqa: C901
+        boxes: List[Tuple[List[int], str]], width: int, height: int, min_run: int
+    ) -> List[Tuple[List[int], str]]:
+        """Drop VLM repetition loops.
+
+        A degenerating model keeps emitting same-sized boxes that tile a row or
+        column edge to edge (e.g. 14 "chair" boxes marching across a room, or a
+        "water cooler" sliced into a stack), usually with a few stray boxes in
+        the same band. A run of ``min_run``+ consecutive tiling boxes is
+        removed along with any other box filling that band. 0 disables this.
+        """
+        if min_run <= 0 or len(boxes) < min_run:
+            return boxes
+        tol_x, tol_y = 0.02 * width, 0.02 * height
+
+        def similar(a: float, b: float) -> bool:
+            return a > 0 and b > 0 and 0.6 <= a / b <= 1.7
+
+        def tiling(a: List[int], b: List[int]) -> Optional[str]:
+            if (
+                abs(a[1] - b[1]) <= tol_y
+                and abs(a[3] - b[3]) <= tol_y
+                and abs(b[0] - a[2]) <= tol_x
+                and similar(b[2] - b[0], a[2] - a[0])
+            ):
+                return "row"
+            if (
+                abs(a[0] - b[0]) <= tol_x
+                and abs(a[2] - b[2]) <= tol_x
+                and abs(b[1] - a[3]) <= tol_y
+                and similar(b[3] - b[1], a[3] - a[1])
+            ):
+                return "col"
+            return None
+
+        runs: List[Tuple[int, int, str]] = []
+        start, axis = 0, None
+        for i in range(1, len(boxes) + 1):
+            link = None
+            if i < len(boxes) and boxes[i][1] == boxes[i - 1][1]:
+                link = tiling(boxes[i - 1][0], boxes[i][0])
+            if link is not None and axis in (None, link):
+                axis = link
+                continue
+            if axis is not None and i - start >= min_run:
+                runs.append((start, i, axis))
+            # The box that broke the run may start a new one with its predecessor.
+            start, axis = (i - 1, link) if link is not None else (i, None)
+
+        if not runs:
+            return boxes
+        drop: Set[int] = set()
+        for s, e, run_axis in runs:
+            drop.update(range(s, e))
+            run = [boxes[k][0] for k in range(s, e)]
+            lo = min(b[0] if run_axis == "row" else b[1] for b in run)
+            hi = max(b[2] if run_axis == "row" else b[3] for b in run)
+            band = np.mean(run, axis=0)
+            for k, (b, _) in enumerate(boxes):
+                if run_axis == "row":
+                    in_band = (
+                        abs(b[1] - band[1]) <= tol_y and abs(b[3] - band[3]) <= tol_y
+                    )
+                    center = (b[0] + b[2]) / 2
+                else:
+                    in_band = (
+                        abs(b[0] - band[0]) <= tol_x and abs(b[2] - band[2]) <= tol_x
+                    )
+                    center = (b[1] + b[3]) / 2
+                if in_band and lo <= center <= hi:
+                    drop.add(k)
+        return [box for k, box in enumerate(boxes) if k not in drop]
+
+    @staticmethod
+    def _nms(
+        detections: List[Dict[str, Any]], threshold: float
+    ) -> List[Dict[str, Any]]:
         """Suppress duplicate boxes.
 
         Same-label duplicates use the configured threshold; cross-label
@@ -429,7 +616,10 @@ class QwenVisionProcessor(BaseVisionProcessor):
             image = Image.open(image_path).convert("RGB")
             width, height = image.size
 
-            detections = self._ground(image, query_params)
+            description = matching.target_description(query_params)
+            detections = self._ground(
+                image, {**query_params, "ground_description": description}
+            )
             for i, det in enumerate(detections):
                 det["object_id"] = f"obj_{i}"
 
@@ -448,12 +638,18 @@ class QwenVisionProcessor(BaseVisionProcessor):
                 is_video_frame=False,
             )
             scene = self._describe_scene([image], query_params, is_video=False)
+            summary = build_image_summary(
+                detections, width, height, query_params, scene
+            )
+            if description:
+                summary["query_match"] = {
+                    "description": description,
+                    "matched": len(detections),
+                }
 
             return {
                 "objects": compress_detections_for_output(detections, is_video=False),
-                "summary": build_image_summary(
-                    detections, width, height, query_params, scene
-                ),
+                "summary": summary,
             }
         except Exception as e:
             self.logger.error(f"Error processing image: {e}")
@@ -501,11 +697,6 @@ class QwenVisionProcessor(BaseVisionProcessor):
             for i in range(min(n_scene, len(keyframe_ids)))
         }
 
-        tracker = SparseTracker(
-            max_missed=int(self.config.get("track_max_missed", 2)),
-            distance_gate=float(self.config.get("track_distance_gate", 1.2)),
-        )
-        keyframes: Dict[str, List[Dict[str, Any]]] = {}
         scene_images: List[Image.Image] = []
         try:
             self._ensure_model()
@@ -524,13 +715,24 @@ class QwenVisionProcessor(BaseVisionProcessor):
         finally:
             cap.release()
 
+        grounding_params = query_params
+        if (
+            not self._targets(query_params)
+            and self.config.get("auto_vocabulary", True)
+            and scene_images
+        ):
+            vocab = self._discover_vocabulary(scene_images)
+            if vocab:
+                self.logger.info(f"Label hints for grounding: {', '.join(vocab)}")
+                grounding_params = {**query_params, "label_hints": vocab}
+
         # Grounding works on the downscaled frames, so map boxes back up.
         def ground_frame(
             item: Tuple[int, Image.Image],
         ) -> Optional[List[Dict[str, Any]]]:
             frame_id, image = item
             try:
-                detections = self._ground(image, query_params)
+                detections = self._ground(image, grounding_params)
             except Exception as e:
                 # One lost keyframe is survivable: tracks bridge the gap.
                 self.logger.warning(f"Skipping keyframe {frame_id}: {e}")
@@ -566,14 +768,21 @@ class QwenVisionProcessor(BaseVisionProcessor):
                     "every keyframe failed; see the warnings above (for the API "
                     "backend this is usually the free model's rate limit)"
                 )
-            for (frame_id, _), detections in zip(frames, results):
-                if detections is None:
-                    continue
-                detections = self._add_basic_attributes(detections, width, height)
-                keyframes[str(frame_id)] = tracker.update(detections, frame_id)
         except Exception as e:
             self.logger.error(f"Error processing video: {e}")
             return {"error": str(e)}
+
+        detected = {
+            frame_id: self._add_basic_attributes(detections, width, height)
+            for (frame_id, _), detections in zip(frames, results)
+            if detections is not None
+        }
+        tracker, keyframes, render = self._track(
+            video_path, detected, total_frames, step
+        )
+        match_info = self._keep_matching_tracks(
+            video_path, tracker, keyframes, render, query_params
+        )
 
         scene = self._describe_scene(scene_images, query_params, is_video=True)
         internal_tracks = list(tracker.tracks.values())
@@ -588,7 +797,7 @@ class QwenVisionProcessor(BaseVisionProcessor):
             self.active_model_name,
             scene,
         )
-        render = interpolate_tracks(tracker, total_frames, step)
+        summary.update(match_info)
 
         # history holds live detection dicts; strip before returning/serialising.
         tracks_out = tracker.get_all_tracks()
@@ -624,6 +833,141 @@ class QwenVisionProcessor(BaseVisionProcessor):
                 "total_frames": total_frames,
             },
         }
+
+    def _keep_matching_tracks(
+        self,
+        video_path: str,
+        tracker: SparseTracker,
+        keyframes: Dict[str, List[Dict[str, Any]]],
+        render: Dict[str, List[Dict[str, Any]]],
+        query_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Drop tracks that don't fit a descriptive query, in place.
+
+        Returns ``{"query_match": ...}`` for the summary, or {} when the query
+        names no description.
+        """
+        description = matching.target_description(query_params)
+        if not description:
+            return {}
+        drawn = {d["track_id"] for dets in render.values() for d in dets}
+        candidates = [t for tid, t in tracker.tracks.items() if tid in drawn]
+        selected = self._select_tracks(video_path, candidates, description)
+        info = {"description": description, "candidates": len(candidates)}
+        if selected is None:
+            self.logger.warning(
+                f'Could not check tracks against "{description}"; keeping all'
+            )
+            return {"query_match": {**info, "matched": None}}
+
+        self.logger.info(
+            f'{len(selected)} of {len(candidates)} tracks match "{description}"'
+        )
+        for tid in list(tracker.tracks):
+            if tid not in selected:
+                del tracker.tracks[tid]
+                tracker.active.pop(tid, None)
+        for frames in (keyframes, render):
+            for key, dets in frames.items():
+                frames[key] = [d for d in dets if d.get("track_id") in selected]
+        return {"query_match": {**info, "matched": len(selected)}}
+
+    def _select_tracks(
+        self,
+        video_path: str,
+        candidates: List[Dict[str, Any]],
+        description: str,
+    ) -> Optional[Set[int]]:
+        """Ask the VLM which tracks fit the description (one call per batch).
+
+        Returns the matching track ids, or None if the answer was unusable.
+        """
+        if not candidates:
+            return set()
+        n_views = max(1, int(self.config.get("match_views", 2)))
+        views = {
+            t["track_id"]: matching.pick_views(t["history"], n_views)
+            for t in candidates
+        }
+        frames = matching.read_frames(
+            video_path, (f for vs in views.values() for f, _ in vs)
+        )
+        crops: List[Tuple[int, List[Image.Image]]] = []
+        for tid, track_views in views.items():
+            images = [
+                c
+                for f, box in track_views
+                if f in frames and (c := matching.crop(frames[f], box)) is not None
+            ]
+            if images:
+                crops.append((tid, images))
+
+        batch_size = max(1, int(self.config.get("match_batch_size", 12)))
+        selected: Set[int] = set()
+        for start in range(0, len(crops), batch_size):
+            batch = crops[start : start + batch_size]
+            images = [
+                matching.candidate_image(imgs, k)
+                for k, (_, imgs) in enumerate(batch, 1)
+            ]
+            prompt = matching.selection_prompt(
+                description, len(batch), any(len(imgs) > 1 for _, imgs in batch)
+            )
+            try:
+                text, _ = self._generate(images, prompt, 60)
+            except Exception as e:
+                self.logger.warning(f"Track selection call failed: {e}")
+                return None
+            picked = matching.parse_selection(text, len(batch))
+            if picked is None:
+                self.logger.warning(f"Unreadable track selection reply: {text!r}")
+                return None
+            selected.update(batch[k - 1][0] for k in picked)
+        return selected
+
+    def _new_tracker(self) -> SparseTracker:
+        return SparseTracker(
+            max_missed=int(self.config.get("track_max_missed", 2)),
+            distance_gate=float(self.config.get("track_distance_gate", 1.2)),
+        )
+
+    def _track(
+        self,
+        video_path: str,
+        detected: Dict[int, List[Dict[str, Any]]],
+        total_frames: int,
+        step: int,
+    ) -> Tuple[
+        SparseTracker,
+        Dict[str, List[Dict[str, Any]]],
+        Dict[str, List[Dict[str, Any]]],
+    ]:
+        """Link keyframe detections into tracks and build per-frame boxes.
+
+        Returns (tracker, tracked keyframe detections, render detections).
+        """
+        if self.config.get("optical_flow", True):
+            tracker = self._new_tracker()
+            try:
+                keyframes, render = propagate_tracks(
+                    video_path,
+                    detected,
+                    tracker,
+                    total_frames,
+                    step,
+                    int(self.config.get("flow_size", 640)),
+                )
+                return tracker, keyframes, render
+            except Exception as e:
+                self.logger.warning(
+                    f"Optical-flow tracking failed ({e}); interpolating boxes"
+                )
+        tracker = self._new_tracker()
+        keyframes = {
+            str(frame_id): tracker.update(detected[frame_id], frame_id)
+            for frame_id in sorted(detected)
+        }
+        return tracker, keyframes, interpolate_tracks(tracker, total_frames, step)
 
     @staticmethod
     def _add_basic_attributes(

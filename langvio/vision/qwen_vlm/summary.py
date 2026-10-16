@@ -15,6 +15,8 @@ import numpy as np
 # Speeds are measured in frame-widths per second.
 _STATIONARY_SPEED = 0.015
 _FAST_SPEED = 0.15
+# Half-width of the dead zone around the midline, as a fraction of frame width.
+_CROSSING_MARGIN = 0.05
 
 
 def _plural(label: str, n: int) -> str:
@@ -101,12 +103,17 @@ def _track_motion(track: Dict[str, Any], width: int, fps: float) -> Dict[str, An
         else:
             direction = "toward_camera" if dy > 0 else "away_from_camera"
 
-    midline = width / 2
+    # A crossing needs the object to get clear of the midline on both sides:
+    # box jitter on someone sitting near the middle is not a crossing.
+    midline, margin = width / 2, _CROSSING_MARGIN * width
     crossings = []
-    for (fa, ba, _), (fb, bb, _) in zip(history, history[1:]):
-        xa, xb = (ba[0] + ba[2]) / 2, (bb[0] + bb[2]) / 2
-        if (xa - midline) * (xb - midline) < 0:
-            crossings.append("left_to_right" if xb > xa else "right_to_left")
+    side = 0
+    for _, b, _ in history:
+        x = (b[0] + b[2]) / 2
+        now = -1 if x < midline - margin else 1 if x > midline + margin else 0
+        if now and side and now != side:
+            crossings.append("left_to_right" if now > 0 else "right_to_left")
+        side = now or side
 
     return {
         "behavior": behavior,
@@ -168,9 +175,13 @@ def build_video_summary(
         entry = by_type.setdefault(
             label, {"entered": 0, "exited": 0, "net_flow": 0, "crossings": 0}
         )
-        if t["first_frame"] > first_kf:
+        # A track seen once is usually a hallucination or a missed re-match,
+        # not an object that came and went; don't count it as traffic.
+        # (It can't have crossings either: those need two observations.)
+        confirmed_track = m["observations"] > 1
+        if confirmed_track and t["first_frame"] > first_kf:
             entry["entered"] += 1
-        if t["last_frame"] < last_kf:
+        if confirmed_track and t["last_frame"] < last_kf:
             entry["exited"] += 1
         entry["crossings"] += len(m["crossings"])
         total_crossings += len(m["crossings"])
@@ -227,9 +238,7 @@ def build_video_summary(
 
     # Tracks seen in a single keyframe are often re-detections of someone already
     # tracked, so they are excluded; the peak frame is a hard lower bound.
-    estimated = {
-        label: max(confirmed[label], peak.get(label, 0)) for label in unique
-    }
+    estimated = {label: max(confirmed[label], peak.get(label, 0)) for label in unique}
 
     insights: List[str] = []
     for label in primary_objects:

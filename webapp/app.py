@@ -479,7 +479,11 @@ def process_media():
                 query_params=query_params,
                 # Additional context
                 task_type=query_params.get("task_type", "identification"),
-                target_objects=query_params.get("target_objects", []),
+                target_objects=(
+                    [query_params["target_description"]]
+                    if query_params.get("target_description")
+                    else query_params.get("target_objects", [])
+                ),
                 requested_attributes=query_params.get("attributes", []),
             )
 

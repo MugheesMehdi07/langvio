@@ -56,10 +56,24 @@ class SparseTracker:
         return [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy]
 
     def update(
-        self, detections: List[Dict[str, Any]], frame_id: int
+        self,
+        detections: List[Dict[str, Any]],
+        frame_id: int,
+        predicted: Optional[Dict[int, List[float]]] = None,
     ) -> List[Dict[str, Any]]:
+        """Match a keyframe's detections to active tracks.
+
+        Args:
+            predicted: Optional track_id -> bbox where each track is expected
+                at ``frame_id`` (e.g. from optical flow). Tracks without an
+                entry fall back to the constant-velocity prediction.
+        """
+        predicted = predicted or {}
         track_ids = list(self.active.keys())
-        predictions = [self._predict(self.active[t], frame_id) for t in track_ids]
+        predictions = [
+            predicted.get(t) or self._predict(self.active[t], frame_id)
+            for t in track_ids
+        ]
 
         matches: Dict[int, int] = {}
         if track_ids and detections:
@@ -220,8 +234,7 @@ def interpolate_tracks(
         # mid-video means the object left the scene — dropping its box
         # right away matches reality instead of freezing it on screen.
         reached_video_end = (
-            track["track_id"] in live_track_ids
-            or last_frame >= total_frames - step
+            track["track_id"] in live_track_ids or last_frame >= total_frames - step
         )
         if reached_video_end:
             for f in range(last_frame, last_frame + hold + 1):
