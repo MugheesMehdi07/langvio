@@ -55,27 +55,13 @@ def register_llm_processors(registry: ModelRegistry) -> None:
         and os.environ.get("LANGVIO_BACKEND", "auto").lower() == "auto"
     )
     if backend == "local" and not is_package_available("transformers"):
-        if fell_back:
-            error_msg = (
-                "ERROR: No API key found (OPENROUTER_API_KEY / QWEN_API_KEY), so "
-                "langvio tried to run Qwen-VL locally, but the local VLM backend "
-                "is not installed. Either:\n"
-                "  - set OPENROUTER_API_KEY in your environment / .env file "
-                "(get one at https://openrouter.ai/keys), or\n"
-                "  - pip install langvio[vlm]  to run the model on this machine."
-            )
-        else:
-            error_msg = (
-                "ERROR: The local VLM backend is not installed.\n"
-                "Please install it with:\n"
-                "  pip install langvio[vlm]\n"
-                "(this pulls in 'transformers' and 'accelerate'),\n"
-                "or unset LANGVIO_BACKEND and set OPENROUTER_API_KEY to use the "
-                "hosted Qwen API instead."
-            )
-        logger.error(error_msg)
-        sys.exit(1)
-    if fell_back:
+        logger.warning(
+            "No API key found (OPENROUTER_API_KEY / QWEN_API_KEY) and the local "
+            "VLM backend is not installed. Set OPENROUTER_API_KEY (get one at "
+            "https://openrouter.ai/keys) or run `pip install langvio[vlm]` before "
+            "building a pipeline."
+        )
+    elif fell_back:
         logger.warning(
             "No API key found (OPENROUTER_API_KEY / QWEN_API_KEY): running "
             "Qwen-VL locally. The first run downloads the model weights from "
