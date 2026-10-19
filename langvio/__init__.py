@@ -2,7 +2,7 @@
 langvio: Connect language models to vision models for natural language visual analysis
 """
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 # === Imports ===
 
