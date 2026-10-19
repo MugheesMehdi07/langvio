@@ -101,36 +101,58 @@ jobs:
         cat release_notes.md >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
-    - name: Commit version bump
+    - name: Commit version bump and tag
       run: |
+        set -euo pipefail
+        VERSION="${{ github.event.inputs.version }}"
+        TAG="v$VERSION"
+
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        echo "Git status before commit:"
-        git status
-        echo "Adding files..."
+
         git add pyproject.toml langvio/__init__.py setup.py
-        echo "Git status after add:"
-        git status
-        echo "Committing changes..."
-        git commit -m "Bump version to ${{ github.event.inputs.version }}" || exit 0
-        echo "Creating tag..."
-        git tag v${{ github.event.inputs.version }}
-        echo "Git status after commit and tag:"
-        git status
+
+        if git diff --cached --quiet; then
+          echo "Version files already at $VERSION; no bump commit needed."
+        else
+          git commit -m "Bump version to $VERSION"
+        fi
+
+        # Tag idempotently. If the tag already exists locally or on origin at
+        # the current HEAD, treat it as already-done. If it points elsewhere,
+        # fail loudly so a stale/mistyped version doesn't silently overwrite.
+        HEAD_SHA=$(git rev-parse HEAD)
+        git fetch --tags origin "+refs/tags/$TAG:refs/tags/$TAG" 2>/dev/null || true
+
+        if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+          TAG_SHA=$(git rev-list -n 1 "$TAG")
+          if [ "$TAG_SHA" = "$HEAD_SHA" ]; then
+            echo "Tag $TAG already points to $HEAD_SHA; nothing to do."
+          else
+            echo "ERROR: tag $TAG already exists at $TAG_SHA but HEAD is $HEAD_SHA."
+            echo "Pick a new version number or delete the existing tag first."
+            exit 1
+          fi
+        else
+          git tag "$TAG"
+        fi
 
     - name: Push changes and tags
       run: |
-        echo "Current branch: $(git branch --show-current)"
-        echo "Available branches:"
-        git branch -a
-        echo "Remote configuration:"
-        git remote -v
-        echo "Current git status:"
-        git status
-        echo "Pushing to master branch..."
-        git push origin master
-        echo "Pushing tag v${{ github.event.inputs.version }}..."
-        git push origin v${{ github.event.inputs.version }}
+        set -euo pipefail
+        VERSION="${{ github.event.inputs.version }}"
+        TAG="v$VERSION"
+
+        # Master may have no new commits (idempotent re-run); that's fine.
+        git push origin master || echo "No new commits to push on master."
+
+        # Tag push is required: skip only if the remote already has it at the
+        # same SHA.
+        if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+          echo "Tag $TAG already present on origin; skipping tag push."
+        else
+          git push origin "$TAG"
+        fi
 
     - name: Create GitHub Release
       run: |
