@@ -16,6 +16,7 @@ from langvio.core.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
+
 def _gen_kwargs() -> dict:
     """Fresh copy per registration - processors may mutate their own kwargs."""
     return {"temperature": 0.2, "max_new_tokens": 1024}

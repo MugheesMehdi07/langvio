@@ -68,9 +68,7 @@ class QwenChatModel(BaseChatModel):
             "temperature": self.temperature,
         }
 
-    def _to_qwen_messages(
-        self, messages: List[BaseMessage]
-    ) -> List[Dict[str, Any]]:
+    def _to_qwen_messages(self, messages: List[BaseMessage]) -> List[Dict[str, Any]]:
         """Convert LangChain messages into Qwen chat-template messages."""
         qwen_messages: List[Dict[str, Any]] = []
         for message in messages:
@@ -134,7 +132,7 @@ class QwenChatModel(BaseChatModel):
 
         # Drop the prompt tokens so we decode only the newly generated answer.
         trimmed = [
-            out_ids[len(in_ids):]
+            out_ids[len(in_ids) :]
             for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)
         ]
         output_text = self.hf_processor.batch_decode(
@@ -214,9 +212,7 @@ class VLMProcessor(BaseLLMProcessor):
             temperature = float(model_kwargs.pop("temperature", 0.2))
             top_p = float(model_kwargs.pop("top_p", 0.9))
             max_new_tokens = int(
-                model_kwargs.pop(
-                    "max_new_tokens", model_kwargs.pop("max_tokens", 1024)
-                )
+                model_kwargs.pop("max_new_tokens", model_kwargs.pop("max_tokens", 1024))
             )
 
             # Remaining kwargs (e.g. torch_dtype) go to the shared loader, which

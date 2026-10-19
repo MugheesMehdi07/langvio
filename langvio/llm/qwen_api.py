@@ -135,9 +135,7 @@ class QwenAPIClient:
         )
 
     @staticmethod
-    def user_content(
-        images: List[Image.Image], text: str
-    ) -> List[Dict[str, Any]]:
+    def user_content(images: List[Image.Image], text: str) -> List[Dict[str, Any]]:
         content: List[Dict[str, Any]] = [
             {"type": "image_url", "image_url": {"url": image_to_data_url(img)}}
             for img in images
@@ -194,7 +192,7 @@ class QwenAPIClient:
 
             if attempt < self.max_retries:
                 # Jitter keeps parallel keyframe requests from retrying in lockstep.
-                delay = round(min(30, 2 ** attempt * 2) * random.uniform(0.7, 1.3), 1)
+                delay = round(min(30, 2**attempt * 2) * random.uniform(0.7, 1.3), 1)
                 if last_error.startswith("HTTP 429"):
                     # A rate limit applies to every in-flight request, so pause
                     # them all instead of letting each one keep hammering.

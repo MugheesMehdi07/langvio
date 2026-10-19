@@ -448,7 +448,11 @@ class VisualizationManager:
             panel_y = height - panel_height - margin
 
             cv2.rectangle(
-                overlay, (margin, panel_y), (panel_width, height - margin), (0, 0, 0), -1
+                overlay,
+                (margin, panel_y),
+                (panel_width, height - margin),
+                (0, 0, 0),
+                -1,
             )
 
             y_offset = panel_y + int(20 * s)
