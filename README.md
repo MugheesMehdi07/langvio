@@ -1,6 +1,6 @@
 # 🧠 Langvio: Natural Language Computer Vision
 
-<dlangvioiv align="center">
+<div align="center">
 
 ![Langvio Logo](https://img.shields.io/badge/Langvio-Vision%20%2B%20Language-blue?style=for-the-badge&logo=python)
 
@@ -13,24 +13,25 @@
 
 [🚀 Quick Start](#-quick-start) • [📖 Documentation](https://langvio.readthedocs.io/) • [🎯 Examples](#-examples) • [🔧 Installation](#-installation) • [🤝 Contributing](#-contributing)
 
-</dlangvioiv>
+</div>
 
 ---
 
 ## ✨ What is Langvio?
 
-Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by state-of-the-art vision models and language models.
+Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by Qwen-VL — a vision-language model that grounds objects and generates explanations in a single pass.
 
 ### 🎯 Key Features
 
 - **🗣️ Natural Language Interface**: Ask questions like "Count all red cars" or "Find people wearing yellow"
 - **🎥 Multi-Modal Support**: Works with both images and videos
-- **🚀 Powered by YOLO-World v2**: Fast, accurate object detection without predefined classes
-- **📹 ByteTracker Integration**: Advanced multi-object tracking for video analysis with boundary crossing detection
-- **🤖 Local VLM Integration**: Uses a local Vision Language Model (Qwen2.5-VL) for query parsing and intelligent explanations — no API keys required
-- **📊 Advanced Analytics**: Object counting, speed estimation, spatial relationships, temporal tracking
+- **🤖 Qwen-VL at the Core**: Qwen-VL does both grounding (detection) and language (query parsing, explanations) — one model, one coherent pipeline
+- **☁️ API by Default, Local Fallback**: Runs over an OpenAI-compatible endpoint (OpenRouter by default) with an API key; falls back to in-process Qwen2.5-VL weights when `langvio[vlm]` is installed and no key is set
+- **📦 Legacy YOLO-World Path**: Classic open-vocabulary detection via YOLO-World v2 + ByteTracker still available for users who want it
+- **📹 Multi-Object Tracking**: ByteTracker integration for video analysis with boundary crossing and speed estimation
+- **📊 Advanced Analytics**: Object counting, spatial relationships, temporal tracking
 - **🎨 Visual Output**: Generates annotated images/videos with detection highlights and tracking trails
-- **🌐 Web Interface**: Includes a Flask web app for easy interaction
+- **🌐 Web Interface**: Flask web app included for easy interaction
 - **🔧 Extensible**: Easy to add new models and capabilities
 
 ## 🎬 See It In Action
@@ -40,7 +41,8 @@ Langvio bridges the gap between **human language** and **computer vision**. Ask 
 ```python
 import langvio
 
-# Create a pipeline
+# Create a pipeline (uses the hosted Qwen-VL API if OPENROUTER_API_KEY is set,
+# otherwise falls back to local Qwen2.5-VL weights)
 pipeline = langvio.create_pipeline()
 
 # Analyze an image
@@ -50,7 +52,7 @@ result = pipeline.process(
 )
 
 print(result['explanation'])
-# Output: "I found 3 people wearing red shirts in the image. 
+# Output: "I found 3 people wearing red shirts in the image.
 #          Two are located in the center-left area, and one is on the right side."
 
 # View the annotated result
@@ -66,16 +68,34 @@ print(f"Annotated image saved to: {result['output_path']}")
 ### Command-Line Interface Example
 
 ```bash
-# Basic usage
+# Basic usage — prompts for an OpenRouter key on first run, saves it to .env
 langvio --query "Count the cars" --media image.jpg
 
-# With custom configuration
-langvio --query "Find red objects" --media scene.jpg --config custom.yaml
+# Pass a key inline (overrides env for this run)
+langvio --api-key sk-or-... -q "Find red objects" -m scene.jpg
+
+# Force the local backend (requires `pip install langvio[vlm]`)
+langvio --backend local -q "What's in this image?" -m photo.jpg
 ```
 
 <div align="center">
 
 [![Watch CLI Demo](https://img.youtube.com/vi/f-JnZoHM4to/maxresdefault.jpg)](https://www.youtube.com/watch?v=f-JnZoHM4to)
+
+</div>
+
+## 🖼️ Example Output
+
+A chair-detection run on a classroom video. The still is one annotated frame; click it to play the full MP4.
+
+<div align="center">
+
+<a href="https://github.com/MugheesMehdi07/langvio/raw/master/assets/classroom_processed.mp4">
+  <img src="https://raw.githubusercontent.com/MugheesMehdi07/langvio/master/assets/classroom_detection.png" alt="Chair detection on a classroom video — click to play the processed MP4" width="720">
+</a>
+
+<br/>
+<em>Query: "detect all chairs in the room" • Click the frame to play the processed video.</em>
 
 </div>
 
@@ -87,13 +107,12 @@ langvio --query "Find red objects" --media scene.jpg --config custom.yaml
 pip install langvio
 ```
 
-### With the Local VLM Backend
+That's enough to use the **hosted API backend** (default). You only need the local VLM extra if you plan to run Qwen-VL on your own machine.
 
-langvio uses a local Vision Language Model (Qwen2.5-VL) as its language layer —
-no API keys, no cloud calls. Install the backend:
+### Optional: Local VLM Backend
 
 ```bash
-# Local VLM (Qwen2.5-VL via HuggingFace transformers)
+# Run Qwen2.5-VL in-process via HuggingFace transformers (adds ~several GB on first run)
 pip install langvio[vlm]
 
 # Equivalent grouped extra
@@ -103,25 +122,34 @@ pip install langvio[all-llm]
 pip install langvio[dev]
 ```
 
-The first run downloads the model weights from HuggingFace (a few GB). A CUDA
-GPU is strongly recommended; CPU works but is slow.
+The first local run downloads Qwen2.5-VL weights from HuggingFace (several GB). A CUDA GPU is strongly recommended; CPU works but is slow.
 
 ### Environment Setup
 
-No API keys are required. Optionally create a `.env` file to point HuggingFace at
-a custom cache or provide a token for gated models:
+The default (hosted) backend needs an OpenRouter API key. Get one at [openrouter.ai/keys](https://openrouter.ai/keys) and either export it or put it in a `.env` file at your project root — langvio auto-loads `.env` on import.
 
 ```bash
-# Copy the template
 cp .env.template .env
 ```
 
 ```env
-# Optional
+# Required for the default API backend
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# Optional overrides
+# QWEN_API_KEY=alternative_key              # alias for OPENROUTER_API_KEY
+# QWEN_API_BASE_URL=https://openrouter.ai/api/v1
+# QWEN_API_MODEL=qwen/qwen3-vl-30b-a3b-instruct
+# LANGVIO_BACKEND=auto                      # auto | api | local
+# LANGVIO_DEFAULT_LLM=qwen
+# LANGVIO_DEFAULT_VISION=qwen_vlm
+
+# Optional (local backend only)
 # HF_HOME=/path/to/hf-cache
-# HF_TOKEN=your_huggingface_token_here
-LANGVIO_DEFAULT_LLM=qwen
+# HF_TOKEN=your_huggingface_token_here      # for gated models
 ```
+
+If no key is set and you run the CLI interactively, langvio will **prompt you for one** and offer to save it to `.env`. Press Enter at the prompt to fall back to the local backend instead.
 
 ## 🚀 Quick Start
 
@@ -130,7 +158,7 @@ LANGVIO_DEFAULT_LLM=qwen
 ```python
 import langvio
 
-# Create a pipeline (automatically detects available LLM providers)
+# Pipeline auto-resolves the backend: API if a key is configured, else local.
 pipeline = langvio.create_pipeline()
 
 # Process an image
@@ -152,7 +180,6 @@ result = pipeline.process(
     media_path="traffic_video.mp4"
 )
 
-# Get detailed analysis including speed and movement patterns
 print(result['explanation'])
 ```
 
@@ -174,7 +201,7 @@ python app.py
 # Count specific objects
 pipeline.process("How many cars are in this parking lot?", "parking.jpg")
 
-# Find objects by attributes  
+# Find objects by attributes
 pipeline.process("Find all red objects in this image", "scene.jpg")
 
 # Spatial relationships
@@ -183,21 +210,20 @@ pipeline.process("What objects are on the table?", "kitchen.jpg")
 
 ### Video Analysis with ByteTracker
 
+ByteTracker is wired into the legacy YOLO-World path for multi-object tracking across frames:
+
 ```python
-# Track movement patterns (uses ByteTracker for multi-object tracking)
-pipeline.process("Track people walking through the scene", "crowd.mp4")
+# Track movement patterns
+pipeline.process("Track people walking through the scene", "crowd.mp4",
+                 vision_name="yolo_world_v2_m")
 
-# Boundary crossing detection (ByteTracker tracks entry/exit)
-pipeline.process("How many vehicles entered vs exited the intersection?", "traffic.mp4")
+# Boundary crossing (entry/exit counts)
+pipeline.process("How many vehicles entered vs exited the intersection?",
+                 "traffic.mp4", vision_name="yolo_world_v2_m")
 
-# Speed analysis (uses tracked trajectories from ByteTracker)
-pipeline.process("What's the average speed of vehicles?", "highway.mp4")
-
-# Activity detection with temporal tracking
-pipeline.process("Detect any unusual activities", "security_footage.mp4")
-
-# Object counting with tracking
-pipeline.process("Count people entering and exiting the building", "entrance.mp4")
+# Speed analysis via tracked trajectories
+pipeline.process("What's the average speed of vehicles?", "highway.mp4",
+                 vision_name="yolo_world_v2_m")
 ```
 
 ### Advanced Queries
@@ -211,60 +237,64 @@ pipeline.process(
 
 # Verification tasks
 pipeline.process("Is there a dog in this image?", "park_scene.jpg")
-
-# Temporal analysis
-pipeline.process("How many people entered vs exited the building?", "entrance.mp4")
 ```
 
 ## 🏗️ Architecture
 
 ```mermaid
 graph TD
-    A[User Query] --> B[LLM Processor]
-    B --> C[Query Parser]
-    C --> D[Vision Processor]
-    D --> E[YOLO-World Detection]
-    E --> F[Attribute Analysis]
-    F --> G[Spatial Relationships]
-    G --> H{Is Video?}
-    H -->|Yes| I[ByteTracker Multi-Object Tracking]
-    H -->|No| J[LLM Explanation]
-    I --> K[Boundary Crossing Detection]
-    K --> L[Speed Estimation]
-    L --> M[Temporal Analysis]
-    M --> J
-    J --> N[Visualization]
-    N --> O[Output with Tracking Trails]
+    A[User Query] --> B[Qwen-VL Query Parser]
+    B --> C{Vision Processor}
+    C -->|Default| D[Qwen-VL Grounding]
+    C -->|Legacy| E[YOLO-World v2 Detection]
+    D --> F[Attribute &amp; Spatial Analysis]
+    E --> F
+    F --> G{Is Video?}
+    G -->|Yes| H[ByteTracker Multi-Object Tracking]
+    G -->|No| J[Qwen-VL Explanation]
+    H --> I[Boundary Crossing / Speed / Trajectories]
+    I --> J
+    J --> K[Visualization]
+    K --> L[Annotated Output]
 ```
 
 ### Core Components
 
-- **🧠 VLM Processor**: Parses queries and generates explanations (local Qwen2.5-VL)
-- **👁️ Vision Processor**: Detects objects and attributes using YOLO-World v2
-- **📹 ByteTracker**: Multi-object tracking system for video analysis with boundary crossing detection
-- **🎨 Media Processor**: Creates visualizations and handles I/O
-- **⚙️ Pipeline**: Orchestrates the entire workflow
+- **🧠 Qwen-VL Processor**: Parses queries, grounds objects, and generates explanations. Runs over the OpenRouter API by default; locally via HuggingFace transformers with `langvio[vlm]`.
+- **👁️ YOLO-World v2 Processor (optional)**: Legacy open-vocabulary detector for use cases where YOLO-level latency and class-flexible detection are preferred.
+- **📹 ByteTracker**: Multi-object tracker used with the YOLO-World path for videos — boundary crossing, counting, speed estimation.
+- **🎨 Media Processor**: Creates visualizations and handles I/O.
+- **⚙️ Pipeline**: Orchestrates the entire workflow and resolves the backend (`api` / `local` / `auto`).
 
 ## 📊 Supported Models
 
-### Vision Models
-- **YOLO-World v2** (small, medium, large, extra-large)
-  - `yolo_world_v2_s` - Small (fastest)
-  - `yolo_world_v2_m` - Medium (balanced, recommended)
-  - `yolo_world_v2_l` - Large (most accurate)
-  - `yolo_world_v2x` - Extra-large (highest accuracy)
-- **Aliases** (all map to YOLO-World v2):
-  - `yolo11n`, `yolo`, `yoloe` - Fastest (map to small)
-  - `yoloe_medium` - Balanced (maps to medium)
-  - `yoloe_large` - Accurate (maps to large)
-- Automatic model selection based on performance needs
+### Language / Vision Models (Qwen-VL)
 
-### Language Models (local VLM)
-- **Qwen2.5-VL** (run locally, no API keys):
-  - `qwen` / `qwen-3b` - Default, `Qwen/Qwen2.5-VL-3B-Instruct` (smallest, fastest)
-  - `qwen-7b` - `Qwen/Qwen2.5-VL-7B-Instruct` (higher quality)
-  - `qwen2-vl-7b` - `Qwen/Qwen2-VL-7B-Instruct`
-- Extensible architecture for adding more local models
+**Hosted API** (default — needs `OPENROUTER_API_KEY`, selected via `--api-model` or `QWEN_API_MODEL`):
+
+- `qwen/qwen3-vl-30b-a3b-instruct` — **default**, sparse MoE, strong grounding at small-model cost
+- `qwen/qwen3-vl-8b-instruct` — cheaper, lower latency
+- `qwen/qwen3-vl-235b-a22b-instruct` — highest quality
+- `qwen/qwen2.5-vl-72b-instruct` — pixel-space bounding boxes
+
+Any OpenAI-compatible endpoint works (OpenRouter, Alibaba Model Studio / DashScope, HuggingFace router, self-hosted vLLM) — set `QWEN_API_BASE_URL`.
+
+**Local backend** (needs `pip install langvio[vlm]`, model loaded in-process via HuggingFace):
+
+- `qwen` / `qwen-3b` — `Qwen/Qwen2.5-VL-3B-Instruct` (smallest, fastest)
+- `qwen-7b` — `Qwen/Qwen2.5-VL-7B-Instruct` (higher quality)
+- `qwen2-vl-7b` — `Qwen/Qwen2-VL-7B-Instruct`
+
+### Legacy Vision Models (YOLO-World v2)
+
+Available by name when you want classic detection + ByteTracker instead of Qwen-VL grounding:
+
+- `yolo_world_v2_s` — Small (fastest)
+- `yolo_world_v2_m` — Medium (balanced)
+- `yolo_world_v2_l` — Large (most accurate)
+- `yolo_world_v2x` — Extra-large
+
+Aliases: `yolo11n`, `yolo`, `yoloe` → small; `yoloe_medium` → medium; `yoloe_large` → large.
 
 ## 🛠️ Configuration
 
@@ -273,22 +303,26 @@ graph TD
 ```yaml
 # config.yaml
 llm:
-  default: "qwen"  # Local Qwen2.5-VL
+  default: "qwen"
   models:
     qwen:
-      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"
-      model_kwargs:
-        temperature: 0.2
-        max_new_tokens: 1024
-    qwen-7b:
-      model_name: "Qwen/Qwen2.5-VL-7B-Instruct"
+      # Qwen-VL — same name for both backends; `backend` + `api_model` decide
+      # which path is used.
+      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"   # used by local backend
+      backend: "auto"                              # auto | api | local
+      api_key_env: "OPENROUTER_API_KEY"
+      api_model: "qwen/qwen3-vl-30b-a3b-instruct"  # used by API backend
+      api_base_url: "https://openrouter.ai/api/v1"
       model_kwargs:
         temperature: 0.2
         max_new_tokens: 1024
 
 vision:
-  default: "yolo11n"  # Fastest default, or "yolo_world_v2_m" for balanced
+  default: "qwen_vlm"
   models:
+    qwen_vlm:
+      model_name: "Qwen/Qwen2.5-VL-3B-Instruct"
+    # Legacy detector:
     yolo_world_v2_m:
       type: "yolo_world"
       model_name: "yolov8m-worldv2"
@@ -313,11 +347,21 @@ pipeline = langvio.create_pipeline(config_path="config.yaml")
 ### Command Line Interface
 
 ```bash
-# Basic usage
+# Basic usage (prompts for key if none set; falls back to local on empty input)
 langvio --query "Count the cars" --media image.jpg
 
-# With custom configuration
-langvio --query "Find red objects" --media scene.jpg --config custom.yaml
+# All CLI flags
+langvio \
+  --query "Find red objects" \
+  --media scene.jpg \
+  --config custom.yaml \
+  --api-key sk-or-...                       \
+  --api-model qwen/qwen3-vl-8b-instruct     \
+  --api-base-url https://openrouter.ai/api/v1 \
+  --backend auto                            \
+  --vision qwen_vlm                         \
+  --llm qwen                                \
+  --output ./results
 
 # List available models
 langvio --list-models
@@ -327,82 +371,67 @@ langvio --list-models
 
 ### Video Tracking with ByteTracker
 
-Langvio uses **ByteTracker** for robust multi-object tracking in videos. ByteTracker is a state-of-the-art tracking algorithm that maintains object identity across video frames, even through occlusions and complex scenes.
+Used with the YOLO-World path for robust multi-object tracking across frames.
 
-**Key ByteTracker Capabilities:**
+- **Multi-Object Tracking**: Persistent IDs across frames
+- **Boundary Crossing Detection**: Entry/exit counts for defined regions
+- **Speed Estimation**: Trajectory-based speed per track
+- **Track Persistence**: Survives short occlusions via configurable buffer
+- **Configurable Thresholds**: `track_thresh`, `track_buffer`, `match_thresh`
 
-- **Multi-Object Tracking**: Tracks multiple objects simultaneously with unique persistent IDs
-- **Boundary Crossing Detection**: Automatically detects when objects enter/exit defined regions
-- **Object Counting**: Accurate counting with entry/exit tracking (in/out counts)
-- **Speed Estimation**: Calculates object speeds based on tracked trajectories over time
-- **Track Persistence**: Maintains object identity even through occlusions and temporary disappearances
-- **Configurable Tracking**: Adjustable thresholds for tracking confidence, buffer, and matching
+Technical:
 
-**ByteTracker Technical Features:**
-- Kalman filter-based motion prediction for smooth tracking
-- IoU-based data association for matching detections to tracks
-- Track buffer management for handling occlusions (configurable buffer size)
-- High/low confidence detection handling for robust tracking
+- Kalman filter-based motion prediction
+- IoU-based data association
+- High/low-confidence detection handling
 - Automatic track initialization and termination
-
-### YOLO-World v2 + ByteTracker Integration
-
-The combination of YOLO-World v2 detection and ByteTracker tracking provides:
-
-- **Seamless Integration**: YOLO-World detections feed directly into ByteTracker for tracking
-- **Efficient Processing**: Optimized frame sampling (default: every 5th frame, every 2nd for tracking tasks)
-- **Track File Management**: Saves/loads tracking data as JSON for faster re-analysis
-- **Visualization**: Draws tracking trails, object IDs, and trajectories on video output
-- **Performance**: Handles real-time video processing with configurable quality/speed tradeoffs
 
 ### Spatial Relationship Analysis
 
 - **Positional Understanding**: "objects on the table", "cars in the parking lot"
-- **Relative Positioning**: left/right, above/below, near/far relationships
+- **Relative Positioning**: left/right, above/below, near/far
 - **Containment Detection**: objects inside other objects
 
 ### Temporal Analysis (Video)
 
-Powered by ByteTracker multi-object tracking:
+Powered by ByteTracker:
 
-- **Movement Patterns**: Track object trajectories and behaviors across frames
-- **Activity Recognition**: Detect activities and interactions over time
-- **Temporal Relationships**: Understand object co-occurrence and interactions
-- **Trajectory Analysis**: Visualize and analyze object movement paths
-- **Entry/Exit Tracking**: Monitor objects crossing boundaries or entering/exiting regions
+- **Movement Patterns**: Track trajectories and behaviors across frames
+- **Activity Recognition**: Detect activities over time
+- **Temporal Relationships**: Object co-occurrence and interactions
+- **Trajectory Analysis**: Visualize movement paths
+- **Entry/Exit Tracking**: Monitor region crossings
 
 ### Color & Attribute Detection
 
-- **Advanced Color Recognition**: 50+ color categories with confidence scoring
+- **Color Recognition**: Many color categories with confidence scoring
 - **Size Classification**: Automatic small/medium/large categorization
-- **Multi-attribute Analysis**: Combined color, size, and position analysis
+- **Multi-attribute Analysis**: Combined color, size, and position
 
 ## 🚀 Performance & Optimization
 
 ### Model Selection Strategy
 
 ```python
-# Automatic model selection based on use case
-pipeline = langvio.create_pipeline()  # Uses best available model
+# Defaults: Qwen-VL for both vision and language, API backend if a key is set.
+pipeline = langvio.create_pipeline()
 
-# Manual model selection for specific needs
-pipeline = langvio.create_pipeline(
-    vision_name="yolo_world_v2_l",  # High accuracy
-    llm_name="qwen-7b"              # Higher-quality VLM (or "qwen" for speed)
-)
+# Pick a larger local VLM for higher-quality explanations
+pipeline = langvio.create_pipeline(llm_name="qwen-7b")
+
+# Opt into the legacy YOLO-World + ByteTracker path for videos
+pipeline = langvio.create_pipeline(vision_name="yolo_world_v2_l")
 ```
 
 ### Optimization Tips
 
-- **YOLO-World models**: Better accuracy for complex scenes with flexible object detection
-- **Model selection**: Use smaller models (`yolo_world_v2_s`) for speed, larger (`yolo_world_v2_l`) for accuracy
-- **Confidence thresholds**: Adjust based on precision/recall needs (lower = more detections)
+- **Backend choice**: The hosted API avoids large downloads and runs well on any machine; the local backend avoids per-request cost and keeps data on-device
+- **Hosted model choice**: `qwen3-vl-8b` for cost/latency, `qwen3-vl-30b-a3b` for quality (default), `qwen3-vl-235b-a22b` for the strongest grounding
+- **YOLO-World path**: Smaller models (`yolo_world_v2_s`) for speed, larger (`yolo_world_v2_l`) for accuracy; adjust `confidence` for precision/recall
 - **Frame sampling**: Control video processing speed vs accuracy (default: every 5th frame)
-- **Environment variables**: Use `LANGVIO_DEFAULT_LLM` and `LANGVIO_DEFAULT_VISION` to set defaults
+- **Environment variables**: `LANGVIO_DEFAULT_LLM`, `LANGVIO_DEFAULT_VISION`, and `LANGVIO_BACKEND` set global defaults without a config file
 
 ## 🧪 Testing
-
-Langvio includes a comprehensive test suite. Run tests with:
 
 ```bash
 # Install test dependencies
@@ -421,8 +450,6 @@ pytest tests/test_config.py
 See [tests/README.md](tests/README.md) for more testing information.
 
 ## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
 
 ### Development Setup
 
@@ -466,7 +493,7 @@ isort langvio/
 
 ## 📄 MIT License
 
-Copyright (c) 2025 LangVio
+Copyright (c) 2026 LangVio
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -488,24 +515,28 @@ SOFTWARE.
 
 ### Usage and License Notices
 
-This project utilizes certain datasets, models, APIs, and algorithms that are subject to their respective original licenses and terms of use. Users must comply with all terms and conditions of these original licenses, including but not limited to:
+This project uses certain datasets, models, APIs, and algorithms that are subject to their respective original licenses and terms of use. Users must comply with all terms and conditions of these original licenses, including but not limited to:
 
-- **Qwen (Tongyi Qianwen) License**: This project uses Alibaba Cloud's Qwen2.5-VL / Qwen2-VL models, run locally via HuggingFace transformers. Users must comply with the [Qwen license terms](https://github.com/QwenLM/Qwen2.5-VL/blob/main/LICENSE) published on the respective HuggingFace model cards.
+- **Qwen (Tongyi Qianwen) License**: This project uses Alibaba Cloud's Qwen-VL family (Qwen3-VL via OpenAI-compatible APIs, and/or Qwen2.5-VL / Qwen2-VL run locally via HuggingFace transformers). Users must comply with the [Qwen license terms](https://github.com/QwenLM/Qwen2.5-VL/blob/main/LICENSE) published on the respective model cards.
 
-- **YOLO World License**: This project uses YOLO-World v2 models developed by Ultralytics. Users must comply with the [Ultralytics YOLO License](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) (AGPL-3.0) and any additional terms specified by Ultralytics for YOLO-World models.
+- **YOLO-World License**: The optional YOLO-World v2 detectors are developed by Ultralytics. Users must comply with the [Ultralytics YOLO License](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) (AGPL-3.0) and any additional terms specified by Ultralytics for YOLO-World.
 
-- **ByteTracker License**: This project uses the ByteTracker algorithm for multi-object tracking. Users must comply with the original ByteTracker license terms as specified in the [ByteTracker repository](https://github.com/ifzhang/ByteTrack).
+- **ByteTracker License**: The ByteTracker algorithm used for multi-object tracking is subject to its original license — see the [ByteTracker repository](https://github.com/ifzhang/ByteTrack).
 
-This project does not impose any additional constraints beyond those stipulated in the original licenses. Furthermore, users are reminded to ensure that their use of the datasets, models, APIs, and algorithms is in compliance with all applicable laws and regulations.
+- **OpenRouter / API Providers**: When using the hosted API backend, usage is also governed by the terms of the chosen provider (OpenRouter, Alibaba Model Studio, etc.).
+
+This project does not impose any additional constraints beyond those stipulated in the original licenses. Users are responsible for ensuring that their use of the datasets, models, APIs, and algorithms is in compliance with all applicable laws and regulations.
 
 For the full license text, see the [LICENSE](LICENSE) file.
 
 ## 🙏 Acknowledgments
 
-- **Ultralytics** for the amazing YOLO-World v2 models
-- **ByteTracker** algorithm for robust multi-object tracking
+- **Alibaba Cloud / Qwen** for the Qwen-VL vision-language models
+- **OpenRouter** and the broader OpenAI-compatible API ecosystem that makes the hosted backend portable
+- **HuggingFace** for `transformers` and model hosting
+- **Ultralytics** for YOLO-World v2 (optional legacy path)
+- **ByteTracker** for robust multi-object tracking
 - **LangChain** for the LLM integration framework
-- **Alibaba Cloud / Qwen** and **HuggingFace** for the local Vision Language Model
 - **OpenCV** for computer vision utilities
 
 ---
