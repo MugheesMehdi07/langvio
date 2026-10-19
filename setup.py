@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="langvio",
-    version="0.1.1",
+    version="0.0.6",
     description="Connect language models to vision models for natural language visual analysis",
     author="Mughees Mehdi",
     author_email="mugheesmehdi@gmail.com",

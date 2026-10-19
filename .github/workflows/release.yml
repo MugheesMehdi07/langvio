@@ -75,6 +75,10 @@ jobs:
       run: |
         sed -i 's/__version__ = "[^"]*"/__version__ = "${{ github.event.inputs.version }}"/' langvio/__init__.py
 
+    - name: Update version in setup.py
+      run: |
+        sed -i 's/version="[^"]*"/version="${{ github.event.inputs.version }}"/' setup.py
+
     - name: Generate changelog entry
       id: changelog
       run: |
@@ -104,7 +108,7 @@ jobs:
         echo "Git status before commit:"
         git status
         echo "Adding files..."
-        git add pyproject.toml langvio/__init__.py
+        git add pyproject.toml langvio/__init__.py setup.py
         echo "Git status after add:"
         git status
         echo "Committing changes..."
