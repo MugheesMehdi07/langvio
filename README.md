@@ -19,7 +19,7 @@
 
 ## ✨ What is Langvio?
 
-Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by Qwen-VL — a vision-language model that parses queries, grounds objects, describes scenes, and generates explanations through separate model calls. The current source version is **0.0.8** (Python **3.10–3.12**).
+Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by Qwen-VL — a vision-language model that parses queries, grounds objects, describes scenes, and generates explanations through separate model calls. The current source version is **0.0.10** (Python **3.10–3.12**).
 
 ### 🎯 Key Features
 
@@ -43,13 +43,13 @@ Annotated classroom outputs from the current Qwen-VL pipeline.
 
 ### Image: Chair Detection
 
-![Qwen-VL chair detections in a classroom](assets/image_processed.png)
+![Qwen-VL chair detections in a classroom](https://raw.githubusercontent.com/MugheesMehdi07/langvio/master/assets/image_processed.png)
 
 The supplied image shows detected chairs with bounding boxes and labels. Displayed confidence values are assigned by the Qwen processor, rather than calibrated model probabilities.
 
 ### Video: Classroom Analysis
 
-[![Preview of the annotated classroom video](assets/classroom_video_preview.png)](https://github.com/MugheesMehdi07/langvio/raw/refs/heads/master/assets/classroom_processed.mp4)
+[![Preview of the annotated classroom video](https://raw.githubusercontent.com/MugheesMehdi07/langvio/master/assets/classroom_video_preview.png)](https://github.com/MugheesMehdi07/langvio/raw/refs/heads/master/assets/classroom_processed.mp4)
 
 [Watch or download the processed video](https://github.com/MugheesMehdi07/langvio/raw/refs/heads/master/assets/classroom_processed.mp4) (32.8 seconds, 1920 × 1080, 30 fps).
 
