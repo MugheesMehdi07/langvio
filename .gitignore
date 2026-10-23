@@ -87,3 +87,8 @@ coverage.xml
 
 # MkDocs build output
 site/
+
+# Published README example outputs
+!assets/image_processed.png
+!assets/classroom_video_preview.png
+!assets/classroom_processed.mp4
