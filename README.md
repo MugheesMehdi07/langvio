@@ -19,7 +19,7 @@
 
 ## ✨ What is Langvio?
 
-Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by Qwen-VL — a vision-language model that parses queries, grounds objects, describes scenes, and generates explanations through separate model calls. The current source version is **0.0.10** (Python **3.10–3.12**).
+Langvio bridges the gap between **human language** and **computer vision**. Ask questions about images and videos in plain English, and get intelligent analysis powered by Qwen-VL — a vision-language model that parses queries, grounds objects, describes scenes, and generates explanations through separate model calls. The current source version is **0.0.11** (Python **3.10–3.12**).
 
 ### 🎯 Key Features
 
